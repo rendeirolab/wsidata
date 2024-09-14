@@ -1,0 +1,63 @@
+from functools import cached_property
+
+from torch.utils.data import Dataset
+
+from .._model import WSIData
+
+
+class TileImagesDataset(Dataset):
+    def __init__(
+        self,
+        wsi: WSIData,
+        key: str = "tiles",
+        target_key: str = None,
+        transform=None,
+        color_norm=None,
+        target_transform=None,
+    ):
+        # Do not assign wsi to self to avoid pickling
+        tiles = wsi.sdata[key]
+        self.tiles = tiles[["x", "y"]].to_numpy()
+        self.spec = wsi.tile_spec(key)
+        self.color_norm = color_norm
+
+        self.targets = None
+        if target_key is not None:
+            self.targets = tiles[target_key].to_numpy()
+        self.transform = transform
+        self.target_transform = target_transform
+
+        # Send reader to the worker instead of wsi
+        self.reader = wsi.reader
+        self.reader.detach_reader()
+
+    @cached_property
+    def cn_func(self):
+        return self.get_cn_func()
+
+    def get_cn_func(self):
+        if self.color_norm is not None:
+            from lazyslide_cv.colornorm import ColorNormalizer
+
+            cn = ColorNormalizer(method=self.color_norm)
+            return lambda x: cn(x)
+        else:
+            return lambda x: x
+
+    def __len__(self):
+        return len(self.tiles)
+
+    def __getitem__(self, idx):
+        x, y = self.tiles[idx]
+        tile = self.reader.get_region(
+            x, y, self.spec.width, self.spec.height, level=self.spec.level
+        )
+        tile = self.cn_func(tile)
+        if self.transform:
+            tile = self.transform(tile)
+        if self.targets is not None:
+            tile_target = self.targets[idx]
+            if self.target_transform:
+                tile_target = self.target_transform(tile_target)
+            return tile, tile_target
+        return tile

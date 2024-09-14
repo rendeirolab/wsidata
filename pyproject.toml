@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wsidata"
+authors = []
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+]
+requires-python = ">=3.7"
+dynamic = ["version", "description"]
+
+dependencies = [
+    "spatialdata>=0.2.2",
+    "opencv-python",
+    "openslide-python",
+    "tiffslide",
+    "rich",
+]
+
+[project.optional-dependencies]
+all = [
+    "torchstain",
+]
+
+dev = [
+    "hatchling",
+    "sphinx",
+    "sphinxawesome-theme",
+    "numpydoc",
+    "sphinx_design",
+    "myst-nb",
+    "pytest",
+]
+
+[tool.hatch.version]
+path = "wsidata/__init__.py"
+
+[tool.ruff]
+lint.ignore = ["F401"]
+line-length = 88
