@@ -28,9 +28,10 @@ all = [
 dev = [
     "hatchling",
     "sphinx",
-    "sphinxawesome-theme",
+    "pydata-sphinx-theme",
     "numpydoc",
     "sphinx_design",
+    "sphinx_copybutton",
     "myst-nb",
     "pytest",
 ]
