@@ -16,16 +16,18 @@ class DatasetAccessor(object):
     ):
         """
         Create a TileImagesDataset from the current object.
+
         Parameters
         ----------
-        tile_key
-        target_key
+        tile_key : str
+        target_key : str
         transform
         target_transform
         color_norm
 
         Returns
         -------
+        TileImagesDataset
 
         """
         from ..dataset.image import TileImagesDataset
@@ -47,15 +49,17 @@ class DatasetAccessor(object):
     ):
         """
         Create a TileFeatureDataset from the current object.
+
         Parameters
         ----------
-        feature_key: str
-        target_key: str
+        feature_key : str
+        target_key : str
         target_transform: callable
 
         Returns
         -------
         TileFeatureDataset
+
         """
 
         from ..dataset.feature import TileFeatureDataset

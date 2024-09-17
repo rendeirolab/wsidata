@@ -19,15 +19,16 @@ class GetAccessor(object):
         return self.n_tissue(key)
 
     def pyramids(self) -> pd.DataFrame:
-        """Return the pyramid levels of the whole slide image.
+        """
+        Return the pyramid levels of the whole slide image.
 
         Returns
         -------
         pd.DataFrame
             A table of pyramid levels (index) with columns:
-            - height: the height of the level
-            - width: the width of the level
-            - downsample: the downsample factor of the level
+            - height: The height of the level (px).
+            - width: The width of the level (px).
+            - downsample: The downsample factor of the level.
 
         """
         heights, widths = zip(*self._obj.properties.level_shape)
@@ -57,12 +58,13 @@ class GetAccessor(object):
         Returns
         -------
         AnnData
-            An AnnData object with the following slots (if present):
-            - X: the feature table
-            - obs: the data stored in tile table
-            - obsm: the spatial information
-            - obsp: the spatial graph information
-            - uns: include tile_spec and slide_properties
+            An AnnData object with the following components (if present):
+
+            - X : The feature table.
+            - obs : The data stored in the tile table.
+            - obsm : The x,y coordinates for each tile.
+            - obsp : The spatial graph information.
+            - uns : Metadata including tile specifications and slide properties.
 
         """
 
