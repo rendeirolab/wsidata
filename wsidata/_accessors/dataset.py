@@ -1,4 +1,8 @@
 class DatasetAccessor(object):
+    """
+    Accessor for dataset objects.
+    """
+
     def __init__(self, obj):
         self._obj = obj
 
@@ -10,6 +14,20 @@ class DatasetAccessor(object):
         target_transform=None,
         color_norm=None,
     ):
+        """
+        Create a TileImagesDataset from the current object.
+        Parameters
+        ----------
+        tile_key
+        target_key
+        transform
+        target_transform
+        color_norm
+
+        Returns
+        -------
+
+        """
         from ..dataset.image import TileImagesDataset
 
         return TileImagesDataset(
@@ -27,6 +45,19 @@ class DatasetAccessor(object):
         target_key: str = None,
         target_transform=None,
     ):
+        """
+        Create a TileFeatureDataset from the current object.
+        Parameters
+        ----------
+        feature_key: str
+        target_key: str
+        target_transform: callable
+
+        Returns
+        -------
+        TileFeatureDataset
+        """
+
         from ..dataset.feature import TileFeatureDataset
 
         return TileFeatureDataset(
