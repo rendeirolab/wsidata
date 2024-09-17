@@ -120,6 +120,7 @@ def agg_wsi(
     slides_table,
     feature_key,
     tile_key="tiles",
+    agg_key="agg",
     wsi_col=None,
     backed_file_col=None,
     error="raise",
@@ -134,12 +135,12 @@ def agg_wsi(
             lambda x: Path(x).with_suffix(".zarr")
         )
 
-    key = f"{feature_key}_{tile_key}_slide"
-
     jobs = []
     with ThreadPoolExecutor() as executor:
         for backed_f in backed_files:
-            job = executor.submit(_agg_wsi, backed_f, key, error)
+            job = executor.submit(
+                _agg_wsi, backed_f, feature_key, tile_key, agg_key, error
+            )
             jobs.append(job)
 
     results = []
@@ -162,21 +163,24 @@ def agg_wsi(
     return AnnData(X, obs=slides_table)
 
 
-def _agg_wsi(f, key, error="raise"):
+def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
     if not Path(f).exists():
         if error == "raise":
             raise ValueError(f"File {f} not existed.")
         else:
             return None
     try:
-        s = read_zarr(f, selection=("labels",))
-        return s.labels[key].values
+        import zarr
+        from anndata import read_zarr
+
+        tables = zarr.open(f"{f}/tables")
+        available_keys = list(tables.keys())
+        if feature_key not in available_keys:
+            feature_key = f"{feature_key}_{tile_key}"
+        s = read_zarr(f"{f}/tables/{feature_key}")
+        return s.varm[agg_key]
     except Exception as e:
         if error == "raise":
             raise e
         else:
             return None
-
-
-class _WSICache:
-    pass

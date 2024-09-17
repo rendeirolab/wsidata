@@ -2,9 +2,9 @@ from collections import namedtuple
 
 import cv2
 import numpy as np
+from shapely import Polygon
 
-
-TissueContour = namedtuple("TissueContour", ["tissue_id", "contour"])
+TissueContour = namedtuple("TissueContour", ["tissue_id", "contour", "holes"])
 TissueImage = namedtuple("TissueImage", ["tissue_id", "x", "y", "image", "mask"])
 TileImage = namedtuple("TileImage", ["id", "x", "y", "tissue_id", "image"])
 
@@ -19,6 +19,7 @@ class IterAccessor(object):
         self,
         key,
         as_array: bool = False,
+        dtype: np.dtype = None,
         shuffle: bool = False,
         seed: int = 0,
     ) -> TissueContour:
@@ -31,6 +32,8 @@ class IterAccessor(object):
         as_array : bool, default: False
             Return the contour as an array.
             If False, the contour is returned as a shapely geometry.
+        dtype : np.dtype, default: None
+            The data type of the array if as_array is True.
         shuffle : bool, default: False
             If True, return tissue contour in random order.
         seed : int, default: 0
@@ -54,10 +57,18 @@ class IterAccessor(object):
             if as_array:
                 yield TissueContour(
                     tissue_id=tissue_id,
-                    contour=np.array(cnt.geometry.exterior.coords, dtype=np.int32),
+                    contour=np.array(cnt.geometry.exterior.coords, dtype=dtype),
+                    holes=[
+                        np.asarray(h.coords, dtype=dtype)
+                        for h in cnt.geometry.interiors
+                    ],
                 )
             else:
-                yield TissueContour(tissue_id=tissue_id, contour=cnt.geometry)
+                yield TissueContour(
+                    tissue_id=tissue_id,
+                    contour=cnt.geometry,
+                    holes=[Polygon(i) for i in cnt.geometry.interiors],
+                )
 
     def tissue_images(
         self,
@@ -113,7 +124,7 @@ class IterAccessor(object):
         for tissue_contour in self.tissue_contours(key):
             ix = tissue_contour.tissue_id
             contour = tissue_contour.contour
-            holes = list(contour.interiors)
+            holes = [np.asarray(h.coords) for h in contour.interiors]
             minx, miny, maxx, maxy = contour.bounds
             x = int(minx)
             y = int(miny)
@@ -134,7 +145,7 @@ class IterAccessor(object):
 
                 # Fill the holes with 0
                 for hole in holes:
-                    hole = np.array(hole.exterior.coords) - [offset_x, offset_y]
+                    hole -= [offset_x, offset_y]
                     hole = (hole / level_downsample).astype(np.int32)
                     cv2.fillPoly(mask, [hole], 0)
 

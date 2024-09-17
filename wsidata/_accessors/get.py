@@ -12,6 +12,12 @@ class GetAccessor(object):
     def __init__(self, obj):
         self._obj = obj
 
+    def n_tissue(self, key: str) -> int:
+        return len(self._obj.sdata.shapes[key])
+
+    def n_tiles(self, key: str) -> int:
+        return self.n_tissue(key)
+
     def pyramids(self) -> pd.DataFrame:
         """Return the pyramid levels of the whole slide image.
 
@@ -63,7 +69,11 @@ class GetAccessor(object):
         sdata = self._obj.sdata
 
         feature_key = self._obj._check_feature_key(feature_key, tile_key)
-        X = sdata.tables[feature_key].X  # Must be a numpy array
+        feature_adata = sdata.tables[feature_key]
+        X = feature_adata.X  # Must be a numpy array
+
+        # layers slot
+        layers = feature_adata.layers
 
         # obs slot
         tile_table = sdata.shapes[tile_key]
@@ -77,6 +87,9 @@ class GetAccessor(object):
 
         # obsp slot
         obsp = {}
+
+        # varm slot
+        varm = feature_adata.varm
 
         # uns slot
         uns = {
@@ -94,4 +107,6 @@ class GetAccessor(object):
                 obsp[dists_key] = graph_table.obsp[dists_key]
                 uns["spatial"] = graph_table.uns["spatial"]
 
-        return AnnData(X=X, obs=obs, obsm=obsm, obsp=obsp, uns=uns)
+        return AnnData(
+            X=X, obs=obs, obsm=obsm, obsp=obsp, uns=uns, varm=varm, layers=layers
+        )
