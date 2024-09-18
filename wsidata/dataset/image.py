@@ -6,6 +6,30 @@ from .._model import WSIData
 
 
 class TileImagesDataset(Dataset):
+    """
+    Dataset for tiles from the whole slide image.
+
+
+    Parameters
+    ----------
+    wsi : WSIData
+    key : str
+        The key of the tile table.
+    target_key : str
+        The key of the target table.
+    transform: callable
+        The transformation for the input tiles.
+    target_transform: callable
+        The transformation for the target.
+    color_norm: str
+        The color normalization method.
+
+    Returns
+    -------
+    TileImagesDataset
+
+    """
+
     def __init__(
         self,
         wsi: WSIData,

@@ -19,11 +19,15 @@ class DatasetAccessor(object):
 
         Parameters
         ----------
-        tile_key : str
+        tile_key : str, default: "tiles"
+            The key of the tile table.
         target_key : str
-        transform
-        target_transform
-        color_norm
+            The key of the target table.
+        transform: callable
+            The transformation for the input tiles.
+        target_transform: callable
+            The transformation for the target.
+        color_norm: str
 
         Returns
         -------
@@ -53,8 +57,11 @@ class DatasetAccessor(object):
         Parameters
         ----------
         feature_key : str
+            The key of the feature table.
         target_key : str
+            The key of the target table.
         target_transform: callable
+            The transformation for the target.
 
         Returns
         -------

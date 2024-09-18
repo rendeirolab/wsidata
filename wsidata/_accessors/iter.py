@@ -46,8 +46,9 @@ class IterAccessor(object):
         -------
         TissueContour
             A named tuple with fields:
-            - tissue_id: the tissue id
-            - contour: the tissue contour as a shapely geometry or an array
+
+            - tissue_id : The tissue id.
+            - contour : The tissue contour as a shapely geometry or an array.
 
         """
 
@@ -92,8 +93,11 @@ class IterAccessor(object):
             The level to extract the tissue images.
         mask_bg : bool | int, default: False
             Mask the background with the given value.
+
             If False, the background is not masked.
+
             If True, the background is masked with 0.
+
             If an integer, the background is masked with the given value.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
@@ -102,11 +106,12 @@ class IterAccessor(object):
         -------
         TissueImage
             A named tuple with fields:
-            - tissue_id: the tissue id
-            - x: the x-coordinate of the image
-            - y: the y-coordinate of the image
-            - image: the tissue image
-            - mask: the tissue mask
+
+            - tissue_id : The tissue id.
+            - x : The x-coordinate of the image.
+            - y : The y-coordinate of the image.
+            - image : The tissue image.
+            - mask : The tissue mask.
 
         """
         import cv2
@@ -181,6 +186,7 @@ class IterAccessor(object):
             The tile key.
         raw : bool, default: True
             Return the raw image without resizing.
+
             If False, the image is resized to the requested tile size.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
@@ -195,11 +201,12 @@ class IterAccessor(object):
         -------
         TileImage
             A named tuple with fields:
-            - id: the tile id
-            - x: the x-coordinate of the tile
-            - y: the y-coordinate of the tile
-            - tissue_id: the tissue id
-            - image: the tile image
+
+            - id: The tile id.
+            - x: The x-coordinate of the tile.
+            - y: The y-coordinate of the tile.
+            - tissue_id: The tissue id.
+            - image: The tile image.
 
         """
         tile_spec = self._obj.tile_spec(key)

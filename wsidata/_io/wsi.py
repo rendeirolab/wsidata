@@ -55,22 +55,22 @@ def open_wsi(
         The cache directory, by default file will be stored in working direction.
     pbar : bool, optional
         Whether to show progress bar, by default True.
-    attach_images : bool, optional
-        Whether to attach whole slide image to image slot in the spatial data object, by default False.
+    attach_images : bool, optional, default: False
+        Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
         The key to store the whole slide image, by default "wsi_thumbnail".
-    save_images : bool, optional
-        Whether to save the whole slide image to on the disk, by default False.
+    save_images : bool, optional, default: False
+        Whether to save the whole slide image to on the disk.
 
         Only works for wsi.save() method.
-    attach_thumbnail : bool, optional
-        Whether to attach thumbnail to image slot in the spatial data object, by default True.
+    attach_thumbnail : bool, optional, default: True
+        Whether to attach thumbnail to image slot in the spatial data object.
     thumbnail_key : str, optional
         The key to store the thumbnail, by default "wsi_thumbnail".
-    thumbnail_size : int, optional
-        The size of the thumbnail, by default 2000.
-    save_thumbnail : bool, optional
-        Whether to save the thumbnail to on the disk, by default True.
+    thumbnail_size : int, optional, default: 2000
+        The size of the thumbnail.
+    save_thumbnail : bool, optional, default: True
+        Whether to save the thumbnail to on the disk.
 
         Only works for wsi.save() method.
 
