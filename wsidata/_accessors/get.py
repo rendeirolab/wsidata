@@ -13,9 +13,36 @@ class GetAccessor(object):
         self._obj = obj
 
     def n_tissue(self, key: str) -> int:
+        """
+        Return the number of tissue regions in the tissue table.
+
+        Parameters
+        ----------
+        key: str
+            The tile key.
+
+        Returns
+        -------
+        int
+            The number of tissue regions.
+
+        """
         return len(self._obj.sdata.shapes[key])
 
     def n_tiles(self, key: str) -> int:
+        """
+        Return the number of tiles in the tile table.
+
+        Parameters
+        ----------
+        key: str
+            The tile key.
+
+        Returns
+        -------
+        int
+            The number of tiles.
+        """
         return self.n_tissue(key)
 
     def pyramids(self) -> pd.DataFrame:
@@ -26,9 +53,10 @@ class GetAccessor(object):
         -------
         pd.DataFrame
             A table of pyramid levels (index) with columns:
-            - height: The height of the level (px).
-            - width: The width of the level (px).
-            - downsample: The downsample factor of the level.
+
+            - height : The height of the level (px).
+            - width : The width of the level (px).
+            - downsample : The downsample factor of the level.
 
         """
         heights, widths = zip(*self._obj.properties.level_shape)
