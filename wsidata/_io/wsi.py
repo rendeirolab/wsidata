@@ -151,6 +151,34 @@ def agg_wsi(
     backed_file_col=None,
     error="raise",
 ):
+    """
+    Aggregate feature from a whole slide image.
+
+    Parameters
+    ----------
+    slides_table: pd.DataFrame
+        The table of slides, including information of whole slide image and .zarr paths and metadata.
+
+        Backed file path to the anndata file is optional, by default the same directory as the
+        whole slide image.
+    feature_key: str
+        The feature key on which aggregation should be run on.
+    tile_key: str
+        The tile key.
+    agg_key: str
+        The output aggregation key in the varm slot.
+    wsi_col: str
+        The column name of the whole slide image paths.
+    backed_file_col: str
+        The column name of the backed file.
+    error: str
+        Whether to raise error when file not existed.
+
+    Returns
+    -------
+    AnnData
+        The aggregated feature space.
+    """
     if wsi_col is None and backed_file_col is None:
         raise ValueError("Either wsi_col or backed_file_col must be provided.")
 
@@ -190,6 +218,28 @@ def agg_wsi(
 
 
 def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
+    """
+    Aggregate feature from a whole slide image.
+
+    Parameters
+    ----------
+    f: str
+        The backed file path to the anndata file stored as .zarr.
+    feature_key: str
+        The feature key on which aggregation should be run on.
+    tile_key: str
+        The tile key.
+    agg_key:
+        The output aggregation key in the varm slot.
+    error: str
+        Whether to raise error when file not existed.
+
+    Returns
+    -------
+    np.ndarray
+        The aggregated feature space.
+
+    """
     if not Path(f).exists():
         if error == "raise":
             raise ValueError(f"File {f} not existed.")

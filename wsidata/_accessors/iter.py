@@ -10,7 +10,11 @@ TileImage = namedtuple("TileImage", ["id", "x", "y", "tissue_id", "image"])
 
 
 class IterAccessor(object):
-    """An accessor to iterate over the WSI data."""
+    """An accessor to iterate over the WSI data.
+
+    Usage: `wsidata.iter`
+
+    """
 
     def __init__(self, obj):
         self._obj = obj
