@@ -52,13 +52,33 @@ def open_wsi(
         If a directory is supplied, the zarr file will be created in that directory.
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
-        Reader to use, by default "auto".
+        Reader to use, by default "auto", choosing available reader, first openslide, then tifffile.
     download : bool, optional
-        Download the whole slide image, by default True.
+        Whether to download the slide.
     name : str, optional
-        The name of the file, by default None.
+        The name of the slide.
     cache_dir : str, optional
-        The cache directory, by default None.
+        The cache directory, by default file will be stored in working direction.
+    pbar : bool, optional
+        Whether to show progress bar, by default True.
+    attach_images : bool, optional, default: False
+        Whether to attach whole slide image to image slot in the spatial data object.
+    image_key : str, optional
+        The key to store the whole slide image, by default "wsi_thumbnail".
+    save_images : bool, optional, default: False
+        Whether to save the whole slide image to on the disk.
+
+        Only works for wsi.save() method.
+    attach_thumbnail : bool, optional, default: True
+        Whether to attach thumbnail to image slot in the spatial data object.
+    thumbnail_key : str, optional
+        The key to store the thumbnail, by default "wsi_thumbnail".
+    thumbnail_size : int, optional, default: 2000
+        The size of the thumbnail.
+    save_thumbnail : bool, optional, default: True
+        Whether to save the thumbnail to on the disk.
+
+        Only works for wsi.save() method.
 
     Returns
     -------
@@ -137,6 +157,34 @@ def agg_wsi(
     backed_file_col=None,
     error="raise",
 ):
+    """
+    Aggregate feature from a whole slide image.
+
+    Parameters
+    ----------
+    slides_table: pd.DataFrame
+        The table of slides, including information of whole slide image and .zarr paths and metadata.
+
+        Backed file path to the anndata file is optional, by default the same directory as the
+        whole slide image.
+    feature_key: str
+        The feature key on which aggregation should be run on.
+    tile_key: str
+        The tile key.
+    agg_key: str
+        The output aggregation key in the varm slot.
+    wsi_col: str
+        The column name of the whole slide image paths.
+    backed_file_col: str
+        The column name of the backed file.
+    error: str
+        Whether to raise error when file not existed.
+
+    Returns
+    -------
+    AnnData
+        The aggregated feature space.
+    """
     if wsi_col is None and backed_file_col is None:
         raise ValueError("Either wsi_col or backed_file_col must be provided.")
 
@@ -176,6 +224,28 @@ def agg_wsi(
 
 
 def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
+    """
+    Aggregate feature from a whole slide image.
+
+    Parameters
+    ----------
+    f: str
+        The backed file path to the anndata file stored as .zarr.
+    feature_key: str
+        The feature key on which aggregation should be run on.
+    tile_key: str
+        The tile key.
+    agg_key:
+        The output aggregation key in the varm slot.
+    error: str
+        Whether to raise error when file not existed.
+
+    Returns
+    -------
+    np.ndarray
+        The aggregated feature space.
+
+    """
     if not Path(f).exists():
         if error == "raise":
             raise ValueError(f"File {f} not existed.")
