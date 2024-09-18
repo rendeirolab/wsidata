@@ -46,7 +46,33 @@ def open_wsi(
         If a directory is supplied, the zarr file will be created in that directory.
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
-        Reader to use, by default "auto".
+        Reader to use, by default "auto", choosing available reader, first openslide, then tifffile.
+    download : bool, optional
+        Whether to download the slide.
+    name : str, optional
+        The name of the slide.
+    cache_dir : str, optional
+        The cache directory, by default file will be stored in working direction.
+    pbar : bool, optional
+        Whether to show progress bar, by default True.
+    attach_images : bool, optional
+        Whether to attach whole slide image to image slot in the spatial data object, by default False.
+    image_key : str, optional
+        The key to store the whole slide image, by default "wsi_thumbnail".
+    save_images : bool, optional
+        Whether to save the whole slide image to on the disk, by default False.
+
+        Only works for wsi.save() method.
+    attach_thumbnail : bool, optional
+        Whether to attach thumbnail to image slot in the spatial data object, by default True.
+    thumbnail_key : str, optional
+        The key to store the thumbnail, by default "wsi_thumbnail".
+    thumbnail_size : int, optional
+        The size of the thumbnail, by default 2000.
+    save_thumbnail : bool, optional
+        Whether to save the thumbnail to on the disk, by default True.
+
+        Only works for wsi.save() method.
 
     Returns
     -------
