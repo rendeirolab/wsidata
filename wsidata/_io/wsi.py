@@ -35,6 +35,12 @@ def open_wsi(
 ):
     """Open a whole slide image.
 
+    You can open a whole slide image from a URL or a local file.
+    If load from remote URL, the image will be downloaded and cached (default to current the working directory).
+    You can also attach images and thumbnail to the SpatialData object. By default, only the thumbnail is attached,
+    the thumbnail is a downsampled version of the whole slide image, the original image is not attached to save disk space
+    when you save the WSIData object on disk.
+
     Parameters
     ----------
     wsi : str or Path
@@ -47,6 +53,12 @@ def open_wsi(
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
         Reader to use, by default "auto".
+    download : bool, optional
+        Download the whole slide image, by default True.
+    name : str, optional
+        The name of the file, by default None.
+    cache_dir : str, optional
+        The cache directory, by default None.
 
     Returns
     -------
