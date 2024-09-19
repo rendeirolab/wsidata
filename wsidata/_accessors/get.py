@@ -33,8 +33,8 @@ class GetAccessor(object):
         heights, widths = zip(*self._obj.properties.level_shape)
         return pd.DataFrame(
             {
-                "height": heights,
-                "width": widths,
+                "height": pd.Series(heights, dtype=int),
+                "width": pd.Series(widths, dtype=int),
                 "downsample": self._obj.properties.level_downsample,
             },
             index=pd.RangeIndex(self._obj.properties.n_level, name="level"),
