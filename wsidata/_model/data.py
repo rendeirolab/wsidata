@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -18,6 +19,7 @@ from spatialdata.models import ShapesModel, TableModel
 from .tilespec import TileSpec
 from .._accessors import GetAccessor, IterAccessor, DatasetAccessor
 from .._reader import ReaderBase
+from .._utils import find_stack_level
 
 
 class WSIData(object):
@@ -61,7 +63,13 @@ class WSIData(object):
     TILE_SPEC_KEY = "tile_spec"
     SLIDE_PROPERTIES_KEY = "slide_properties"
 
-    def __init__(self, reader: ReaderBase, sdata: SpatialData, backed_file: str | Path):
+    def __init__(
+        self,
+        reader: ReaderBase,
+        sdata: SpatialData,
+        backed_file: str | Path,
+        load_slide_properties: bool = True,
+    ):
         self._reader = reader
         self._sdata = sdata
         self.set_backed_file(backed_file)
@@ -72,6 +80,18 @@ class WSIData(object):
                 uns=reader.properties.to_dict()
             )
             self._write_elements.add(self.SLIDE_PROPERTIES_KEY)
+        else:
+            # Try to load the slide properties from the spatial data
+            if load_slide_properties:
+                reader_properties = sdata.tables[self.SLIDE_PROPERTIES_KEY].uns
+                if reader_properties != reader.properties.to_dict():
+                    # Update the reader properties
+                    reader.properties.from_mapping(reader_properties)
+                    warnings.warn(
+                        "Slide properties in the spatial data is different from the reader properties.",
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
 
     def __repr__(self):
         return (
@@ -114,8 +134,9 @@ class WSIData(object):
             return TileSpec(**spec)
 
     def set_mpp(self, mpp):
-        # TODO: Allow user to set the mpp of slide
-        pass
+        self.properties.mpp = mpp
+        self.sdata.tables[self.SLIDE_PROPERTIES_KEY].uns["mpp"] = mpp
+        self._write_elements.add(self.SLIDE_PROPERTIES_KEY)
 
     def set_backed_file(self, file):
         self._backed_file = Path(file)
