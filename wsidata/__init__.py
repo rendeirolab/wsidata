@@ -6,3 +6,4 @@ import wsidata.dataset as dataset
 from ._model import WSIData, TileSpec
 from ._io import open_wsi, agg_wsi
 from ._accessors import register_wsidata_accessor, GetAccessor, IterAccessor
+from ._reader import get_reader

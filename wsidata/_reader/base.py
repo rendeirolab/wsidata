@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from functools import singledispatch
 from typing import Optional, List, Mapping
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 import cv2
 import numpy as np
@@ -22,7 +22,7 @@ class SlideProperties:
     mpp: Optional[float] = None
     magnification: Optional[float] = None
     bounds: Optional[SHAPE] = None
-    raw: Optional[str] = None
+    raw: Optional[str] = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_mapping(self, metadata: Mapping):
@@ -57,6 +57,9 @@ class ReaderBase:
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.file}')"
 
+    def __del__(self):
+        self.detach_reader()
+
     def translate_level(self, level):
         levels = np.arange(self.properties.n_level)
         if level >= len(levels):
@@ -79,15 +82,19 @@ class ReaderBase:
         """Get a thumbnail of the image"""
         raise NotImplementedError
 
-    def get_level(self, level):
-        """Get the image level in numpy array"""
-        raise NotImplementedError
+    def get_level(self, level) -> np.ndarray[np.uint8]:
+        height, width = self.properties.level_shape[level]
+        return self.get_region(0, 0, width, height, level=level)
 
     def set_properties(self, properties: SlideProperties | Mapping):
         if isinstance(properties, SlideProperties):
             self.properties = properties
         else:
             self.properties = SlideProperties.from_mapping(properties)
+
+    def create_reader(self):
+        # The basic fallback implementation to create _reader
+        raise NotImplementedError
 
     def detach_reader(self):
         # The basic fallback implementation to detach _reader
@@ -102,6 +109,12 @@ class ReaderBase:
         dim = np.asarray(img.shape)
         dim = np.array(dim * scale, dtype=int)
         return cv2.resize(img, dim)
+
+    @property
+    def reader(self):
+        if self._reader is None:
+            self.create_reader()
+        return self._reader
 
 
 @singledispatch
