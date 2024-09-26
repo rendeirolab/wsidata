@@ -4,6 +4,22 @@ from .._model import WSIData
 
 
 class TileFeatureDataset(Dataset):
+    """
+    Dataset for features extracted from tiles.
+
+    Parameters
+    ----------
+    wsi : WSIData
+    feature_key : str
+    target_key : str
+    target_transform: callable
+
+    Returns
+    -------
+    TileFeatureDataset
+
+    """
+
     def __init__(
         self,
         wsi: WSIData,

@@ -5,8 +5,8 @@ from .base import ReaderBase, convert_image
 
 
 # NOTE: This is a placeholder for the actual implementation
-#      of the CuCIM _reader. It's not tested and will not work.
-# TODO: Implement the CuCIM _reader on GPU-available machine
+#      of the CuCIM reader. It's not tested and will not work.
+# TODO: Implement the CuCIM reader on GPU-available machine
 class CuCIMReader(ReaderBase):
     """
     Use CuCIM to interface with image files.

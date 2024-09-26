@@ -3,13 +3,14 @@ from __future__ import annotations
 import warnings
 from functools import cached_property
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Literal
 
 import anndata as ad
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import zarr
+from PIL.Image import Image, fromarray
 from anndata import AnnData
 from ome_zarr.io import parse_url
 from shapely import box, Polygon
@@ -18,45 +19,109 @@ from spatialdata.models import ShapesModel, TableModel
 
 from .tilespec import TileSpec
 from .._accessors import GetAccessor, IterAccessor, DatasetAccessor
-from .._reader import ReaderBase
+from ..reader import ReaderBase
 from .._utils import find_stack_level
 
 
 class WSIData(object):
-    """WSI Data
+    """
+    A container class combining :class:`SpatialData <spatialdata.SpatialData>`
+     and a whole slide image reader.
 
-    WSIData is a container class combining SpatialData and a Reader
-    to handle whole slide images (WSI).
+     .. note::
+         Use the :func:`open_wsi` function to create a WSIData object.
 
-    The WSIData is initialized with a reader object that can
-    operate on the whole slide image file. By default, the whole slide image
-    is not attached to the SpatialData. However, for visualization purposes,
-    a thumbnail version of the whole slide image can be attached.
+     By default, the whole slide image is not attached to the SpatialData.
+     A thumbnail version of the whole slide image is attached for visualization purpose.
 
-    The WSIData contains four main components:
+     The WSIData contains four main components:
 
-    1. Whole slide image (WSI)
-    2. Tissue contours (shapes)
-    3. Tile locations (shapes)
-    4. Features (tables)
+     .. list-table::
+         :header-rows: 1
 
-    Parameters
-    ----------
-    reader : ReaderBase
-        A reader object that can interface with the whole slide image file.
-    sdata : SpatialData
-        A SpatialData object to store the spatial data.
-    backed_file : str or Path
-        Path to the backed file for storing the SpatialData.
+         * -
+           - Whole slide image
+           - Tissue contours
+           - Tile locations
+           - Features
 
-    Attributes
-    ----------
-    reader : ReaderBase
-        The reader object for interfacing with the whole slide image.
-    sdata : SpatialData
-        The SpatialData object containing the spatial data.
-    backed_file : Path
-        The path to the backed file.
+         * - **SpatialData Slot**
+           - :bdg-danger:`images`
+           - :bdg-danger:`shapes`
+           - :bdg-danger:`shapes`
+           - :bdg-danger:`tables`
+
+         * - **Default Key**
+           - :bdg-info:`wsi_thumbnail`
+           - :bdg-info:`tissues`
+           - :bdg-info:`tiles`
+           - :bdg-info:`\{feature_key\}_\{tile_key\}`
+
+         * - | **Attributes**
+             | **Slot**
+             | **Key**
+           - | :class:`SlideProperties <wsidata.reader.SlideProperties>`
+             | :bdg-danger:`tables`
+             | :bdg-info:`slide_properties`
+           -
+           - | :class:`TileSpec <wsidata.TileSpec>`
+             | :bdg-danger:`tables`
+             | :bdg-info:`tile_spec`
+           -
+
+         * - **Content**
+           - | :class:`DataArray <xarray.DataArray>`
+             | (c, y, x) format.
+           - | :class:`GeoDataFrame <geopandas.GeoDataFrame>` with columns:
+             | :bdg-black:`tissue_id`
+             | :bdg-black:`geometry`
+           - | :class:`GeoDataFrame <geopandas.GeoDataFrame>` with columns:
+             | :bdg-black:`tile_id`
+             | :bdg-black:`x`, :bdg-black:`y`
+             | :bdg-black:`tissue_id`
+             | :bdg-black:`geometry`
+           - | :class:`AnnData <anndata.AnnData>` with:
+             | :code:`X`: The feature matrix
+             | :code:`varm`: :bdg-black:`agg_slide`, :bdg-black:`agg_tissue`
+
+
+
+     You can interact with WSIData using the following accessors:
+
+     - :class:`get <wsidata.GetAccessor>`: Access data from the WSIData object.
+     - :class:`iter <wsidata.IterAccessor>`: Iterate over data in the WSIData object.
+     - :class:`ds <wsidata.DatasetAccessor>`: Create deep learning datasets from the WSIData object.
+     - To implement your own accessors, use :func:`register_wsidata_accessor <wsidata.register_wsidata_accessor>`.
+
+     For analysis purpose, you can override two slide properties:
+
+     - microns per pixel (mpp): Using the :meth:`set_mpp` method.
+     - bounds: Using the :meth:`set_bounds` method.
+
+     Parameters
+     ----------
+     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
+         A reader object that can interface with the whole slide image file.
+     sdata : :class:`SpatialData <spatialdata.SpatialData>`
+         A SpatialData object for storing analysis data.
+     backed_file : str or Path
+         Storage location to the SpatialData object.
+     slide_properties_source : {'slide', 'sdata'}, default: 'sdata'
+         The source of the slide properties.
+
+         - "slide": load from the reader object.
+         - "sdata": load from the SpatialData object.
+
+     Attributes
+     ----------
+     properties : :class:`SlideProperties <wsidata.reader.SlideProperties>`
+         The properties of the whole slide image.
+     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
+         The reader object for interfacing with the whole slide image.
+     sdata : :class:`SpatialData <spatialdata.SpatialData>`
+         The SpatialData object containing the spatial data.
+     backed_file : Path
+         The path to the backed file.
 
     """
 
@@ -68,7 +133,7 @@ class WSIData(object):
         reader: ReaderBase,
         sdata: SpatialData,
         backed_file: str | Path,
-        load_slide_properties: bool = True,
+        slide_properties_source: Literal["slide", "sdata"] = "sdata",
     ):
         self._reader = reader
         self._sdata = sdata
@@ -82,7 +147,7 @@ class WSIData(object):
             self._write_elements.add(self.SLIDE_PROPERTIES_KEY)
         else:
             # Try to load the slide properties from the spatial data
-            if load_slide_properties:
+            if slide_properties_source == "slide":
                 reader_properties = sdata.tables[self.SLIDE_PROPERTIES_KEY].uns
                 if reader_properties != reader.properties.to_dict():
                     # Update the reader properties
@@ -104,9 +169,11 @@ class WSIData(object):
         return self.sdata.__getitem__(item)
 
     def close(self):
+        """Close the reader object."""
         self.reader.detach_reader()
 
     def add_write_elements(self, name: str | Sequence[str]):
+        """Add an element or elements that need to save to backed file on disk."""
         if isinstance(name, str):
             self._write_elements.add(name)
         else:
@@ -128,14 +195,34 @@ class WSIData(object):
     def backed_file(self):
         return self._backed_file
 
+    @property
+    def thumbnail(self):
+        return self.get_thumbnail(size=500, as_array=False)
+
     def tile_spec(self, key: str) -> TileSpec:
+        """
+        Get the :class:`TileSpec` for a collection of tiles.
+
+        Parameters
+        ----------
+        key : str
+            The key of the tiles.
+
+        """
         if self.TILE_SPEC_KEY in self.sdata:
             spec = self.sdata.tables[self.TILE_SPEC_KEY].uns[key]
             return TileSpec(**spec)
 
     def set_mpp(self, mpp):
+        """Set the microns per pixel (mpp) of the whole slide image."""
         self.properties.mpp = mpp
         self.sdata.tables[self.SLIDE_PROPERTIES_KEY].uns["mpp"] = mpp
+        self._write_elements.add(self.SLIDE_PROPERTIES_KEY)
+
+    def set_bounds(self, bounds):
+        """Set the bounds of the whole slide image."""
+        self.properties.bounds = bounds
+        self.sdata.tables[self.SLIDE_PROPERTIES_KEY].uns["bounds"] = bounds
         self._write_elements.add(self.SLIDE_PROPERTIES_KEY)
 
     def set_backed_file(self, file):
@@ -150,9 +237,56 @@ class WSIData(object):
         level: int = 0,
         **kwargs,
     ) -> np.ndarray[np.uint8]:
+        """Read a region from the whole slide image.
+
+        Parameters
+        ----------
+        x : int
+            The x-coordinate at level 0.
+        y : int
+            The y-coordinate at level 0.
+        width : int
+            The width of the region in pixels.
+        height : int
+            The height of the region in pixels.
+        level : int, default: 0
+            The pyramid level.
+
+        """
         return self.reader.get_region(x, y, width, height, level=level, **kwargs)
 
+    def get_thumbnail(self, size=500, as_array=False) -> np.ndarray[np.uint8] | Image:
+        """Get the thumbnail of the whole slide image.
+
+        Parameters
+        ----------
+        as_array : bool, default: False
+            Return as numpy array.
+
+        """
+        img = self.reader.get_thumbnail(size=size)
+        if as_array:
+            return img
+        else:
+            return fromarray(img)
+
     def add_tissues(self, key: str, tissues: Sequence[Polygon], ids=None, **kws):
+        """Add tissue contours to the SpatialData.
+
+        - :bdg-primary:`SpatialData Slot`: :bdg-danger:`shapes`
+        - :bdg-info:`Table Columns`: :bdg-black:`tissue_id`, :bdg-black:`geometry`
+
+        Parameters
+        ----------
+        key : str
+            The key of the tissue contours.
+        tissues : array of :class:`Polygon <shapely.Polygon>`
+            A sequence of shapely Polygon objects.
+        ids : Sequence[int], optional
+            The tissue ids.
+
+
+        """
         if ids is None:
             ids = np.arange(len(tissues))
         gdf = gpd.GeoDataFrame(

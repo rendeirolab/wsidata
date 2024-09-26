@@ -9,9 +9,6 @@ import numpy as np
 from .base import ReaderBase, convert_image, SlideProperties
 
 
-# TODO: If multiprocess doesn't work, use lock and release reader
-
-
 class BioFormatsReader(ReaderBase):
     """
     Use Bio-Formats to interface with image files.

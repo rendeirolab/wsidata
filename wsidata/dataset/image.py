@@ -6,6 +6,30 @@ from .._model import WSIData
 
 
 class TileImagesDataset(Dataset):
+    """
+    Dataset for tiles from the whole slide image.
+
+
+    Parameters
+    ----------
+    wsi : WSIData
+    key : str
+        The key of the tile table.
+    target_key : str
+        The key of the target table.
+    transform: callable
+        The transformation for the input tiles.
+    target_transform: callable
+        The transformation for the target.
+    color_norm: str
+        The color normalization method.
+
+    Returns
+    -------
+    TileImagesDataset
+
+    """
+
     def __init__(
         self,
         wsi: WSIData,
@@ -32,12 +56,12 @@ class TileImagesDataset(Dataset):
         self.reader.detach_reader()
 
     @cached_property
-    def cn_func(self):
-        return self.get_cn_func()
+    def _cn_func(self):
+        return self._get_cn_func()
 
-    def get_cn_func(self):
+    def _get_cn_func(self):
         if self.color_norm is not None:
-            from lazyslide_cv.colornorm import ColorNormalizer
+            from .._normalizer import ColorNormalizer
 
             cn = ColorNormalizer(method=self.color_norm)
             return lambda x: cn(x)
@@ -52,7 +76,7 @@ class TileImagesDataset(Dataset):
         tile = self.reader.get_region(
             x, y, self.spec.width, self.spec.height, level=self.spec.level
         )
-        tile = self.cn_func(tile)
+        tile = self._cn_func(tile)
         if self.transform:
             tile = self.transform(tile)
         if self.targets is not None:

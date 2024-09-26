@@ -1,13 +1,17 @@
 # wsidata
 
-A data container for Whole Slide Image (WSI) IO and data storage.
+<p align="center">
+    <picture align="center">
+    <img src="https://raw.githubusercontent.com/rendeirolab/wsidata/main/assets/logo.svg" width="100px">
+    </picture>
+</p>
+<p align="center">
+  <i>Efficient Data Structures for Whole Slide Image Analysis and IO</i>
+</p>
+
 
 ## Installation
 
 ```bash
 pip install wsidata
 ```
-
-## Principles
-
-- One storage should only store one WSI.

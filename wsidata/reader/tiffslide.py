@@ -3,10 +3,9 @@ from .openslide import OpenSlideReader
 
 class TiffSlideReader(OpenSlideReader):
     """
-    Use OpenSlide to interface with image files.
+    Use TiffSlide to interface with image files.
 
-    Depends on `openslide-python <https://openslide.org/api/python/>`_
-    which wraps the `openslide <https://openslide.org/>`_ C library.
+    Depends on `tiffslide <https://github.com/Bayer-Group/tiffslide>`_.
 
     Parameters
     ----------

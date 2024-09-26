@@ -18,8 +18,8 @@ from zarr.storage import (
 )
 from zarr.util import json_dumps, normalize_storage_path, normalize_shape
 
-from .._reader import TiffSlideReader
-from .._reader.base import ReaderBase
+from ..reader import TiffSlideReader
+from ..reader.base import ReaderBase
 
 
 def init_attrs(store, attrs, path: str = None):
@@ -75,7 +75,7 @@ class ReaderStore(Store):
     Parameters
     ----------
     reader: Reader
-        The _reader object
+        The reader object
     tilesize: int
         Desired "chunk" size for zarr store (default: 512).
     """

@@ -61,6 +61,27 @@ def _register_accessor(name: str, cls):
 
 
 def register_wsidata_accessor(name: str):
+    """Register a custom accessor on WSIData objects.
+
+    Examples
+    --------
+
+    Create a custom accessor for WSIData objects,
+    the init method of the accessor class should accept a single argument,
+    which is the WSIData object.
+
+    .. code-block:: python
+
+        >>> @register_wsidata_accessor("my_accessor")
+        ... class MyAccessor:
+        ...    def __init__(self, obj):
+        ...        self.obj = obj
+        ...
+        ...    def my_method(self):
+        ...        return "Hello, world!"
+
+
+    """
     from .._model import WSIData
 
     return _register_accessor(name, WSIData)

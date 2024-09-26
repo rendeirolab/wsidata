@@ -15,6 +15,31 @@ SHAPE = List[int]
 
 @dataclass
 class SlideProperties:
+    """
+    The properties of the slide
+
+    Attributes
+    ----------
+    shape : [height, width]
+        The shape of the slide
+    n_level : int
+        The number of pyramids levels
+    level_shape : List[[height, width]]
+        The shape of each pyramid level
+    level_downsample : List[float]
+        The downsample factor of each pyramid level
+    mpp : Optional[float]
+        The physical size of each pixel in microns
+    magnification : Optional[float]
+        The magnification of the slide
+    bounds : Optional[SHAPE]
+        The bounds of the slide, in the format [x, y, height, width]
+        This is the region of the slide that contains tissue
+    raw : Optional[str]
+        The raw metadata in serialized json format
+
+    """
+
     shape: SHAPE
     n_level: int
     level_shape: List[SHAPE]
@@ -26,13 +51,16 @@ class SlideProperties:
 
     @classmethod
     def from_mapping(self, metadata: Mapping):
+        """Create SlideProperties from a mapping"""
         metadata = parse_metadata(metadata)
         return SlideProperties(**metadata)
 
     def to_dict(self):
+        """Convert the properties to a dictionary"""
         return asdict(self)
 
     def to_json(self):
+        """Convert the properties to a json string"""
         return json.dumps(asdict(self))
 
     def _repr_html_(self):
@@ -49,6 +77,23 @@ class SlideProperties:
 
 
 class ReaderBase:
+    """The base class for all reader
+
+    This class defines the basic interface for all reader
+
+    Attributes
+    ----------
+    file : str
+        The path to the image file
+    properties : :class:`SlideProperties <wsi.reader.SlideProperties>`
+        The properties of the slide
+    name : str
+        The name of the reader
+    reader : Any
+        The reader object
+
+    """
+
     file: str
     properties: SlideProperties
     name = "base"
@@ -61,6 +106,16 @@ class ReaderBase:
         self.detach_reader()
 
     def translate_level(self, level):
+        """Translate the level to the actual level
+
+        level -1 refer to the lowest resolution level
+
+        Parameters
+        ----------
+        level : int
+            The level to translate
+
+        """
         levels = np.arange(self.properties.n_level)
         if level >= len(levels):
             raise ValueError(f"Request level {level} not exist")
@@ -83,6 +138,17 @@ class ReaderBase:
         raise NotImplementedError
 
     def get_level(self, level) -> np.ndarray[np.uint8]:
+        """
+        Extract the image at the given level
+
+        A very expensive operation, use with caution
+
+        Parameters
+        ----------
+        level : int
+            The level to extract
+
+        """
         height, width = self.properties.level_shape[level]
         return self.get_region(0, 0, width, height, level=level)
 
@@ -93,12 +159,30 @@ class ReaderBase:
             self.properties = SlideProperties.from_mapping(properties)
 
     def create_reader(self):
-        # The basic fallback implementation to create _reader
+        """Create the reader
+
+        This function should be implemented in the subclass
+
+        1. create the reader
+        2. assign the reader to self._reader
+
+        """
+        # The basic fallback implementation to create reader
         raise NotImplementedError
 
     def detach_reader(self):
-        # The basic fallback implementation to detach _reader
-        # In real implementation, this should close the file handler
+        """Detach the reader
+
+        This function will be called when the object is deleted or
+        sent to other process
+
+        Please implement this function in the subclass
+
+        1. Close the reader
+        2. Set self._reader to None
+        3. Clean up any resources that are not python-managed
+
+        """
         raise NotImplementedError
 
     @staticmethod

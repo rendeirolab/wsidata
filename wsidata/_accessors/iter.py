@@ -1,16 +1,40 @@
-from collections import namedtuple
+from typing import NamedTuple
 
 import cv2
 import numpy as np
 from shapely import Polygon
 
-TissueContour = namedtuple("TissueContour", ["tissue_id", "contour", "holes"])
-TissueImage = namedtuple("TissueImage", ["tissue_id", "x", "y", "image", "mask"])
-TileImage = namedtuple("TileImage", ["id", "x", "y", "tissue_id", "image"])
+from .._normalizer import ColorNormalizer
+
+
+class TissueContour(NamedTuple):
+    tissue_id: int
+    contour: np.ndarray
+    holes: list[np.ndarray]
+
+
+class TissueImage(NamedTuple):
+    tissue_id: int
+    x: int
+    y: int
+    image: np.ndarray
+    mask: np.ndarray
+
+
+class TileImage(NamedTuple):
+    id: int
+    x: int
+    y: int
+    tissue_id: int
+    image: np.ndarray
 
 
 class IterAccessor(object):
-    """An accessor to iterate over the WSI data."""
+    """An accessor to iterate over the WSI data.
+
+    Usage: `wsidata.iter`
+
+    """
 
     def __init__(self, obj):
         self._obj = obj
@@ -42,8 +66,9 @@ class IterAccessor(object):
         -------
         TissueContour
             A named tuple with fields:
-            - tissue_id: the tissue id
-            - contour: the tissue contour as a shapely geometry or an array
+
+            - tissue_id : The tissue id.
+            - contour : The tissue contour as a shapely geometry or an array.
 
         """
 
@@ -77,6 +102,7 @@ class IterAccessor(object):
         mask_bg=False,
         tissue_mask=False,
         color_norm: str = None,
+        format: str = "xyc",
     ) -> TissueImage:
         """Extract tissue images from the WSI.
 
@@ -88,21 +114,27 @@ class IterAccessor(object):
             The level to extract the tissue images.
         mask_bg : bool | int, default: False
             Mask the background with the given value.
+
             If False, the background is not masked.
+
             If True, the background is masked with 0.
+
             If an integer, the background is masked with the given value.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
+        format : str, {"xyc", "cyx"}, default: "xyc"
+            The channel format of the image.
 
         Returns
         -------
         TissueImage
             A named tuple with fields:
-            - tissue_id: the tissue id
-            - x: the x-coordinate of the image
-            - y: the y-coordinate of the image
-            - image: the tissue image
-            - mask: the tissue mask
+
+            - tissue_id : The tissue id.
+            - x : The x-coordinate of the image.
+            - y : The y-coordinate of the image.
+            - image : The tissue image.
+            - mask : The tissue mask.
 
         """
         import cv2
@@ -158,6 +190,9 @@ class IterAccessor(object):
             else:
                 mask = mask.astype(bool)
 
+            if format == "cyx":
+                img = img.transpose(2, 0, 1)
+
             yield TissueImage(tissue_id=ix, x=x, y=y, image=img, mask=mask)
 
     def tile_images(
@@ -165,6 +200,7 @@ class IterAccessor(object):
         key,
         raw=False,
         color_norm: str = None,
+        format: str = "xyc",
         shuffle: bool = False,
         sample_n: int = None,
         seed: int = 0,
@@ -177,9 +213,12 @@ class IterAccessor(object):
             The tile key.
         raw : bool, default: True
             Return the raw image without resizing.
+
             If False, the image is resized to the requested tile size.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
+        format : str, {"xyc", "cyx"}, default: "xyc"
+            The channel format of the image.
         shuffle : bool, default: False
             If True, return tile images in random order.
         sample_n : int, default: None
@@ -191,11 +230,12 @@ class IterAccessor(object):
         -------
         TileImage
             A named tuple with fields:
-            - id: the tile id
-            - x: the x-coordinate of the tile
-            - y: the y-coordinate of the tile
-            - tissue_id: the tissue id
-            - image: the tile image
+
+            - id: The tile id.
+            - x: The x-coordinate of the tile.
+            - y: The y-coordinate of the tile.
+            - tissue_id: The tissue id.
+            - image: The tile image.
 
         """
         tile_spec = self._obj.tile_spec(key)
@@ -226,61 +266,11 @@ class IterAccessor(object):
                 x, y, tile_spec.raw_width, tile_spec.raw_height, level=tile_spec.level
             )
             img = cn_func(img)
-            if raw and not need_transform:
-                yield TileImage(id=ix, x=x, y=y, tissue_id=tix, image=img)
-            else:
-                yield TileImage(
-                    id=ix,
-                    x=x,
-                    y=y,
-                    tissue_id=tix,
-                    image=cv2.resize(img, (tile_spec.width, tile_spec.height)),
-                )
 
+            if not raw or need_transform:
+                img = cv2.resize(img, (tile_spec.width, tile_spec.height))
 
-try:
-    import torch
-    import torchstain.torch.normalizers as norm
+            if format == "cyx":
+                img = img.transpose(2, 0, 1)
 
-    class ColorNormalizer(torch.nn.Module):
-        from torchvision.transforms.v2 import Compose, ToImage, ToDtype, Lambda
-
-        T = Compose(
-            [ToImage(), ToDtype(torch.float32, scale=True), Lambda(lambda x: x * 255)]
-        )
-
-        def __init__(self, method="macenko"):
-            super().__init__()
-
-            self.method = method
-            if method == "macenko":
-                normalizer = norm.TorchMacenkoNormalizer()
-            elif method == "reinhard":
-                normalizer = norm.TorchReinhardNormalizer()
-                normalizer.target_means = torch.tensor([72.909996, 20.8268, -4.9465137])
-                normalizer.target_stds = torch.tensor([18.560713, 14.889295, 5.6756697])
-            elif method == "reinhard_modified":
-                normalizer = norm.TorchReinhardNormalizer(method="modified")
-                normalizer.target_means = torch.tensor([72.909996, 20.8268, -4.9465137])
-                normalizer.target_stds = torch.tensor([18.560713, 14.889295, 5.6756697])
-            else:
-                raise NotImplementedError(
-                    f"Requested method '{method}' not implemented"
-                )
-            self.normalizer = normalizer
-
-        def __repr__(self):
-            return f"ColorNormalizer(method='{self.method}')"
-
-        def forward(self, img):
-            t_img = self.T(img)
-            if self.method == "macenko":
-                norm, _, _ = self.normalizer.normalize(I=t_img)
-            else:
-                norm = self.normalizer.normalize(I=t_img)
-            return norm
-except (ImportError, ModuleNotFoundError):
-
-    class ColorNormalizer:
-        def __init__(self):
-            raise ImportError("To use color normalization, please install torchstain.")
+            yield TileImage(id=ix, x=x, y=y, tissue_id=tix, image=img)

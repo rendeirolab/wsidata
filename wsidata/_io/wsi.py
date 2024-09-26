@@ -10,7 +10,7 @@ from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
 from .._model import WSIData
-from .._reader import get_reader
+from ..reader import get_reader
 from ._image import reader_datatree
 
 from .download import CacheDownloader
@@ -67,7 +67,6 @@ def open_wsi(
         The key to store the whole slide image, by default "wsi_thumbnail".
     save_images : bool, optional, default: False
         Whether to save the whole slide image to on the disk.
-
         Only works for wsi.save() method.
     attach_thumbnail : bool, optional, default: True
         Whether to attach thumbnail to image slot in the spatial data object.
@@ -82,8 +81,17 @@ def open_wsi(
 
     Returns
     -------
-    WSIData
+    :class:`WSIData`
         Whole slide image data.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        >>> from wsidata import open_wsi
+        >>> wsi = open_wsi("https://bit.ly/3ZvbzVc")
+
     """
 
     # Check if the slide is a file or URL
@@ -92,7 +100,7 @@ def open_wsi(
     if not fs.exists(wsi_path):
         raise ValueError(f"Slide {wsi} not existed or not accessible.")
 
-    # Early attempt with _reader
+    # Early attempt with reader
     ReaderCls = get_reader(reader)
 
     if download and fs.protocol != "file":
