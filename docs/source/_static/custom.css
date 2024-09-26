@@ -1,4 +1,20 @@
-/*For type annotation in API documentation*/
+html[data-theme="light"] {
+    --pst-color-primary: #C68FE6;
+    --pst-color-secondary: #FFCD05;
+    --pst-color-link: #C68FE6;
+    --pst-color-inline-code: rgb(96, 141, 130);
+}
+
+html[data-theme="dark"] {
+    --pst-color-primary: #C68FE6;
+    --pst-color-secondary: #FFCD05;
+}
+
+/* Change the highlight color, increase contrast*/
+html[data-theme="light"] .highlight .hll {
+    background-color: #fcf427;
+}
+
 span.classifier {
     margin-left: .5rem;
 }
