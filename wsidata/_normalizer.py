@@ -1,10 +1,9 @@
 try:
     import torch
     import torchstain.torch.normalizers as norm
+    from torchvision.transforms.v2 import Compose, ToImage, ToDtype, Lambda
 
     class ColorNormalizer(torch.nn.Module):
-        from torchvision.transforms.v2 import Compose, ToImage, ToDtype, Lambda
-
         T = Compose(
             [ToImage(), ToDtype(torch.float32, scale=True), Lambda(lambda x: x * 255)]
         )
@@ -43,4 +42,6 @@ except (ImportError, ModuleNotFoundError):
 
     class ColorNormalizer:
         def __init__(self, *args, **kwargs):
-            raise ImportError("To use color normalization, please install torchstain.")
+            raise ImportError(
+                "To use color normalization, please install torch, torchvision and torchstain."
+            )
