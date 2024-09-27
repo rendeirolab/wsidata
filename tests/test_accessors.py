@@ -1,3 +1,4 @@
+import pytest
 from anndata import AnnData
 
 
@@ -11,35 +12,34 @@ class TestGetAccessor:
         assert "width" in tables.columns
         assert "height" in tables.columns
 
-    def test_feature_anndata(self, wsidata):
-        tables = wsidata.get.feature_anndata("tiles")
+    def test_get_features_anndata(self, wsidata):
+        tables = wsidata.get.features_anndata("resnet50")
 
         assert isinstance(tables, AnnData)
-        assert "X" in tables
-        assert "obs" in tables
-        assert "obsm" in tables
-        assert "obsp" in tables
-        assert "uns" in tables
+        assert tables.X is not None
+        assert tables.obs is not None
+        assert tables.obsm is not None
+        assert tables.obsp is not None
+        assert tables.uns is not None
         assert "tile_spec" in tables.uns
         assert "slide_properties" in tables.uns
 
-    def test_get_features_anndata(self, wsidata):
-        features = wsidata.get.features_anndata("resnet50")
-        assert features is not None
-
-    def test_get_n_tissues(self, wsidata):
-        n_tissues = wsidata.get.n_tissues("tissues")
+    def test_get_n_tissue(self, wsidata):
+        n_tissues = wsidata.get.n_tissue("tissues")
         assert n_tissues == 1
 
     def test_get_n_tiles(self, wsidata):
         n_tiles = wsidata.get.n_tiles("tiles")
-        assert n_tiles == 20
+        assert n_tiles == 35
 
 
 class TestIterAccessor:
-    def test_iter_tissues(self, wsidata):
-        for _ in wsidata.iter.tissue_images("tissues"):
+    @pytest.mark.parametrize("color_norm", ["macenko", "reinhard"])
+    def test_iter_tissues(self, wsidata, color_norm):
+        for _ in wsidata.iter.tissue_images("tissues", color_norm=color_norm):
             pass
+
+        next(wsidata.iter.tissue_images("tissues", mask_bg=True))
 
     def test_iter_tiles(self, wsidata):
         for _ in wsidata.iter.tile_images("tiles"):
@@ -53,5 +53,5 @@ class TestIterAccessor:
 class TestDatasetAccessor:
     def test_ds_tile_images(self, wsidata):
         dataset = wsidata.ds.tile_images("tiles")
-        assert dataset.tiles.shape == (20, 2)
+        assert dataset.tiles.shape == (35, 2)
         assert dataset.spec is not None
