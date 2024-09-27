@@ -57,8 +57,13 @@ class OpenSlideReader(ReaderBase):
 
     def detach_reader(self):
         if self._reader is not None:
-            self._reader.close()
-            self._reader = None
+            try:
+                self._reader.close()
+                self._reader = None
+            # There is a chance that the pointer
+            # to C-library is already collected
+            except TypeError:
+                pass
 
     def create_reader(self):
         from openslide import OpenSlide
