@@ -1,8 +1,6 @@
 from datetime import datetime
 from functools import cached_property
 
-from sphinxawesome_theme.postprocess import Icons
-
 import wsidata
 
 project = "wsidata"
@@ -33,7 +31,6 @@ html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_logo = "_static/logo.svg"
 html_css_files = ["custom.css"]
-html_permalinks_icon = Icons.permalinks_icon
 html_theme_options = {
     "github_url": "https://github.com/rendeiro/wsidata",
     "navigation_with_keys": True,
