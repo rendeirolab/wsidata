@@ -1,7 +1,6 @@
 from datetime import datetime
 from functools import cached_property
 
-from patchworklib import inset
 from sphinxawesome_theme.postprocess import Icons
 
 import wsidata
