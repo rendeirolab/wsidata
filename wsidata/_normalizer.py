@@ -42,5 +42,5 @@ try:
 except (ImportError, ModuleNotFoundError):
 
     class ColorNormalizer:
-        def __init__(self):
+        def __init__(self, *args, **kwargs):
             raise ImportError("To use color normalization, please install torchstain.")
