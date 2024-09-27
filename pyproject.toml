@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
+    "torch",
     "torchstain",
 ]
 
