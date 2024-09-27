@@ -76,8 +76,18 @@ class CacheDownloader:
     def _hash_file(self, fileobj):
         import hashlib
 
-        digest = hashlib.file_digest(fileobj, self.hash_method)
-        return digest.hexdigest()
+        if hasattr(hashlib, "file_digest"):
+            digest = hashlib.file_digest(fileobj, self.hash_method)
+            hex_digest = digest.hexdigest()
+        else:
+            h = getattr(hashlib, self.hash_method)()
+            b = bytearray(128 * 1024)
+            mv = memoryview(b)
+            while n := fileobj.readinto(mv):
+                h.update(mv[:n])
+            hex_digest = h.hexdigest()
+
+        return hex_digest
 
     def download(self, pbar=True):
         """Download a single file with progress tracking."""
