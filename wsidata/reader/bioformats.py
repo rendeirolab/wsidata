@@ -27,9 +27,11 @@ class BioFormatsReader(ReaderBase):
     def __init__(
         self,
         file: Union[Path, str],
+        memorize: bool = False,
         **kwargs,
     ):
         self.file = str(file)
+        self._memorize = memorize
         # Bio-Formats specific properties
         self._is_interleaved = None  # This is a flag to indicate the storage layout
         self._dtype = None  # This is the pixel type
@@ -152,7 +154,8 @@ class BioFormatsReader(ReaderBase):
         # Now each series will be a pyramid level
         reader.setFlattenedResolutions(False)
         # This will cache the reader on java side
-        reader = loci.formats.Memoizer(reader, 1)
+        if self._memorize:
+            reader = loci.formats.Memoizer(reader, 1)
         reader.setId(self.file)
 
         # Always point the reader to the Pyramid with the highest resolution
