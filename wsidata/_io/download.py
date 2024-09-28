@@ -3,7 +3,7 @@ from pathlib import Path
 import fsspec
 
 
-def _create_progress(pbar=True):
+def _create_progress(pbar=True, known_length=True):
     from rich.progress import (
         Progress,
         BarColumn,
@@ -11,20 +11,32 @@ def _create_progress(pbar=True):
         DownloadColumn,
         TransferSpeedColumn,
         TimeRemainingColumn,
+        SpinnerColumn,
     )
 
-    return Progress(
-        TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
-        BarColumn(bar_width=20),
-        "[progress.percentage]{task.percentage:>3.1f}%",
-        "•",
-        DownloadColumn(),
-        "•",
-        TransferSpeedColumn(),
-        "•",
-        TimeRemainingColumn(),
-        disable=not pbar,
-    )
+    if known_length:
+        return Progress(
+            TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
+            BarColumn(bar_width=20),
+            "[progress.percentage]{task.percentage:>3.1f}%",
+            "•",
+            DownloadColumn(),
+            "•",
+            TransferSpeedColumn(),
+            "•",
+            TimeRemainingColumn(),
+            disable=not pbar,
+        )
+    else:
+        return Progress(
+            TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
+            SpinnerColumn(),
+            "•",
+            DownloadColumn(),
+            "•",
+            TransferSpeedColumn(),
+            disable=not pbar,
+        )
 
 
 class CacheDownloader:
@@ -65,7 +77,7 @@ class CacheDownloader:
         self.hash_path = cache_dir / f".{name}.{self.hash_method}"
 
     def is_cache(self):
-        if self.dest.exists() and self.hash_path.exists():
+        if self.dest.exists() & self.hash_path.exists():
             with open(self.hash_path, "r") as f:
                 last_file_hash = f.read()
             with open(self.dest, "rb") as f:
@@ -94,7 +106,8 @@ class CacheDownloader:
         if self.is_cache():
             return self.dest
         else:
-            progress = _create_progress(pbar)
+            known_length = self.total_size is not None
+            progress = _create_progress(pbar, known_length)
             with progress:
                 with fsspec.open(self.url, "rb") as fsrc:
                     task_id = progress.add_task(
@@ -105,7 +118,7 @@ class CacheDownloader:
                         chunk_size = 1024 * 1024  # 1 MB
                         while chunk := fsrc.read(chunk_size):
                             fdst.write(chunk)
-                            progress.advance(task_id, chunk_size)
+                            progress.advance(task_id, len(chunk))
                 progress.refresh()
                 # Create a hash file
                 with open(self.hash_path, "w") as f:
