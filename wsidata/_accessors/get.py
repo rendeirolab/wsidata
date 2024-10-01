@@ -101,6 +101,7 @@ class GetAccessor(object):
         feature_key = self._obj._check_feature_key(feature_key, tile_key)
         feature_adata = sdata.tables[feature_key]
         X = feature_adata.X  # Must be a numpy array
+        var = feature_adata.var
 
         # layers slot
         layers = feature_adata.layers
@@ -138,5 +139,12 @@ class GetAccessor(object):
                 uns["spatial"] = graph_table.uns["spatial"]
 
         return AnnData(
-            X=X, obs=obs, obsm=obsm, obsp=obsp, uns=uns, varm=varm, layers=layers
+            X=X,
+            layers=layers,
+            var=var,
+            varm=varm,
+            obs=obs,
+            obsm=obsm,
+            obsp=obsp,
+            uns=uns,
         )
