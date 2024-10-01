@@ -239,11 +239,6 @@ class IterAccessor(object):
 
         """
         tile_spec = self._obj.tile_spec(key)
-        # Check if the image needs to be transformed
-        need_transform = (
-            tile_spec.raw_width != tile_spec.width
-            or tile_spec.raw_height != tile_spec.height
-        )
 
         if color_norm is not None:
             cn = ColorNormalizer(method=color_norm)
@@ -267,7 +262,7 @@ class IterAccessor(object):
             )
             img = cn_func(img)
 
-            if not raw or need_transform:
+            if not raw:
                 img = cv2.resize(img, (tile_spec.width, tile_spec.height))
 
             if format == "cyx":
