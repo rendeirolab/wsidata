@@ -32,8 +32,9 @@ html_static_path = ["_static"]
 html_logo = "_static/logo.svg"
 html_css_files = ["custom.css"]
 html_theme_options = {
-    "github_url": "https://github.com/rendeiro/wsidata",
+    "github_url": "https://github.com/rendeirolab/wsidata",
     "navigation_with_keys": True,
+    "show_prev_next": False,
 }
 
 html_sidebars = {"installation": [], "intro": []}
