@@ -19,8 +19,8 @@ from spatialdata.models import ShapesModel, TableModel
 
 from .tilespec import TileSpec
 from .._accessors import GetAccessor, IterAccessor, DatasetAccessor
-from ..reader import ReaderBase
 from .._utils import find_stack_level
+from ..reader import ReaderBase
 
 
 class WSIData(object):
@@ -338,23 +338,39 @@ class WSIData(object):
             shapes[k] = v
         self._write_elements.add(key)
 
-    def add_features(self, key, tile_key, features):
+    def add_features(self, key, tile_key, features, **kws):
         tile_id = np.arange(len(features))
-        obs = pd.DataFrame(
-            {"tile_id": tile_id, "library_id": pd.Categorical([tile_key])},
-            index=tile_id.astype(str),
-        )
-        adata = AnnData(X=features, obs=obs)
+        library_id = pd.Categorical([tile_key])
 
-        feature_table = TableModel.parse(
-            adata, region=tile_key, region_key="library_id", instance_key="tile_id"
+        if "obs" in kws:
+            obs = kws["obs"]
+            obs["tile_id"] = tile_id
+            obs["library_id"] = library_id
+        else:
+            obs = pd.DataFrame(
+                {"tile_id": tile_id, "library_id": library_id},
+                index=tile_id.astype(str),
+            )
+            kws["obs"] = obs
+        adata = AnnData(X=features, **kws)
+
+        model_kws = dict(
+            region=tile_key, region_key="library_id", instance_key="tile_id"
         )
+        feature_table = TableModel.parse(adata, **model_kws)
         self.sdata.tables[key] = feature_table
         self._write_elements.add(key)
 
-    def add_agg_features(self, key, agg_key, agg_features):
+    def add_agg_features(self, key, agg_key, agg_features, by_key=None, by_data=None):
         feature_table = self.sdata.tables[key]
         feature_table.varm[agg_key] = agg_features
+
+        agg_ops = feature_table.uns.get("agg_ops", {})
+        agg_ops[agg_key] = by_key
+        feature_table.uns["agg_ops"] = agg_ops
+        if by_data is not None:
+            feature_table.obs[by_key] = by_data
+
         self._write_elements.add(key)
 
     def add_table(self, key, table, **kws):
