@@ -101,7 +101,8 @@ def open_wsi(
         raise ValueError(f"Slide {wsi} not existed or not accessible.")
 
     # Early attempt with reader
-    ReaderCls = get_reader(reader)
+    format = Path(wsi).suffix
+    ReaderCls = get_reader(reader, format=format)
 
     if download and fs.protocol != "file":
         downloader = CacheDownloader(wsi_path, name=name, cache_dir=cache_dir)
