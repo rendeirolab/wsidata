@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-wsidata: Efficient Data Structures for Whole Slide Image Analysis and IO
+wsidata: Efficient data structures and IO for whole slide images analysis
 =========================================================================
 
 
@@ -20,7 +20,7 @@ wsidata: Efficient Data Structures for Whole Slide Image Analysis and IO
       :columns: 12 8 8 8
       :child-align: center
 
-      `WSIData <wsidata.WSIData>` is data structure for manipulating whole slide images (WSI)
+      `WSIData <wsidata.WSIData>`_ is data structure for manipulating whole slide images (WSI)
       and storing its analysis results in Python.
       It can read a variety of WSI formats and the storage is backed by SpatialData storage.
       :code:`wsidata` is designed to used with `LazySlide`.

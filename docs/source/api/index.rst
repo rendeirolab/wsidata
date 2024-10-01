@@ -14,6 +14,18 @@ IO and Utilities Functions
     agg_wsi
     get_reader
 
+WSIData
+-------
+
+.. currentmodule:: wsidata
+.. autosummary::
+    :toctree: _autogen
+    :template: autosummary
+    :nosignatures:
+
+    WSIData
+    TileSpec
+
 Accessors
 ---------
 
@@ -53,16 +65,3 @@ Readers
     TiffSlideReader
     BioFormatsReader
     SlideProperties
-
-
-WSIData
--------
-
-.. currentmodule:: wsidata
-.. autosummary::
-    :toctree: _autogen
-    :template: autosummary
-    :nosignatures:
-
-    WSIData
-    TileSpec
