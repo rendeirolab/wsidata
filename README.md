@@ -6,7 +6,7 @@
     </picture>
 </p>
 <p align="center">
-  <i>Efficient Data Structures for Whole Slide Image Analysis and IO</i>
+  <i>Efficient data structures and IO for whole slide images analysis</i>
 </p>
 
 
