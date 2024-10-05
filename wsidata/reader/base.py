@@ -188,11 +188,15 @@ class ReaderBase:
     @staticmethod
     def resize_img(
         img: np.ndarray,
-        scale: float,
+        dsize: SHAPE = None,
+        scale: float = None,
     ):
         dim = np.asarray(img.shape)
-        dim = np.array(dim * scale, dtype=int)
-        return cv2.resize(img, dim)
+        if dsize is not None:
+            return cv2.resize(img, dsize)
+        if scale is not None:
+            dim = np.array(dim * scale, dtype=int)
+            return cv2.resize(img, dim)
 
     @property
     def reader(self):
