@@ -39,7 +39,10 @@ class OpenSlideReader(ReaderBase):
         **kwargs,
     ):
         level = self.translate_level(level)
-        img = self.reader.read_region((x, y), level, (int(width), int(height)))
+        # All types are coerced to native Python types
+        img = self.reader.read_region(
+            (int(x), int(y)), int(level), (int(width), int(height))
+        )
         return convert_image(img)
 
     def get_thumbnail(self, size, **kwargs):
