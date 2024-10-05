@@ -1,8 +1,11 @@
-from typing import NamedTuple
+from __future__ import annotations
+
+from typing import NamedTuple, Sequence, Dict
 
 import cv2
 import numpy as np
-from shapely import Polygon
+from shapely import Polygon, box
+from shapely.affinity import translate, scale
 
 from .._normalizer import ColorNormalizer
 
@@ -27,6 +30,22 @@ class TileImage(NamedTuple):
     y: int
     tissue_id: int
     image: np.ndarray
+    anno_mask: np.ndarray = None
+
+    def __repr__(self):
+        image_dtype = self.image.dtype
+        if self.anno_mask is not None:
+            mask_repr = f"shape: {self.anno_mask.shape}, dtype: {self.anno_mask.dtype}"
+        else:
+            mask_repr = None
+
+        return (
+            f"TileImage(id={self.id}, "
+            f"x={self.x}, y={self.y}, "
+            f"tissue_id={self.tissue_id}, "
+            f"image=(shape: {self.image.shape}, dtype: {image_dtype}), "
+            f"anno_mask=({mask_repr})"
+        )
 
 
 class IterAccessor(object):
@@ -201,6 +220,10 @@ class IterAccessor(object):
         raw=False,
         color_norm: str = None,
         format: str = "xyc",
+        annotation_key: str = None,
+        annotation_name: str | Sequence[str] = None,
+        annotation_label: str | Dict[str, int] = None,
+        mask_dtype: np.dtype = None,
         shuffle: bool = False,
         sample_n: int = None,
         seed: int = 0,
@@ -213,12 +236,20 @@ class IterAccessor(object):
             The tile key.
         raw : bool, default: True
             Return the raw image without resizing.
-
             If False, the image is resized to the requested tile size.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
         format : str, {"xyc", "cyx"}, default: "xyc"
             The channel format of the image.
+        annotation_key : str, default: None
+            The key to the annotation table in :bdg-danger:`shapes` slot.
+        annotation_name : str or array of str, default: None
+            The name of the annotation column in the annotation table or a list of names.
+        annotation_label : str or dict, default: None
+            The name of the label column in the annotation table or a dictionary of label mappings.
+        mask_dtype : np.dtype, default: np.uint8
+            The data type of the annotation mask, if you have annotation labels more than 255,
+            consider using data type with higher bound.
         shuffle : bool, default: False
             If True, return tile images in random order.
         sample_n : int, default: None
@@ -246,6 +277,42 @@ class IterAccessor(object):
         else:
             cn_func = lambda x: x  # noqa
 
+        create_anno_mask = False
+        anno_tb = None
+        mask_size = (
+            (tile_spec.raw_height, tile_spec.raw_width)
+            if raw
+            else (tile_spec.height, tile_spec.width)
+        )
+        downsample = tile_spec.downsample
+        if annotation_key is not None:
+            create_anno_mask = True
+            if annotation_name is None:
+                raise ValueError(
+                    "annotation_name must be provided to create annotation mask."
+                )
+            if annotation_label is None:
+                raise ValueError(
+                    "annotation_label must be provided to create annotation mask."
+                )
+
+            anno_tb = self._obj.sdata.shapes[annotation_key]
+            if isinstance(annotation_name, str):
+                annotation_name = anno_tb[annotation_name]
+
+            if isinstance(annotation_label, str):
+                annotation_label = anno_tb[annotation_label]
+            else:
+                annotation_label = [annotation_label[n] for n in annotation_name]
+            annotation_name = np.asarray(annotation_name)
+            annotation_label = np.asarray(annotation_label)
+
+            if mask_dtype is None:
+                if annotation_label.max() > 255:
+                    mask_dtype = np.uint32
+                else:
+                    mask_dtype = np.uint8
+
         points = self._obj.sdata[key]
         if sample_n is not None:
             points = points.sample(n=sample_n, random_state=seed)
@@ -257,6 +324,7 @@ class IterAccessor(object):
             y = row["y"]
             ix = row["id"]
             tix = row["tissue_id"]
+
             img = self._obj.reader.get_region(
                 x, y, tile_spec.raw_width, tile_spec.raw_height, level=tile_spec.level
             )
@@ -268,4 +336,30 @@ class IterAccessor(object):
             if format == "cyx":
                 img = img.transpose(2, 0, 1)
 
-            yield TileImage(id=ix, x=x, y=y, tissue_id=tix, image=img)
+            anno_mask = None
+            if create_anno_mask:
+                bbox = box(x, y, x + tile_spec.raw_width, y + tile_spec.raw_height)
+                sel = anno_tb.geometry.intersects(bbox)  # return a boolean mask
+                anno_mask = np.zeros(mask_size, dtype=mask_dtype)
+                if sel.sum() > 0:
+                    sel = sel.values
+                    geos = anno_tb.geometry[sel]
+                    names = annotation_name[sel]
+                    labels = annotation_label[sel]
+
+                    for geo, name, label in zip(geos, names, labels):
+                        geo = translate(geo, xoff=-x, yoff=-y)
+                        if not raw:
+                            geo = scale(
+                                geo, 1 / downsample, 1 / downsample, origin=(0, 0)
+                            )
+                        cnt = np.array(geo.exterior.coords, dtype=np.int32)
+                        holes = [
+                            np.array(h.coords, dtype=np.int32) for h in geo.interiors
+                        ]
+                        cv2.fillPoly(anno_mask, [cnt], int(label))  # noqa
+                        cv2.fillPoly(anno_mask, holes, 0)  # noqa
+
+            yield TileImage(
+                id=ix, x=x, y=y, tissue_id=tix, image=img, anno_mask=anno_mask
+            )
