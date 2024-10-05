@@ -13,10 +13,14 @@ class TileSpec:
         The height of the tile.
     width : int
         The width of the tile.
-    raw_height : int
-        The height of the raw image.
-    raw_width : int
-        The width of the raw image.
+    stride_height : int
+        The height of the stride.
+    stride_width : int
+        The width of the stride.
+    raw_{height, width} : int
+        The height/width of the tile when retrieving images.
+    raw_stride_{height, width}: int
+        The height/width of the stride when retrieving images.
     tissue_name : str
         The name of the tissue.
     level : int, default: 0
@@ -30,8 +34,12 @@ class TileSpec:
 
     height: int
     width: int
+    stride_height: int
+    stride_width: int
     raw_height: int
     raw_width: int
+    raw_stride_height: int
+    raw_stride_width: int
     tissue_name: str
     level: int = 0
     downsample: float = 1
