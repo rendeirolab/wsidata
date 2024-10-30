@@ -4,6 +4,7 @@ import pytest
 from shapely import Polygon
 
 from wsidata import TileSpec
+from wsidata import io
 
 
 class TestWSIData:
@@ -35,16 +36,17 @@ class TestWSIData:
 
         tissues = [Polygon(tissue, tissue_holes)]
 
-        wsidata.add_tissues("test_tissue", tissues)
+        io.add_tissues(wsidata, "test_tissue", tissues)
 
-        tissue_table = wsidata.sdata["test_tissue"]
+        tissue_table = wsidata["test_tissue"]
 
         assert "tissue_id" in tissue_table.columns
 
     def test_add_tiles(self, wsidata):
         tiles = np.random.randint(0, 255, (self.n_tiles, 2), dtype=np.int32)
 
-        wsidata.add_tiles(
+        io.add_tiles(
+            wsidata,
             "test_tile",
             tiles,
             tile_spec=TileSpec(
@@ -52,6 +54,10 @@ class TestWSIData:
                 width=256,
                 raw_height=256,
                 raw_width=256,
+                stride_height=256,
+                stride_width=256,
+                raw_stride_height=256,
+                raw_stride_width=256,
                 tissue_name="test_tissue",
                 level=0,
                 downsample=1,
@@ -60,7 +66,7 @@ class TestWSIData:
             tissue_ids=np.random.randint(0, 2, self.n_tiles),
         )
 
-        tile_table = wsidata.sdata["test_tile"]
+        tile_table = wsidata["test_tile"]
         assert "id" in tile_table.columns
         assert "tissue_id" in tile_table.columns
         assert "x" in tile_table.columns
@@ -71,14 +77,14 @@ class TestWSIData:
         data = {"key1": np.random.rand(self.n_tiles)}
 
         if format == "dict":
-            wsidata.update_shapes_data("test_tile", data=data)
+            io.update_shapes_data(wsidata, "test_tile", data=data)
         elif format == "dataframe":
-            wsidata.update_shapes_data("test_tile", data=pd.DataFrame(data))
+            io.update_shapes_data(wsidata, "test_tile", data=pd.DataFrame(data))
 
     def test_add_features(self, wsidata):
         features = np.random.rand(self.n_tiles, 1024)
 
-        wsidata.add_features("test_feature", "test_tile", features)
+        io.add_features(wsidata, "test_feature", "test_tile", features)
 
     def test_save(self, wsidata, tmpdir):
         wsidata.save(tmpdir / "test.wsi")

@@ -3,6 +3,153 @@
         ".zgroup": {
             "zarr_format": 2
         },
+        "images/.zgroup": {
+            "zarr_format": 2
+        },
+        "images/wsi_thumbnail/.zattrs": {
+            "multiscales": [
+                {
+                    "axes": [
+                        {
+                            "name": "c",
+                            "type": "channel"
+                        },
+                        {
+                            "name": "y",
+                            "type": "space"
+                        },
+                        {
+                            "name": "x",
+                            "type": "space"
+                        }
+                    ],
+                    "coordinateTransformations": [
+                        {
+                            "input": {
+                                "axes": [
+                                    {
+                                        "name": "c",
+                                        "type": "channel"
+                                    },
+                                    {
+                                        "name": "y",
+                                        "type": "space",
+                                        "unit": "unit"
+                                    },
+                                    {
+                                        "name": "x",
+                                        "type": "space",
+                                        "unit": "unit"
+                                    }
+                                ],
+                                "name": "cyx"
+                            },
+                            "output": {
+                                "axes": [
+                                    {
+                                        "name": "c",
+                                        "type": "channel"
+                                    },
+                                    {
+                                        "name": "y",
+                                        "type": "space",
+                                        "unit": "unit"
+                                    },
+                                    {
+                                        "name": "x",
+                                        "type": "space",
+                                        "unit": "unit"
+                                    }
+                                ],
+                                "name": "global"
+                            },
+                            "scale": [
+                                1.0,
+                                1.9839142091152815,
+                                1.983288770053476
+                            ],
+                            "type": "scale"
+                        }
+                    ],
+                    "datasets": [
+                        {
+                            "coordinateTransformations": [
+                                {
+                                    "scale": [
+                                        1.0,
+                                        1.0,
+                                        1.0
+                                    ],
+                                    "type": "scale"
+                                }
+                            ],
+                            "path": "0"
+                        }
+                    ],
+                    "metadata": {
+                        "omero": {
+                            "channels": [
+                                {
+                                    "label": 0
+                                },
+                                {
+                                    "label": 1
+                                },
+                                {
+                                    "label": 2
+                                }
+                            ]
+                        }
+                    },
+                    "name": "/images/wsi_thumbnail",
+                    "version": "0.4"
+                }
+            ],
+            "omero": {
+                "channels": [
+                    {
+                        "label": 0
+                    },
+                    {
+                        "label": 1
+                    },
+                    {
+                        "label": 2
+                    }
+                ]
+            },
+            "spatialdata_attrs": {
+                "version": "0.1"
+            }
+        },
+        "images/wsi_thumbnail/.zgroup": {
+            "zarr_format": 2
+        },
+        "images/wsi_thumbnail/0/.zarray": {
+            "chunks": [
+                3,
+                1496,
+                1119
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dimension_separator": "/",
+            "dtype": "|u1",
+            "fill_value": 0,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                3,
+                1496,
+                1119
+            ],
+            "zarr_format": 2
+        },
         "shapes/.zgroup": {
             "zarr_format": 2
         },
@@ -119,7 +266,7 @@
         },
         "tables/resnet50_tiles/X/.zarray": {
             "chunks": [
-                35,
+                31,
                 1000
             ],
             "compressor": {
@@ -135,7 +282,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                35,
+                31,
                 1000
             ],
             "zarr_format": 2
@@ -165,7 +312,7 @@
         },
         "tables/resnet50_tiles/obs/_index/.zarray": {
             "chunks": [
-                35
+                31
             ],
             "compressor": {
                 "blocksize": 0,
@@ -184,7 +331,7 @@
             ],
             "order": "C",
             "shape": [
-                35
+                31
             ],
             "zarr_format": 2
         },
@@ -231,7 +378,7 @@
         },
         "tables/resnet50_tiles/obs/library_id/codes/.zarray": {
             "chunks": [
-                35
+                31
             ],
             "compressor": {
                 "blocksize": 0,
@@ -246,7 +393,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                35
+                31
             ],
             "zarr_format": 2
         },
@@ -256,7 +403,7 @@
         },
         "tables/resnet50_tiles/obs/tile_id/.zarray": {
             "chunks": [
-                35
+                31
             ],
             "compressor": {
                 "blocksize": 0,
@@ -271,7 +418,7 @@
             "filters": null,
             "order": "C",
             "shape": [
-                35
+                31
             ],
             "zarr_format": 2
         },
@@ -856,6 +1003,36 @@
             "encoding-type": "numeric-scalar",
             "encoding-version": "0.2.0"
         },
+        "tables/tile_spec/uns/tiles/raw_stride_height/.zarray": {
+            "chunks": [],
+            "compressor": null,
+            "dimension_separator": "/",
+            "dtype": "<i8",
+            "fill_value": 0,
+            "filters": null,
+            "order": "C",
+            "shape": [],
+            "zarr_format": 2
+        },
+        "tables/tile_spec/uns/tiles/raw_stride_height/.zattrs": {
+            "encoding-type": "numeric-scalar",
+            "encoding-version": "0.2.0"
+        },
+        "tables/tile_spec/uns/tiles/raw_stride_width/.zarray": {
+            "chunks": [],
+            "compressor": null,
+            "dimension_separator": "/",
+            "dtype": "<i8",
+            "fill_value": 0,
+            "filters": null,
+            "order": "C",
+            "shape": [],
+            "zarr_format": 2
+        },
+        "tables/tile_spec/uns/tiles/raw_stride_width/.zattrs": {
+            "encoding-type": "numeric-scalar",
+            "encoding-version": "0.2.0"
+        },
         "tables/tile_spec/uns/tiles/raw_width/.zarray": {
             "chunks": [],
             "compressor": null,
@@ -868,6 +1045,36 @@
             "zarr_format": 2
         },
         "tables/tile_spec/uns/tiles/raw_width/.zattrs": {
+            "encoding-type": "numeric-scalar",
+            "encoding-version": "0.2.0"
+        },
+        "tables/tile_spec/uns/tiles/stride_height/.zarray": {
+            "chunks": [],
+            "compressor": null,
+            "dimension_separator": "/",
+            "dtype": "<i8",
+            "fill_value": 0,
+            "filters": null,
+            "order": "C",
+            "shape": [],
+            "zarr_format": 2
+        },
+        "tables/tile_spec/uns/tiles/stride_height/.zattrs": {
+            "encoding-type": "numeric-scalar",
+            "encoding-version": "0.2.0"
+        },
+        "tables/tile_spec/uns/tiles/stride_width/.zarray": {
+            "chunks": [],
+            "compressor": null,
+            "dimension_separator": "/",
+            "dtype": "<i8",
+            "fill_value": 0,
+            "filters": null,
+            "order": "C",
+            "shape": [],
+            "zarr_format": 2
+        },
+        "tables/tile_spec/uns/tiles/stride_width/.zattrs": {
             "encoding-type": "numeric-scalar",
             "encoding-version": "0.2.0"
         },
