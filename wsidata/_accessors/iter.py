@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import NamedTuple, Sequence, Dict
+from typing import NamedTuple, Sequence, Dict, List, Tuple
 
 import cv2
 import numpy as np
-from shapely import Polygon, box
+from shapely import MultiPolygon, Polygon, box, clip_by_rect
 from shapely.affinity import translate, scale
 
 from .._normalizer import ColorNormalizer
@@ -13,7 +13,7 @@ from .._normalizer import ColorNormalizer
 class TissueContour(NamedTuple):
     tissue_id: int
     contour: np.ndarray
-    holes: list[np.ndarray]
+    holes: List[np.ndarray | Polygon] | None = None
 
 
 class TissueImage(NamedTuple):
@@ -30,12 +30,15 @@ class TileImage(NamedTuple):
     y: int
     tissue_id: int
     image: np.ndarray
-    anno_mask: np.ndarray = None
+    anno_mask: np.ndarray | None = None
+    anno_shapes: List[Tuple[Polygon, str, int]] | None = None
 
     def __repr__(self):
         image_dtype = self.image.dtype
         if self.anno_mask is not None:
-            mask_repr = f"shape: {self.anno_mask.shape}, dtype: {self.anno_mask.dtype}"
+            mask_repr = (
+                f"(shape: {self.anno_mask.shape}, dtype: {self.anno_mask.dtype})"
+            )
         else:
             mask_repr = None
 
@@ -44,7 +47,8 @@ class TileImage(NamedTuple):
             f"x={self.x}, y={self.y}, "
             f"tissue_id={self.tissue_id}, "
             f"image=(shape: {self.image.shape}, dtype: {image_dtype}), "
-            f"anno_mask=({mask_repr})"
+            f"anno_mask={mask_repr}, "
+            f"anno_shapes=({len(self.anno_shapes)} shapes))"
         )
 
 
@@ -91,7 +95,7 @@ class IterAccessor(object):
 
         """
 
-        contours = self._obj.sdata.shapes[key]
+        contours = self._obj.shapes[key]
 
         if shuffle:
             contours = contours.sample(frac=1, random_state=seed)
@@ -296,7 +300,7 @@ class IterAccessor(object):
                     "annotation_label must be provided to create annotation mask."
                 )
 
-            anno_tb = self._obj.sdata.shapes[annotation_key]
+            anno_tb = self._obj.shapes[annotation_key]
             if isinstance(annotation_name, str):
                 annotation_name = anno_tb[annotation_name]
 
@@ -313,7 +317,7 @@ class IterAccessor(object):
                 else:
                     mask_dtype = np.uint8
 
-        points = self._obj.sdata[key]
+        points = self._obj[key]
         if sample_n is not None:
             points = points.sample(n=sample_n, random_state=seed)
         elif shuffle:
@@ -336,8 +340,10 @@ class IterAccessor(object):
             if format == "cyx":
                 img = img.transpose(2, 0, 1)
 
+            anno_shapes = None
             anno_mask = None
             if create_anno_mask:
+                anno_shapes = []
                 bbox = box(x, y, x + tile_spec.raw_width, y + tile_spec.raw_height)
                 sel = anno_tb.geometry.intersects(bbox)  # return a boolean mask
                 anno_mask = np.zeros(mask_size, dtype=mask_dtype)
@@ -359,7 +365,21 @@ class IterAccessor(object):
                         ]
                         cv2.fillPoly(anno_mask, [cnt], int(label))  # noqa
                         cv2.fillPoly(anno_mask, holes, 0)  # noqa
+                        # Clip the annotation by the tile
+                        output_geo = clip_by_rect(geo, 0, 0, *mask_size)
+                        if isinstance(output_geo, MultiPolygon):
+                            output_geo = [p for p in output_geo.geoms]
+                        else:
+                            output_geo = [output_geo]
+                        for p in output_geo:
+                            anno_shapes.append((p, name, label))
 
             yield TileImage(
-                id=ix, x=x, y=y, tissue_id=tix, image=img, anno_mask=anno_mask
+                id=ix,
+                x=x,
+                y=y,
+                tissue_id=tix,
+                image=img,
+                anno_mask=anno_mask,
+                anno_shapes=anno_shapes,
             )

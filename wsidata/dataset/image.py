@@ -41,7 +41,7 @@ class TileImagesDataset(Dataset):
         target_transform=None,
     ):
         # Do not assign wsi to self to avoid pickling
-        tiles = wsi.sdata[key]
+        tiles = wsi[key]
         self.tiles = tiles[["x", "y", "tissue_id"]].to_numpy()
         self.spec = wsi.tile_spec(key)
         self.color_norm = color_norm

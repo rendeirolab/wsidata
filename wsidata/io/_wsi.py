@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -9,16 +9,14 @@ from spatialdata import read_zarr, SpatialData
 from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
+from ._download import CacheDownloader
 from .._model import WSIData
-from ..reader import get_reader
-from ._image import reader_datatree
-
-from .download import CacheDownloader
+from ..reader import get_reader, to_datatree
 
 
 def open_wsi(
     wsi,
-    backed_file=None,
+    store=None,
     reader=None,
     download=True,
     name=None,
@@ -45,7 +43,7 @@ def open_wsi(
     ----------
     wsi : str or Path
         The URL to whole slide image.
-    backed_file : str, optional
+    store : str, optional
         The backed file path, by default will create
         a zarr file with the same name as the slide file.
         You can either supply a file path or a directory.
@@ -110,29 +108,29 @@ def open_wsi(
 
     reader_obj = ReaderCls(wsi)
     wsi = Path(wsi)
-    if backed_file is None:
-        backed_file = wsi.with_suffix(".zarr")
+    if store is None:
+        store = wsi.with_suffix(".zarr")
     else:
         # We also support write all backed file to a directory
-        backed_file_p = Path(backed_file)
+        backed_file_p = Path(store)
         if backed_file_p.is_dir():
             zarr_name = Path(wsi).with_suffix(".zarr").name
-            backed_file = backed_file_p / zarr_name
+            store = backed_file_p / zarr_name
         else:
-            backed_file = backed_file_p
+            store = backed_file_p
 
-    if backed_file.exists():
-        sdata = read_zarr(backed_file)
+    if store.exists():
+        sdata = read_zarr(store)
     else:
         sdata = SpatialData()
 
-    updated_elements = []
+    exclude_elements = []
 
     if attach_images and image_key not in sdata:
-        images_datatree = reader_datatree(reader_obj)
+        images_datatree = to_datatree(reader_obj)
         sdata.images[image_key] = images_datatree
-        if save_images:
-            updated_elements.append(image_key)
+        if not save_images:
+            exclude_elements.append(image_key)
 
     if attach_thumbnail and thumbnail_key not in sdata:
         thumbnail = reader_obj.get_thumbnail(thumbnail_size)
@@ -149,11 +147,11 @@ def open_wsi(
                 dims=("c", "y", "x"),
                 transformations={"global": Scale([scale_x, scale_y], axes=("x", "y"))},
             )
-            if save_thumbnail:
-                updated_elements.append(thumbnail_key)
+            if not save_thumbnail:
+                exclude_elements.append(thumbnail_key)
 
-    slide_data = WSIData(reader_obj, sdata, backed_file)
-    slide_data.add_write_elements(updated_elements)
+    slide_data = WSIData.from_spatialdata(sdata, reader_obj)
+    slide_data.set_exclude_elements(exclude_elements)
     return slide_data
 
 
@@ -163,7 +161,7 @@ def agg_wsi(
     tile_key="tiles",
     agg_key="agg",
     wsi_col=None,
-    backed_file_col=None,
+    store_col=None,
     error="raise",
 ):
     """
@@ -184,7 +182,7 @@ def agg_wsi(
         The output aggregation key in the varm slot.
     wsi_col: str
         The column name of the whole slide image paths.
-    backed_file_col: str
+    store_col: str
         The column name of the backed file.
     error: str
         Whether to raise error when file not existed.
@@ -194,11 +192,11 @@ def agg_wsi(
     AnnData
         The aggregated feature space.
     """
-    if wsi_col is None and backed_file_col is None:
+    if wsi_col is None and store_col is None:
         raise ValueError("Either wsi_col or backed_file_col must be provided.")
 
-    if backed_file_col is not None:
-        backed_files = slides_table[backed_file_col]
+    if store_col is not None:
+        backed_files = slides_table[store_col]
     elif wsi_col is not None:
         backed_files = slides_table[wsi_col].apply(
             lambda x: Path(x).with_suffix(".zarr")
