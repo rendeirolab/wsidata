@@ -20,7 +20,7 @@ WSIData
 .. currentmodule:: wsidata
 .. autosummary::
     :toctree: _autogen
-    :template: autosummary
+    :template: wsidata
     :nosignatures:
 
     WSIData
@@ -36,7 +36,7 @@ Accessors
     :nosignatures:
 
     register_wsidata_accessor
-    GetAccessor
+    FetchAccessor
     IterAccessor
     DatasetAccessor
 

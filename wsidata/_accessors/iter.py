@@ -92,6 +92,7 @@ class IterAccessor(object):
 
             - tissue_id : The tissue id.
             - contour : The tissue contour as a shapely geometry or an array.
+            - holes : The holes in the tissue contour.
 
         """
 
@@ -271,6 +272,8 @@ class IterAccessor(object):
             - y: The y-coordinate of the tile.
             - tissue_id: The tissue id.
             - image: The tile image.
+            - anno_mask: The annotation mask.
+            - anno_shapes: The annotation shapes.
 
         """
         tile_spec = self._obj.tile_spec(key)

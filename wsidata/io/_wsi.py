@@ -152,6 +152,7 @@ def open_wsi(
 
     slide_data = WSIData.from_spatialdata(sdata, reader_obj)
     slide_data.set_exclude_elements(exclude_elements)
+    slide_data.set_wsi_store(store)
     return slide_data
 
 

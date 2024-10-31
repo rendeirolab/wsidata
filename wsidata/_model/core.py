@@ -6,10 +6,8 @@ from pathlib import Path
 from typing import Literal, Generator
 
 import numpy as np
-import zarr
 from PIL.Image import Image, fromarray
 from anndata import AnnData
-from ome_zarr.io import parse_url
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
@@ -125,7 +123,7 @@ class WSIData(SpatialData):
     SLIDE_PROPERTIES_KEY = "slide_properties"
 
     @classmethod
-    def from_spatialdata(cls, sdata, reader, **kws):
+    def from_spatialdata(cls, sdata, reader=None, **kws):
         d = cls(
             images=sdata.images,
             labels=sdata.labels,
@@ -148,10 +146,8 @@ class WSIData(SpatialData):
         reader: ReaderBase = None,
         slide_properties_source: Literal["slide", "sdata"] = "sdata",
     ):
-        if reader is None:
-            raise ValueError("WSIData must initialize with a reader object.")
         self._reader = reader
-        self._backed_store = None
+        self._wsi_store = None
         self.slide_properties_source = slide_properties_source
         self._exclude_elements = set()
         super().__init__(
@@ -189,8 +185,8 @@ class WSIData(SpatialData):
     def set_exclude_elements(self, elements):
         self._exclude_elements.update(elements)
 
-    def set_backed_store(self, store: str | Path):
-        self._backed_store = Path(store)
+    def set_wsi_store(self, store: str | Path):
+        self._wsi_store = Path(store)
 
     def _gen_elements(
         self, include_table: bool = False
@@ -212,8 +208,16 @@ class WSIData(SpatialData):
         return self.reader.properties
 
     @property
+    def wsi_store(self):
+        return self._wsi_store
+
+    @property
     def thumbnail(self):
         return self.get_thumbnail(size=500, as_array=False)
+
+    @property
+    def name(self):
+        return Path(self.reader.file).name
 
     def tile_spec(self, key: str) -> TileSpec:
         """
@@ -264,6 +268,8 @@ class WSIData(SpatialData):
             The pyramid level.
 
         """
+        if self.reader is None:
+            raise ValueError("The reader object is not attached.")
         return self.reader.get_region(x, y, width, height, level=level, **kwargs)
 
     def get_thumbnail(self, size=500, as_array=False) -> np.ndarray[np.uint8] | Image:
@@ -281,29 +287,50 @@ class WSIData(SpatialData):
         else:
             return fromarray(img)
 
-    def save(self, file=None, consolidate_metadata: bool = True):
-        # Create the store first
-        if file is not None:
-            file = Path(file)
+    def write(
+        self,
+        file_path=None,
+        overwrite: bool = True,
+        consolidate_metadata: bool = True,
+        format=None,
+    ):
+        if file_path is not None:
+            file_path = Path(file_path)
             if self.path is None:
-                self.path = file
+                self.path = file_path
         else:
-            file = self._backed_store
-        store = parse_url(file, mode="w").store
-        _ = zarr.group(store=store, overwrite=False)
-        store.close()
-        # WARNING: This is not thread-safe, data may be corrupted if multiple threads write to the same file
-        # Waiting for SpatialData to support thread-safe writing
-        for elem_type, elem_key, elem in self._gen_elements(include_table=True):
-            self._write_element(
-                element=elem,
-                zarr_container_path=file,
-                element_type=elem_type,
-                element_name=elem_key,
-                overwrite=True,
-            )
-        if consolidate_metadata:
-            self.write_consolidated_metadata()
+            file_path = self._wsi_store
+        super().write(
+            file_path=file_path,
+            overwrite=overwrite,
+            consolidate_metadata=consolidate_metadata,
+            format=format,
+        )
+
+    # def save(self, file=None, consolidate_metadata: bool = True):
+    #     # Create the store first
+    #     if file is not None:
+    #         file = Path(file)
+    #         if self.path is None:
+    #             self.path = file
+    #     else:
+    #         file = self._wsi_store
+    #     store = parse_url(file, mode="w").store
+    #     self.path = file
+    #     _ = zarr.group(store=store, overwrite=False)
+    #     store.close()
+    #     # WARNING: This is not thread-safe, data may be corrupted if multiple threads write to the same file
+    #     # Waiting for SpatialData to support thread-safe writing
+    #     for elem_type, elem_key, elem in self._gen_elements(include_table=True):
+    #         self._write_element(
+    #             element=elem,
+    #             zarr_container_path=file,
+    #             element_type=elem_type,
+    #             element_name=elem_key,
+    #             overwrite=True,
+    #         )
+    #     if consolidate_metadata:
+    #         self.write_consolidated_metadata()
 
     def _check_feature_key(self, feature_key, tile_key=None):
         msg = f"{feature_key} doesn't exist"
