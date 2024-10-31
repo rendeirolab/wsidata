@@ -2,10 +2,10 @@ import pandas as pd
 from anndata import AnnData
 
 
-class GetAccessor(object):
+class FetchAccessor(object):
     """Accessor for getting information from WSIData object.
 
-    Usage: `wsidata.get`
+    Usage: `wsidata.fetch`
 
     """
 
@@ -27,7 +27,7 @@ class GetAccessor(object):
             The number of tissue regions.
 
         """
-        return len(self._obj.sdata.shapes[key])
+        return len(self._obj.shapes[key])
 
     def n_tiles(self, key: str) -> int:
         """
@@ -96,7 +96,7 @@ class GetAccessor(object):
 
         """
 
-        sdata = self._obj.sdata
+        sdata = self._obj
 
         feature_key = self._obj._check_feature_key(feature_key, tile_key)
         feature_adata = sdata.tables[feature_key]
