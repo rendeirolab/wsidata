@@ -87,4 +87,4 @@ class TestWSIData:
         io.add_features(wsidata, "test_feature", "test_tile", features)
 
     def test_save(self, wsidata, tmpdir):
-        wsidata.save(tmpdir / "test.wsi")
+        wsidata.write(tmpdir / "test.wsi")
