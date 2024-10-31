@@ -41,6 +41,24 @@ dev = [
 [tool.hatch.version]
 path = "wsidata/__init__.py"
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "docs",
+    "data",
+    "assets",
+    "tests",
+    "scripts",
+    ".readthedocs.yaml",
+    ".github",
+    ".gitignore",
+]
+include = [
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+    "wsidata",
+]
+
 [tool.ruff]
 lint.ignore = ["F401"]
 line-length = 88
