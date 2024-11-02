@@ -166,7 +166,7 @@ class IterAccessor(object):
         level_downsample = self._obj.properties.level_downsample[level]
         if color_norm is not None:
             cn = ColorNormalizer(method=color_norm)
-            cn_func = lambda x: cn(x).numpy()  # noqa
+            cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
         else:
             cn_func = lambda x: x  # noqa
 
@@ -280,7 +280,7 @@ class IterAccessor(object):
 
         if color_norm is not None:
             cn = ColorNormalizer(method=color_norm)
-            cn_func = lambda x: cn(x).numpy()  # noqa
+            cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
         else:
             cn_func = lambda x: x  # noqa
 
