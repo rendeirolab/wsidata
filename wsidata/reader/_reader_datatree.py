@@ -21,8 +21,7 @@ from zarr.util import json_dumps, normalize_storage_path, normalize_shape
 from ..reader import TiffSlideReader
 from ..reader.base import ReaderBase
 
-from xarray import open_zarr, DataArray
-from datatree import DataTree
+from xarray import open_zarr, DataArray, DataTree
 from spatialdata.models import Image2DModel
 from spatialdata.transformations import Identity, Scale
 
