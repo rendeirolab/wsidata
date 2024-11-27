@@ -369,8 +369,11 @@ class IterAccessor(object):
                         cv2.fillPoly(anno_mask, [cnt], int(label))  # noqa
                         cv2.fillPoly(anno_mask, holes, 0)  # noqa
                         # Clip the annotation by the tile
+                        # May not be valid after clipping
                         output_geo = clip_by_rect(geo, 0, 0, *mask_size)
-                        if isinstance(output_geo, MultiPolygon):
+                        if not output_geo.is_valid:
+                            continue
+                        elif isinstance(output_geo, MultiPolygon):
                             output_geo = [p for p in output_geo.geoms]
                         else:
                             output_geo = [output_geo]
