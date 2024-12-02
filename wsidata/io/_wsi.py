@@ -114,8 +114,11 @@ def open_wsi(
         # We also support write all backed file to a directory
         backed_file_p = Path(store)
         if backed_file_p.is_dir():
-            zarr_name = Path(wsi).with_suffix(".zarr").name
-            store = backed_file_p / zarr_name
+            if is_zarr_dir(backed_file_p):
+                store = backed_file_p
+            else:
+                zarr_name = Path(wsi).with_suffix(".zarr").name
+                store = backed_file_p / zarr_name
         else:
             store = backed_file_p
 
@@ -274,3 +277,22 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
             raise e
         else:
             return None
+
+
+def is_zarr_dir(path):
+    """
+    Detect if the given directory is a Zarr storage using the Zarr library.
+
+    Parameters:
+        path (str): The path to the directory.
+
+    Returns:
+        bool: True if the directory is a Zarr storage, False otherwise.
+    """
+    import zarr
+
+    try:
+        zarr.open_group(path, mode="r")
+        return True
+    except Exception:
+        return False
