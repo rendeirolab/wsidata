@@ -136,6 +136,9 @@ def open_wsi(
             exclude_elements.append(image_key)
 
     if attach_thumbnail and thumbnail_key not in sdata:
+        max_thumbnail_size = min(reader_obj.properties.shape)
+        if thumbnail_size > max_thumbnail_size:
+            thumbnail_size = max_thumbnail_size
         thumbnail = reader_obj.get_thumbnail(thumbnail_size)
         thumbnail_shape = thumbnail.shape
         origin_shape = reader_obj.properties.shape
@@ -176,7 +179,7 @@ def agg_wsi(
     slides_table: pd.DataFrame
         The table of slides, including information of whole slide image and .zarr paths and metadata.
 
-        Backed file path to the anndata file is optional, by default the same directory as the
+        Backed file path to the SpatialData file is optional, by default the same directory as the
         whole slide image.
     feature_key: str
         The feature key on which aggregation should be run on.
@@ -197,7 +200,7 @@ def agg_wsi(
         The aggregated feature space.
     """
     if wsi_col is None and store_col is None:
-        raise ValueError("Either wsi_col or backed_file_col must be provided.")
+        raise ValueError("Either wsi_col or store_col must be provided.")
 
     if store_col is not None:
         backed_files = slides_table[store_col]
@@ -271,7 +274,7 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
         if feature_key not in available_keys:
             feature_key = f"{feature_key}_{tile_key}"
         s = read_zarr(f"{f}/tables/{feature_key}")
-        return s.varm[agg_key]
+        return np.squeeze(s.varm[agg_key])
     except Exception as e:
         if error == "raise":
             raise e
