@@ -20,7 +20,7 @@ from anndata import AnnData
 from shapely import box, Polygon
 from spatialdata.models import ShapesModel, TableModel
 
-from .._model import WSIData
+from .._model import WSIData, TileSpec
 
 
 def add_tissues(
@@ -56,10 +56,10 @@ def add_tissues(
     wsidata.shapes[key] = cs
 
 
-def add_tiles(wsidata, key, xys, tile_spec, tissue_ids, **kws):
+def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
     # Tiles should be stored as polygon
     # This allows easy query of which cells in which tiles
-    w, h = tile_spec.raw_width, tile_spec.raw_height
+    w, h = tile_spec.ops_width, tile_spec.ops_height
     gdf = gpd.GeoDataFrame(
         data={
             "id": np.arange(len(xys)),

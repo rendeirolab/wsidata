@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from functools import singledispatch
+from functools import singledispatch, cached_property
 from typing import Optional, List, Mapping
 from dataclasses import dataclass, asdict, field
 
@@ -33,7 +33,7 @@ class SlideProperties:
     magnification : Optional[float]
         The magnification of the slide
     bounds : Optional[SHAPE]
-        The bounds of the slide, in the format [x, y, height, width]
+        The bounds of the slide, in the format [x, y, width, height]
         This is the region of the slide that contains tissue
     raw : Optional[str]
         The raw metadata in serialized json format
@@ -105,6 +105,14 @@ class ReaderBase:
     def __del__(self):
         self.detach_reader()
 
+    @cached_property
+    def _level_mapper(self):
+        levels = {}
+        for lv in np.arange(self.properties.n_level):
+            levels[lv] = lv
+            levels[-lv - 1] = lv
+        return levels
+
     def translate_level(self, level):
         """Translate the level to the actual level
 
@@ -116,10 +124,10 @@ class ReaderBase:
             The level to translate
 
         """
-        levels = np.arange(self.properties.n_level)
-        if level >= len(levels):
-            raise ValueError(f"Request level {level} not exist")
-        return levels[level]
+        req_level = self._level_mapper.get(level)
+        if req_level is None:
+            raise ValueError(f"Level {level} doesn't exist.")
+        return req_level
 
     def get_region(self, x, y, width, height, level=0, **kwargs):
         """Get a region from image with top-left corner
@@ -137,7 +145,7 @@ class ReaderBase:
         """Get a thumbnail of the image"""
         raise NotImplementedError
 
-    def get_level(self, level) -> np.ndarray[np.uint8]:
+    def get_level(self, level, in_bounds=False) -> np.ndarray[np.uint8]:
         """
         Extract the image at the given level
 
@@ -147,10 +155,16 @@ class ReaderBase:
         ----------
         level : int
             The level to extract
+        in_bounds : bool
+            If True, only extract the region that are in the bounds
 
         """
         height, width = self.properties.level_shape[level]
-        return self.get_region(0, 0, width, height, level=level)
+        if in_bounds:
+            x, y, h, w = self.properties.bounds
+        else:
+            x, y, h, w = 0, 0, height, width
+        return self.get_region(x, y, w, h, level=level)
 
     def set_properties(self, properties: SlideProperties | Mapping):
         if isinstance(properties, SlideProperties):
@@ -302,7 +316,7 @@ def parse_metadata(metadata: Mapping):
     bounds_y = 0 if bounds_y is None else int(bounds_y)
     bounds_height = shape[0] if bounds_height is None else int(bounds_height)
     bounds_width = shape[1] if bounds_width is None else int(bounds_width)
-    bounds = [bounds_x, bounds_y, bounds_height, bounds_width]
+    bounds = [bounds_x, bounds_y, bounds_width, bounds_height]
 
     metadata = {
         "mpp": mpp,

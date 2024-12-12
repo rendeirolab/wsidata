@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import json
 import warnings
+from dataclasses import dataclass, asdict
 from functools import cached_property
+from numbers import Integral
 from pathlib import Path
-from typing import Literal, Generator
+from typing import Literal, Generator, Sequence
 
 import numpy as np
 from PIL.Image import Image, fromarray
 from anndata import AnnData
+from ome_zarr.io import parse_url
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
-from .tilespec import TileSpec
 from .._accessors import FetchAccessor, IterAccessor, DatasetAccessor
 from .._utils import find_stack_level
-from ..reader import ReaderBase
+from ..reader import ReaderBase, SlideProperties
 
 
 class WSIData(SpatialData):
@@ -204,7 +207,7 @@ class WSIData(SpatialData):
         return self._reader
 
     @property
-    def properties(self):
+    def properties(self) -> SlideProperties:
         return self.reader.properties
 
     @property
@@ -238,8 +241,15 @@ class WSIData(SpatialData):
         self.properties.mpp = mpp
         self.tables[self.SLIDE_PROPERTIES_KEY].uns["mpp"] = mpp
 
-    def set_bounds(self, bounds):
-        """Set the bounds of the whole slide image."""
+    def set_bounds(self, bounds: tuple[int, int, int, int]):
+        """Set the bounds of the whole slide image.
+
+        Parameters
+        ----------
+        bounds : tuple[int, int, int, int]
+            The bounds of the whole slide image in the format [x, y, width, height].
+
+        """
         self.properties.bounds = bounds
         self.tables[self.SLIDE_PROPERTIES_KEY].uns["bounds"] = bounds
 
@@ -307,30 +317,33 @@ class WSIData(SpatialData):
             format=format,
         )
 
-    # def save(self, file=None, consolidate_metadata: bool = True):
-    #     # Create the store first
-    #     if file is not None:
-    #         file = Path(file)
-    #         if self.path is None:
-    #             self.path = file
-    #     else:
-    #         file = self._wsi_store
-    #     store = parse_url(file, mode="w").store
-    #     self.path = file
-    #     _ = zarr.group(store=store, overwrite=False)
-    #     store.close()
-    #     # WARNING: This is not thread-safe, data may be corrupted if multiple threads write to the same file
-    #     # Waiting for SpatialData to support thread-safe writing
-    #     for elem_type, elem_key, elem in self._gen_elements(include_table=True):
-    #         self._write_element(
-    #             element=elem,
-    #             zarr_container_path=file,
-    #             element_type=elem_type,
-    #             element_name=elem_key,
-    #             overwrite=True,
-    #         )
-    #     if consolidate_metadata:
-    #         self.write_consolidated_metadata()
+    def _validate_can_safely_write_to_path(
+        self,
+        file_path: str | Path,
+        overwrite: bool = False,
+        saving_an_element: bool = False,
+    ) -> None:
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
+
+        if not isinstance(file_path, Path):
+            raise ValueError(
+                f"file_path must be a string or a Path object, type(file_path) = {type(file_path)}."
+            )
+
+        if Path(file_path).exists():
+            if parse_url(file_path, mode="r") is None:
+                raise ValueError(
+                    "The target file path specified already exists, and it has been detected to not be a Zarr store. "
+                    "Overwriting non-Zarr stores is not supported to prevent accidental data loss."
+                )
+            if not overwrite:
+                raise ValueError(
+                    "The Zarr store already exists. Use `overwrite=True` to try overwriting the store."
+                    "Please note that only Zarr stores not currently in used by the current SpatialData object can be "
+                    "overwritten."
+                )
+        # Skip the workaround for now
 
     def _check_feature_key(self, feature_key, tile_key=None):
         msg = f"{feature_key} doesn't exist"
@@ -360,3 +373,223 @@ class WSIData(SpatialData):
     @cached_property
     def ds(self):
         return DatasetAccessor(self)
+
+
+@dataclass
+class TileSpec:
+    """Data class for storing tile specifications.
+
+    # There are 3 levels of tile size that we should record:
+    # 1. The destined tile size requested by the user
+    # 2. The tile size used by the image reader to optimize the performance
+    # 3. The actual tile size at the level 0
+
+    Parameters
+    ----------
+    height : int
+        The height of the tile.
+    width : int
+        The width of the tile.
+    stride_height : int
+        The height of the stride.
+    stride_width : int
+        The width of the stride.
+    mpp : float, default: None
+        The requested microns per pixel of tiles.
+    ops_level : int, default: 0
+        The level of the tiling operation.
+    ops_downsample : float, default: 1
+        The downsample factor to transform the operation level
+        tiles to the requested level.
+    tissue_name : str, optional
+        The name of the tissue.
+
+    Properties
+    ----------
+    ops_{height, width} : int
+        The height/width of the tile when retrieving images.
+    ops_stride_{height, width}: int
+        The height/width of the stride when retrieving images.
+    base_{height, width} : int
+        The height/width of the tile at the level 0.
+    base_stride_{height, width} : int
+        The height/width of the stride at the level 0.
+
+    """
+
+    height: int
+    width: int
+    stride_height: int
+    stride_width: int
+
+    mpp: float | None = None
+
+    ops_level: int = 0  # level of the tiling operation
+    ops_downsample: float = 1  # downsample to requested level
+
+    base_level: int = 0  # level of the base tile, always 0
+    base_downsample: int = 1  # downsample to requested level
+
+    tissue_name: str | None = None
+
+    @classmethod
+    def from_wsidata(
+        cls,
+        wsi: WSIData,
+        tile_px: int | (int, int),
+        stride_px: int | (int, int) = None,
+        mpp=None,
+        ops_level=None,
+        slide_mpp=None,
+        tissue_name=None,
+    ):
+        """Create a TileSpec from a WSIData object.
+
+        To tile from the whole slide image, the user needs to specify the tile size and stride size.
+        mpp only need to be specified if the user wants to make sure
+        the tile size is harmonized across different slides.
+
+        If ops_level is not specified, the optimal level will be calculated based on the requested mpp
+        to maximize the performance.
+
+        """
+        # Check if the tile size is valid
+        tile_w, tile_h = _check_width_height("tile_px", tile_px)
+
+        # Check if the stride size is valid
+        stride_w, stride_h = _check_width_height(
+            "stride_px", stride_px, default_w=tile_w, default_h=tile_h
+        )
+
+        # If user does not override slide mpp, use the recorded slide mpp
+        if slide_mpp is None:
+            slide_mpp = wsi.properties.mpp
+
+        # If user does not specify mpp, default to ops level is 0
+        ops_downsample = None
+        if mpp is None:
+            mpp = wsi.properties.mpp
+            if ops_level is not None:
+                raise ValueError("Please specify mpp if ops_level is specified.")
+            ops_level = 0
+            ops_downsample = 1
+        # Or if user specify mpp, but the slide mpp is not available, use the default level 0
+        elif slide_mpp is None:
+            if ops_level is None:
+                ops_level = 0
+                ops_downsample = 1
+            else:
+                ops_downsample = wsi.properties.level_downsample[ops_level]
+
+            warning_text = f"Slide mpp is not available, using level {ops_level}."
+            # If user specify the mpp at the same time but slide mpp is not available
+            # we will inform the user that the mpp will be ignored
+            if mpp is not None:
+                warning_text += f" Requested mpp={mpp} will be ignored."
+            warnings.warn(warning_text, stacklevel=find_stack_level())
+        else:
+            # If user didn't specify ops level but mpp, an optimized ops level will be calculated
+            wsi_downsample = np.asarray(wsi.properties.level_downsample)
+            req_downsample = mpp / slide_mpp
+            if req_downsample < 1:
+                raise ValueError(
+                    f"Requested mpp={mpp} is smaller than the slide mpp={slide_mpp}. "
+                    f"Up-sampling is not supported."
+                )
+
+            gap = wsi_downsample - req_downsample
+            gap[gap > 0] = np.inf
+
+            suggest_level = np.argmin(np.abs(gap))
+            suggest_downsample = mpp / (slide_mpp * wsi_downsample[suggest_level])
+            if ops_level is None:
+                # Apply the optimized level
+                ops_level = suggest_level
+                ops_downsample = suggest_downsample
+            else:
+                # check if user specified ops level is valid
+                ops_level = wsi.reader.translate_level(ops_level)
+                ops_downsample = mpp / (
+                    slide_mpp * wsi.properties.level_downsample[ops_level]
+                )
+                if ops_downsample < 1:
+                    if suggest_level == 0:
+                        consider_text = "Consider using level 0."
+                    else:
+                        consider_text = f"Consider using ops_level<={suggest_level}."
+                    raise ValueError(
+                        f"Requested tile size at mpp={mpp} "
+                        f"on ops_level={ops_level} will require up-sampling. "
+                        + consider_text
+                    )
+
+        base_downsample = ops_downsample * wsi.properties.level_downsample[ops_level]
+
+        return cls(
+            height=tile_h,
+            width=tile_w,
+            stride_height=stride_h,
+            stride_width=stride_w,
+            mpp=mpp,
+            ops_level=ops_level,
+            ops_downsample=ops_downsample,
+            base_downsample=base_downsample,
+            tissue_name=tissue_name,
+        )
+
+    def to_dict(self):
+        return asdict(self)
+
+    def to_json(self):
+        return json.dumps(asdict(self))
+
+    @cached_property
+    def ops_height(self):
+        return self.height * self.ops_downsample
+
+    @cached_property
+    def ops_width(self):
+        return self.width * self.ops_downsample
+
+    @cached_property
+    def ops_stride_height(self):
+        return self.stride_height * self.ops_downsample
+
+    @cached_property
+    def ops_stride_width(self):
+        return self.stride_width * self.ops_downsample
+
+    @cached_property
+    def base_height(self):
+        return self.height * self.base_downsample
+
+    @cached_property
+    def base_width(self):
+        return self.width * self.base_downsample
+
+    @cached_property
+    def base_stride_height(self):
+        return self.stride_height * self.base_downsample
+
+    @cached_property
+    def base_stride_width(self):
+        return self.stride_width * self.base_downsample
+
+
+def _check_width_height(name, length, default_w=None, default_h=None):
+    if length is None:
+        if default_w is None or default_h is None:
+            raise ValueError(f"{name} cannot be None.")
+        w, h = (default_w, default_h)
+    elif isinstance(length, Integral):
+        w, h = (length, length)
+    elif isinstance(length, Sequence):
+        w, h = (length[0], length[1])
+    else:
+        raise TypeError(
+            f"Input {name} of {length} is invalid. "
+            f"Please use either a tuple of (W, H), or a single integer."
+        )
+    if not (w > 0 and h > 0):
+        raise ValueError(f"{name} must be positive.")
+    return w, h

@@ -1,2 +1,1 @@
-from .core import WSIData
-from .tilespec import TileSpec
+from .core import WSIData, TileSpec

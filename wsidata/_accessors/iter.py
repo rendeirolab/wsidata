@@ -8,6 +8,7 @@ from shapely import MultiPolygon, Polygon, box, clip_by_rect
 from shapely.affinity import translate, scale
 
 from .._normalizer import ColorNormalizer
+from .._model import TileSpec
 
 
 class TissueContour(NamedTuple):
@@ -276,7 +277,7 @@ class IterAccessor(object):
             - anno_shapes: The annotation shapes.
 
         """
-        tile_spec = self._obj.tile_spec(key)
+        tile_spec: TileSpec = self._obj.tile_spec(key)
 
         if color_norm is not None:
             cn = ColorNormalizer(method=color_norm)
@@ -287,11 +288,11 @@ class IterAccessor(object):
         create_anno_mask = False
         anno_tb = None
         mask_size = (
-            (tile_spec.raw_height, tile_spec.raw_width)
+            (tile_spec.ops_height, tile_spec.ops_width)
             if raw
             else (tile_spec.height, tile_spec.width)
         )
-        downsample = tile_spec.downsample
+        downsample = tile_spec.base_downsample
         if annotation_key is not None:
             create_anno_mask = True
             if annotation_name is None:
@@ -333,7 +334,11 @@ class IterAccessor(object):
             tix = row["tissue_id"]
 
             img = self._obj.reader.get_region(
-                x, y, tile_spec.raw_width, tile_spec.raw_height, level=tile_spec.level
+                x,
+                y,
+                tile_spec.ops_width,
+                tile_spec.ops_height,
+                level=tile_spec.ops_level,
             )
             img = cn_func(img)
 
@@ -347,7 +352,7 @@ class IterAccessor(object):
             anno_mask = None
             if create_anno_mask:
                 anno_shapes = []
-                bbox = box(x, y, x + tile_spec.raw_width, y + tile_spec.raw_height)
+                bbox = box(x, y, x + tile_spec.base_width, y + tile_spec.base_height)
                 sel = anno_tb.geometry.intersects(bbox)  # return a boolean mask
                 anno_mask = np.zeros(mask_size, dtype=mask_dtype)
                 if sel.sum() > 0:

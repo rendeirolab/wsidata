@@ -76,7 +76,7 @@ class TileImagesDataset(Dataset):
     def __getitem__(self, idx):
         x, y, tid = self.tiles[idx]
         tile = self.reader.get_region(
-            x, y, self.spec.raw_width, self.spec.raw_height, level=self.spec.level
+            x, y, self.spec.ops_width, self.spec.ops_height, level=self.spec.ops_level
         )
         tile = self.reader.resize_img(tile, dsize=(self.spec.height, self.spec.width))
         tile = self._cn_func(tile)
