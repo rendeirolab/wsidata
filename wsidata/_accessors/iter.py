@@ -8,7 +8,6 @@ from shapely import MultiPolygon, Polygon, box, clip_by_rect
 from shapely.affinity import translate, scale
 
 from .._normalizer import ColorNormalizer
-from .._model import TileSpec
 
 
 class TissueContour(NamedTuple):
@@ -277,7 +276,7 @@ class IterAccessor(object):
             - anno_shapes: The annotation shapes.
 
         """
-        tile_spec: TileSpec = self._obj.tile_spec(key)
+        tile_spec = self._obj.tile_spec(key)
 
         if color_norm is not None:
             cn = ColorNormalizer(method=color_norm)
