@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, asdict, field
 from functools import singledispatch, cached_property
 from typing import Optional, List, Mapping
-from dataclasses import dataclass, asdict, field
 
 import cv2
 import numpy as np
@@ -108,9 +108,10 @@ class ReaderBase:
     @cached_property
     def _level_mapper(self):
         levels = {}
-        for lv in np.arange(self.properties.n_level):
+        n_level = self.properties.n_level
+        for lv in np.arange(n_level):
             levels[lv] = lv
-            levels[-lv - 1] = lv
+            levels[-n_level + lv] = lv
         return levels
 
     def translate_level(self, level):
