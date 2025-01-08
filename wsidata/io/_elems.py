@@ -72,7 +72,7 @@ def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
     cs = ShapesModel.parse(gdf, **kws)
     wsidata.shapes[key] = cs
 
-    if wsidata.TILE_SPEC_KEY in wsidata.tables:
+    if wsidata.TILE_SPEC_KEY in wsidata.attrs:
         spec_data = wsidata.attrs[wsidata.TILE_SPEC_KEY]
         spec_data[key] = tile_spec.to_dict()
     else:

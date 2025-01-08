@@ -232,7 +232,7 @@ class WSIData(SpatialData):
             The key of the tiles.
 
         """
-        if self.TILE_SPEC_KEY in self:
+        if self.TILE_SPEC_KEY in self.attrs:
             spec = self.attrs[self.TILE_SPEC_KEY][key]
             return TileSpec(**spec)
 
