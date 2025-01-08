@@ -59,7 +59,7 @@ def add_tissues(
 def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
     # Tiles should be stored as polygon
     # This allows easy query of which cells in which tiles
-    w, h = tile_spec.ops_width, tile_spec.ops_height
+    w, h = tile_spec.base_width, tile_spec.base_height
     gdf = gpd.GeoDataFrame(
         data={
             "id": np.arange(len(xys)),
@@ -73,11 +73,11 @@ def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
     wsidata.shapes[key] = cs
 
     if wsidata.TILE_SPEC_KEY in wsidata.tables:
-        spec_data = wsidata.tables[wsidata.TILE_SPEC_KEY]
-        spec_data.uns[key] = tile_spec.to_dict()
+        spec_data = wsidata.attrs[wsidata.TILE_SPEC_KEY]
+        spec_data[key] = tile_spec.to_dict()
     else:
-        spec_data = AnnData(uns={key: tile_spec.to_dict()})
-        wsidata.tables[wsidata.TILE_SPEC_KEY] = spec_data
+        spec_data = {key: tile_spec.to_dict()}
+        wsidata.attrs[wsidata.TILE_SPEC_KEY] = spec_data
 
 
 def subset_tiles(wsidata, key, indices, new_key=None):
@@ -86,8 +86,8 @@ def subset_tiles(wsidata, key, indices, new_key=None):
     if new_key is None:
         new_key = key
     else:
-        spec_data = wsidata.tables[wsidata.TILE_SPEC_KEY]
-        spec_data.uns[new_key] = spec_data.uns[key]
+        spec_data = wsidata.attrs[wsidata.TILE_SPEC_KEY]
+        spec_data[new_key] = spec_data[key]
     wsidata.shapes[new_key] = shapes
 
 

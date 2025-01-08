@@ -146,6 +146,7 @@ class WSIData(SpatialData):
         shapes=None,
         tables=None,
         points=None,
+        attrs=None,
         reader: ReaderBase = None,
         slide_properties_source: Literal["slide", "sdata"] = "sdata",
     ):
@@ -159,16 +160,15 @@ class WSIData(SpatialData):
             shapes=shapes,
             tables=tables,
             points=points,
+            attrs=attrs,
         )
 
         if self.SLIDE_PROPERTIES_KEY not in self:
-            self.tables[self.SLIDE_PROPERTIES_KEY] = AnnData(
-                uns=reader.properties.to_dict()
-            )
+            self.attrs[self.SLIDE_PROPERTIES_KEY] = reader.properties.to_dict()
         else:
             # Try to load the slide properties from the spatial data
             if slide_properties_source == "slide":
-                reader_properties = self.tables[self.SLIDE_PROPERTIES_KEY].uns
+                reader_properties = self.attrs[self.SLIDE_PROPERTIES_KEY]
                 if reader_properties != reader.properties.to_dict():
                     # Update the reader properties
                     reader.properties.from_mapping(reader_properties)
@@ -233,13 +233,13 @@ class WSIData(SpatialData):
 
         """
         if self.TILE_SPEC_KEY in self:
-            spec = self.tables[self.TILE_SPEC_KEY].uns[key]
+            spec = self.attrs[self.TILE_SPEC_KEY][key]
             return TileSpec(**spec)
 
     def set_mpp(self, mpp):
         """Set the microns per pixel (mpp) of the whole slide image."""
         self.properties.mpp = mpp
-        self.tables[self.SLIDE_PROPERTIES_KEY].uns["mpp"] = mpp
+        self.attrs[self.SLIDE_PROPERTIES_KEY]["mpp"] = mpp
 
     def set_bounds(self, bounds: tuple[int, int, int, int]):
         """Set the bounds of the whole slide image.
@@ -428,9 +428,20 @@ class TileSpec:
     ops_downsample: float = 1  # downsample to requested level
 
     base_level: int = 0  # level of the base tile, always 0
-    base_downsample: int = 1  # downsample to requested level
+    base_downsample: float = 1.0  # downsample to requested level
 
     tissue_name: str | None = None
+
+    def __post_init__(self):
+        # coerce attributes to correct type
+        self.height = int(self.height)
+        self.width = int(self.width)
+        self.stride_height = int(self.stride_height)
+        self.stride_width = int(self.stride_width)
+        self.ops_level = int(self.ops_level)
+        self.ops_downsample = float(self.ops_downsample)
+        self.base_level = int(self.base_level)
+        self.base_downsample = float(self.base_downsample)
 
     @classmethod
     def from_wsidata(
@@ -544,36 +555,51 @@ class TileSpec:
         return json.dumps(asdict(self))
 
     @cached_property
-    def ops_height(self):
-        return self.height * self.ops_downsample
+    def is_overlap_x(self) -> bool:
+        """Check if the tiles are overlapped along the x-axis."""
+        return self.stride_width < self.width
 
     @cached_property
-    def ops_width(self):
-        return self.width * self.ops_downsample
+    def is_overlap_y(self) -> bool:
+        """Check if the tiles are overlapped along the y-axis."""
+        return self.stride_height < self.height
 
     @cached_property
-    def ops_stride_height(self):
-        return self.stride_height * self.ops_downsample
+    def is_overlap(self) -> bool:
+        """Check if the tiles are overlapped."""
+        return self.is_overlap_x or self.is_overlap_y
 
     @cached_property
-    def ops_stride_width(self):
-        return self.stride_width * self.ops_downsample
+    def ops_height(self) -> int:
+        return int(self.height * self.ops_downsample)
 
     @cached_property
-    def base_height(self):
-        return self.height * self.base_downsample
+    def ops_width(self) -> int:
+        return int(self.width * self.ops_downsample)
 
     @cached_property
-    def base_width(self):
-        return self.width * self.base_downsample
+    def ops_stride_height(self) -> int:
+        return int(self.stride_height * self.ops_downsample)
 
     @cached_property
-    def base_stride_height(self):
-        return self.stride_height * self.base_downsample
+    def ops_stride_width(self) -> int:
+        return int(self.stride_width * self.ops_downsample)
 
     @cached_property
-    def base_stride_width(self):
-        return self.stride_width * self.base_downsample
+    def base_height(self) -> int:
+        return int(self.height * self.base_downsample)
+
+    @cached_property
+    def base_width(self) -> int:
+        return int(self.width * self.base_downsample)
+
+    @cached_property
+    def base_stride_height(self) -> int:
+        return int(self.stride_height * self.base_downsample)
+
+    @cached_property
+    def base_stride_width(self) -> int:
+        return int(self.stride_width * self.base_downsample)
 
 
 def _check_width_height(name, length, default_w=None, default_h=None):
