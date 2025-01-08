@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from typing import NamedTuple, Sequence, Dict, List, Tuple
 
 import cv2
@@ -7,49 +8,386 @@ import numpy as np
 from shapely import MultiPolygon, Polygon, box, clip_by_rect
 from shapely.affinity import translate, scale
 
-from .._normalizer import ColorNormalizer
+
+def _get_cn_func(color_norm):
+    from .._normalizer import ColorNormalizer
+
+    if color_norm is not None:
+        cn = ColorNormalizer(method=color_norm)
+        cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
+    else:
+        cn_func = lambda x: x  # noqa
+    return cn_func
 
 
-class TissueContour(NamedTuple):
+def _normalize_polygon(polygon, bbox):
+    """
+    Normalize a polygon to the 0-1 range based on a bounding box.
+
+    Parameters
+    ----------
+    polygon : shapely.geometry.Polygon
+        Input polygon.
+    bbox : tuple
+        Bounding box as (minx, miny, maxx, maxy).
+
+    Returns
+    -------
+    shapely.geometry.Polygon: Normalized polygon.
+
+    """
+    minx, miny, maxx, maxy = bbox
+    width = maxx - minx
+    height = maxy - miny
+
+    # Translate the polygon to origin
+    translated = translate(polygon, xoff=-minx, yoff=-miny)
+    # Scale to 0-1 range
+    normalized = scale(translated, xfact=1 / width, yfact=1 / height, origin=(0, 0))
+    return normalized
+
+
+PALETTE = (
+    "#e60049",
+    "#0bb4ff",
+    "#50e991",
+    "#e6d800",
+    "#9b19f5",
+    "#ffa300",
+    "#dc0ab4",
+    "#b3d4ff",
+    "#00bfa0",
+)
+
+
+class TissueContour:
     tissue_id: int
-    contour: np.ndarray
-    holes: List[np.ndarray | Polygon] | None = None
+    shape: Polygon
+    as_array: bool
+    dtype: np.dtype
+
+    def __init__(self, tissue_id, shape, as_array=False, dtype=None):
+        self.tissue_id = tissue_id
+        self.shape = shape
+        self._as_array = as_array
+        self._dtype = dtype
+
+    @property
+    def as_array(self):
+        return self._as_array
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @cached_property
+    def contour(self) -> np.ndarray | Polygon:
+        if self.as_array:
+            return np.array(self.shape.exterior.coords, dtype=self.dtype)
+        else:
+            return Polygon(self.shape.exterior.coords)
+
+    @cached_property
+    def holes(self) -> List[np.ndarray | Polygon]:
+        if self.as_array:
+            return [
+                np.asarray(h.coords, dtype=self.dtype) for h in self.shape.interiors
+            ]
+        else:
+            return [Polygon(h) for h in self.shape.interiors]
+
+    def __repr__(self):
+        n_holes = len(self.holes)
+        hole_text = "holes" if n_holes > 1 else "hole"
+        return (
+            f"TissueContour(tissue_id={self.tissue_id}, {n_holes} {hole_text}) "
+            f"with attributes: \n"
+            f"tissue_id, shape, contour, holes"
+        )
+
+    def plot(
+        self,
+        ax=None,
+        outline_color="#117554",
+        hole_color="#4379F2",
+        linewidth=2,
+        outline_kwargs=None,
+        hole_kwargs=None,
+    ):
+        """Plot the tissue contour.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, default: None
+            The axes to plot the contour.
+        outline_color : str, default: "#117554"
+            The color of the outline.
+        hole_color : str, default: "#4379F2"
+            The color of the holes.
+        linewidth : int, default: 2
+            The width of the line.
+        outline_kwargs : dict, default: None
+            Additional keyword arguments for the outline.
+        hole_kwargs : dict, default: None
+            Additional keyword arguments for the holes.
+
+        """
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        outline_kwargs = outline_kwargs or {}
+        outline_kwargs.setdefault("color", outline_color)
+        outline_kwargs.setdefault("linewidth", linewidth)
+        hole_kwargs = hole_kwargs or {}
+        hole_kwargs.setdefault("color", hole_color)
+        hole_kwargs.setdefault("linewidth", linewidth)
+        contour = self.contour
+        holes = self.holes
+        if isinstance(contour, Polygon):
+            ax.plot(*contour.exterior.xy, **outline_kwargs)
+        else:
+            ax.plot(contour[:, 0], contour[:, 1], **outline_kwargs)
+        if holes is not None:
+            for hole in holes:
+                if isinstance(hole, Polygon):
+                    ax.plot(*hole.exterior.xy, **hole_kwargs)
+                else:
+                    ax.plot(hole[:, 0], hole[:, 1], **hole_kwargs)
+        ax.set_aspect(1)
+        ax.invert_yaxis()
+        return ax
 
 
-class TissueImage(NamedTuple):
-    tissue_id: int
-    x: int
-    y: int
+class TissueImage(TissueContour):
     image: np.ndarray
-    mask: np.ndarray
+    format: str
+    mask_bg: int | None
+
+    def __init__(
+        self,
+        tissue_id,
+        shape,
+        image,
+        format="xyc",
+        mask_bg=None,
+        as_array=False,
+        dtype=None,
+        downsample=1.0,
+    ):
+        super().__init__(tissue_id, shape, as_array, dtype)
+        self._image = image
+        self.format = format
+        self.mask_bg = mask_bg
+        self.downsample = downsample
+
+    @cached_property
+    def x(self):
+        return int(self.shape.bounds[0])
+
+    @cached_property
+    def y(self):
+        return int(self.shape.bounds[1])
+
+    @cached_property
+    def width(self):
+        return int(self.shape.bounds[2] - self.shape.bounds[0])
+
+    @cached_property
+    def height(self):
+        return int(self.shape.bounds[3] - self.shape.bounds[1])
+
+    @property
+    def image(self):
+        if self.format == "cyx":
+            return self._image.transpose(1, 2, 0)
+        return self._image
+
+    @cached_property
+    def mask(self):
+        mask = None
+        if self.mask_bg is not None:
+            mask = np.zeros_like(self.image[:, :, 0])
+            # Offset and scale the contour
+            offset_x, offset_y = self.shape.bounds[:2]
+            coords = np.array(self.shape.exterior.coords) - [offset_x, offset_y]
+            coords = coords.astype(np.int32)
+            # Fill the contour with 1
+            cv2.fillPoly(mask, [coords], 1)
+
+            # Fill the holes with 0
+            for hole in self.holes:
+                if isinstance(hole, Polygon):
+                    hole = np.array(hole.exterior.coords)
+                hole -= [offset_x, offset_y]
+                hole = hole.astype(np.int32)
+                cv2.fillPoly(mask, [hole], 0)
+            mask = mask.astype(bool)
+        return mask
+
+    @cached_property
+    def masked_image(self) -> np.ndarray:
+        """A masked image with the background masked will be returned
+        if the mask_bg is not None."""
+        if self.mask_bg is None:
+            return self.image
+        mask = self.mask
+        image = self.image.copy()
+        if mask is not None:
+            # Fill everything that is not the contour
+            # (which is background) with 0
+            image[mask != 1] = self.mask_bg
+
+        if self.format == "cyx":
+            image = image.transpose(2, 0, 1)
+        return image
+
+    def __repr__(self):
+        n_holes = len(self.holes)
+        hole_text = "holes" if n_holes > 1 else "hole"
+        return (
+            f"TissueImage(tissue_id={self.tissue_id}, HW={self._image.shape[:2]}, {n_holes} {hole_text}) "
+            f"with attributes: \n"
+            f"tissue_id, image, mask, masked_image, shape, contour, holes, x, y, width, height"
+        )
+
+    def plot(self, ax=None, masked: bool = False, **kwargs):
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        img = self.masked_image if masked else self.image
+        if self.format == "cyx":
+            img = img.transpose(1, 2, 0)
+        extent = (self.x, self.x + self.width, self.y + self.height, self.y)
+        ax.imshow(img, extent=extent, **kwargs)
+        return ax
 
 
-class TileImage(NamedTuple):
+class TileImage:
     id: int
     x: int
     y: int
     tissue_id: int
     image: np.ndarray
-    anno_mask: np.ndarray | None = None
-    anno_shapes: List[Tuple[Polygon, str, int]] | None = None
+    annot_mask: np.ndarray | None = None
+    annot_shapes: List[Tuple[Polygon, str, int]] | None = None
+    annot_labels: Dict[str, int] | None = None
+
+    def __init__(
+        self,
+        id,
+        x,
+        y,
+        base_width,
+        base_height,
+        tissue_id,
+        image,
+        annot_mask=None,
+        annot_shapes=None,
+        annot_labels=None,
+    ):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.base_width = base_width
+        self.base_height = base_height
+        self.tissue_id = tissue_id
+        self.image = image
+        self.annot_mask = annot_mask
+        self.annot_shapes = annot_shapes
+        self.annot_labels = annot_labels
+
+    @cached_property
+    def norm_annot_shapes(self):
+        if self.annot_shapes is not None:
+            new_shapes = []
+            for shape, name, label in self.annot_shapes:
+                norm_shape = _normalize_polygon(
+                    shape, (0, 0, self.base_width, self.base_height)
+                )
+                new_shapes.append((norm_shape, name, self.annot_labels[name]))
+            return new_shapes
+
+    @property
+    def has_annot(self):
+        return self.annot_shapes is not None
 
     def __repr__(self):
-        image_dtype = self.image.dtype
-        if self.anno_mask is not None:
-            mask_repr = (
-                f"(shape: {self.anno_mask.shape}, dtype: {self.anno_mask.dtype})"
-            )
+        if self.annot_shapes is not None:
+            n_shapes = len(self.annot_shapes)
+            shape_text = "annotation" if n_shapes == 1 else "annotations"
+            shapes_repr = f"({n_shapes} {shape_text})"
         else:
-            mask_repr = None
+            shapes_repr = None
 
         return (
-            f"TileImage(id={self.id}, "
-            f"x={self.x}, y={self.y}, "
-            f"tissue_id={self.tissue_id}, "
-            f"image=(shape: {self.image.shape}, dtype: {image_dtype}), "
-            f"anno_mask={mask_repr}, "
-            f"anno_shapes=({len(self.anno_shapes)} shapes))"
+            f"TileImage(id={self.id}, x={self.x}, y={self.y}, "
+            f"tissue_id={self.tissue_id}) {shapes_repr} "
+            f"with attributes: \n"
+            f"image, annot_mask, annot_shapes"
         )
+
+    def plot(
+        self,
+        ax=None,
+        show_annots: bool = True,
+        palette: Dict = None,
+        legend: bool = True,
+        alpha: float = 0.3,
+        linewidth=1,
+        **kwargs,
+    ):
+        import matplotlib.pyplot as plt
+
+        from matplotlib.patches import PathPatch
+        from matplotlib.path import Path
+
+        if ax is None:
+            ax = plt.gca()
+
+        ax.imshow(self.image, **kwargs)
+
+        # Create palette
+        if palette is None:
+            palette = {k: v for k, v in zip(self.annot_labels.keys(), PALETTE)}
+
+        if show_annots and self.annot_shapes is not None:
+            for shape, name, label in self.annot_shapes:
+                path = Path.make_compound_path(
+                    Path(np.asarray(shape.exterior.coords)[:, :2]),
+                    *[Path(np.asarray(ring.coords)[:, :2]) for ring in shape.interiors],
+                )
+                outline = PathPatch(
+                    path,
+                    label=name,
+                    facecolor="none",
+                    edgecolor=palette[name],
+                    linewidth=linewidth,
+                    alpha=1,
+                )
+                ax.add_patch(outline)
+                fill = PathPatch(
+                    path,
+                    label=name,
+                    facecolor=palette[name],
+                    edgecolor="none",
+                    alpha=alpha,
+                )
+                ax.add_patch(fill)
+        if legend:
+            from legendkit import cat_legend
+
+            cat_legend(
+                labels=palette.keys(),
+                colors=palette.values(),
+                loc="out right center",
+                ax=ax,
+            )
+        ax.set_axis_off()
+        return ax
 
 
 class IterAccessor(object):
@@ -103,30 +441,25 @@ class IterAccessor(object):
 
         for ix, cnt in contours.iterrows():
             tissue_id = cnt["tissue_id"]
-            if as_array:
-                yield TissueContour(
-                    tissue_id=tissue_id,
-                    contour=np.array(cnt.geometry.exterior.coords, dtype=dtype),
-                    holes=[
-                        np.asarray(h.coords, dtype=dtype)
-                        for h in cnt.geometry.interiors
-                    ],
-                )
-            else:
-                yield TissueContour(
-                    tissue_id=tissue_id,
-                    contour=cnt.geometry,
-                    holes=[Polygon(i) for i in cnt.geometry.interiors],
-                )
+
+            yield TissueContour(
+                tissue_id=tissue_id,
+                shape=cnt.geometry,
+                as_array=as_array,
+                dtype=dtype,
+            )
 
     def tissue_images(
         self,
         key,
-        level=0,
+        level=-1,
         mask_bg=False,
-        tissue_mask=False,
         color_norm: str = None,
         format: str = "xyc",
+        as_array: bool = False,
+        dtype: np.dtype = None,
+        shuffle: bool = False,
+        seed: int = 0,
     ) -> TissueImage:
         """Extract tissue images from the WSI.
 
@@ -163,71 +496,57 @@ class IterAccessor(object):
         """
         import cv2
 
-        level_downsample = self._obj.properties.level_downsample[level]
-        if color_norm is not None:
-            cn = ColorNormalizer(method=color_norm)
-            cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
-        else:
-            cn_func = lambda x: x  # noqa
-
+        # Determine if we should mask the background
         if isinstance(mask_bg, bool):
-            do_mask = mask_bg
-            if do_mask:
+            if mask_bg:
                 mask_bg = 0
+            else:
+                mask_bg = None
         else:
-            do_mask = True
-            mask_bg = mask_bg
-        for tissue_contour in self.tissue_contours(key):
-            ix = tissue_contour.tissue_id
-            contour = tissue_contour.contour
-            holes = [np.asarray(h.coords) for h in contour.interiors]
-            minx, miny, maxx, maxy = contour.bounds
+            mask_bg = int(mask_bg)
+
+        contours = self._obj.shapes[key]
+        if shuffle:
+            contours = contours.sample(frac=1, random_state=seed)
+
+        level_downsample = self._obj.properties.level_downsample[level]
+        cn_func = _get_cn_func(color_norm)
+        for ix, cnt in contours.iterrows():
+            tissue_id = cnt["tissue_id"]
+            minx, miny, maxx, maxy = cnt.geometry.bounds
             x = int(minx)
             y = int(miny)
-            w = int(maxx - minx) / level_downsample
-            h = int(maxy - miny) / level_downsample
+            w = int((maxx - minx) // level_downsample)
+            h = int((maxy - miny) // level_downsample)
             img = self._obj.reader.get_region(x, y, w, h, level=level)
             img = cn_func(img)
 
-            mask = None
-            if do_mask or tissue_mask:
-                mask = np.zeros_like(img[:, :, 0])
-                # Offset and scale the contour
-                offset_x, offset_y = x / level_downsample, y / level_downsample
-                coords = np.array(contour.exterior.coords) - [offset_x, offset_y]
-                coords = (coords / level_downsample).astype(np.int32)
-                # Fill the contour with 1
-                cv2.fillPoly(mask, [coords], 1)
-
-                # Fill the holes with 0
-                for hole in holes:
-                    hole -= [offset_x, offset_y]
-                    hole = (hole / level_downsample).astype(np.int32)
-                    cv2.fillPoly(mask, [hole], 0)
-
-            if do_mask:
-                # Fill everything that is not the contour
-                # (which is background) with 0
-                img[mask != 1] = mask_bg
-            if not tissue_mask:
-                mask = None
-            else:
-                mask = mask.astype(bool)
-
-            if format == "cyx":
-                img = img.transpose(2, 0, 1)
-
-            yield TissueImage(tissue_id=ix, x=x, y=y, image=img, mask=mask)
+            # scale the shape
+            shape = scale(
+                cnt.geometry,
+                xfact=1 / level_downsample,
+                yfact=1 / level_downsample,
+                origin=(0, 0),
+            )
+            yield TissueImage(
+                tissue_id=tissue_id,
+                shape=shape,
+                image=img,
+                as_array=as_array,
+                dtype=dtype,
+                format=format,
+                mask_bg=mask_bg,
+                downsample=level_downsample,
+            )
 
     def tile_images(
         self,
         key,
-        raw=False,
         color_norm: str = None,
         format: str = "xyc",
-        annotation_key: str = None,
-        annotation_name: str | Sequence[str] = None,
-        annotation_label: str | Dict[str, int] = None,
+        annot_key: str = None,
+        annot_names: str | Sequence[str] = None,
+        annot_labels: str | Dict[str, int] = None,
         mask_dtype: np.dtype = None,
         shuffle: bool = False,
         sample_n: int = None,
@@ -239,18 +558,15 @@ class IterAccessor(object):
         ----------
         key : str
             The tile key.
-        raw : bool, default: True
-            Return the raw image without resizing.
-            If False, the image is resized to the requested tile size.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
         format : str, {"xyc", "cyx"}, default: "xyc"
             The channel format of the image.
-        annotation_key : str, default: None
+        annot_key : str, default: None
             The key to the annotation table in :bdg-danger:`shapes` slot.
-        annotation_name : str or array of str, default: None
+        annot_names : str or array of str, default: None
             The name of the annotation column in the annotation table or a list of names.
-        annotation_label : str or dict, default: None
+        annot_labels : str or dict, default: None
             The name of the label column in the annotation table or a dictionary of label mappings.
         mask_dtype : np.dtype, default: np.uint8
             The data type of the annotation mask, if you have annotation labels more than 255,
@@ -278,44 +594,37 @@ class IterAccessor(object):
         """
         tile_spec = self._obj.tile_spec(key)
 
-        if color_norm is not None:
-            cn = ColorNormalizer(method=color_norm)
-            cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
-        else:
-            cn_func = lambda x: x  # noqa
+        create_annot_mask = False
+        annot_tb = None
+        annot_labels_dict = None
+        mask_size = tile_spec.height, tile_spec.width
 
-        create_anno_mask = False
-        anno_tb = None
-        mask_size = (
-            (tile_spec.ops_height, tile_spec.ops_width)
-            if raw
-            else (tile_spec.height, tile_spec.width)
-        )
-        downsample = tile_spec.base_downsample
-        if annotation_key is not None:
-            create_anno_mask = True
-            if annotation_name is None:
+        if annot_key is not None:
+            create_annot_mask = True
+            if annot_names is None:
                 raise ValueError(
-                    "annotation_name must be provided to create annotation mask."
+                    "annot_name must be provided to create annotation mask."
                 )
-            if annotation_label is None:
+            if annot_labels is None:
                 raise ValueError(
-                    "annotation_label must be provided to create annotation mask."
+                    "annot_labels must be provided to create annotation mask."
                 )
 
-            anno_tb = self._obj.shapes[annotation_key]
-            if isinstance(annotation_name, str):
-                annotation_name = anno_tb[annotation_name]
+            annot_tb = self._obj.shapes[annot_key]
+            if isinstance(annot_names, str):
+                annot_names = annot_tb[annot_names]
 
-            if isinstance(annotation_label, str):
-                annotation_label = anno_tb[annotation_label]
+            if isinstance(annot_labels, str):
+                annot_labels = annot_tb[annot_labels]
             else:
-                annotation_label = [annotation_label[n] for n in annotation_name]
-            annotation_name = np.asarray(annotation_name)
-            annotation_label = np.asarray(annotation_label)
+                annot_labels = [annot_labels[n] for n in annot_names]
+            annot_names = np.asarray(annot_names)
+            annot_labels = np.asarray(annot_labels)
+            annot_labels_dict = dict(zip(annot_names, annot_labels))
 
+            # If there are more than 255 labels, use uint32
             if mask_dtype is None:
-                if annotation_label.max() > 255:
+                if annot_labels.max() > 255:
                     mask_dtype = np.uint32
                 else:
                     mask_dtype = np.uint8
@@ -326,11 +635,14 @@ class IterAccessor(object):
         elif shuffle:
             points = points.sample(frac=1, random_state=seed)
 
+        cn_func = _get_cn_func(color_norm)
+        downsample = tile_spec.base_downsample
         for _, row in points.iterrows():
             x = row["x"]
             y = row["y"]
             ix = row["id"]
             tix = row["tissue_id"]
+            tile_bbox = row["geometry"]
 
             img = self._obj.reader.get_region(
                 x,
@@ -339,33 +651,32 @@ class IterAccessor(object):
                 tile_spec.ops_height,
                 level=tile_spec.ops_level,
             )
+            img = cv2.resize(img, (tile_spec.width, tile_spec.height))
             img = cn_func(img)
-
-            if not raw:
-                img = cv2.resize(img, (tile_spec.width, tile_spec.height))
 
             if format == "cyx":
                 img = img.transpose(2, 0, 1)
 
-            anno_shapes = None
-            anno_mask = None
-            if create_anno_mask:
-                anno_shapes = []
-                bbox = box(x, y, x + tile_spec.base_width, y + tile_spec.base_height)
-                sel = anno_tb.geometry.intersects(bbox)  # return a boolean mask
+            annot_shapes = None
+            annot_mask = None
+            if create_annot_mask:
+                annot_shapes = []
+                sel = annot_tb.geometry.intersects(tile_bbox)  # return a boolean mask
                 anno_mask = np.zeros(mask_size, dtype=mask_dtype)
                 if sel.sum() > 0:
                     sel = sel.values
-                    geos = anno_tb.geometry[sel]
-                    names = annotation_name[sel]
-                    labels = annotation_label[sel]
+                    geos = annot_tb.geometry[sel]
+                    names = annot_names[sel]
+                    labels = annot_labels[sel]
 
                     for geo, name, label in zip(geos, names, labels):
                         geo = translate(geo, xoff=-x, yoff=-y)
-                        if not raw:
-                            geo = scale(
-                                geo, 1 / downsample, 1 / downsample, origin=(0, 0)
-                            )
+                        geo = scale(
+                            geo,
+                            xfact=1 / downsample,
+                            yfact=1 / downsample,
+                            origin=(0, 0),
+                        )
                         cnt = np.array(geo.exterior.coords, dtype=np.int32)
                         holes = [
                             np.array(h.coords, dtype=np.int32) for h in geo.interiors
@@ -375,21 +686,24 @@ class IterAccessor(object):
                         # Clip the annotation by the tile
                         # May not be valid after clipping
                         output_geo = clip_by_rect(geo, 0, 0, *mask_size)
-                        if not output_geo.is_valid:
+                        if (not output_geo.is_valid) or output_geo.is_empty:
                             continue
                         elif isinstance(output_geo, MultiPolygon):
                             output_geo = [p for p in output_geo.geoms]
                         else:
                             output_geo = [output_geo]
                         for p in output_geo:
-                            anno_shapes.append((p, name, label))
+                            annot_shapes.append((p, name, label))
 
             yield TileImage(
                 id=ix,
                 x=x,
                 y=y,
+                base_width=tile_spec.base_width,
+                base_height=tile_spec.base_height,
                 tissue_id=tix,
                 image=img,
-                anno_mask=anno_mask,
-                anno_shapes=anno_shapes,
+                annot_mask=annot_mask,
+                annot_shapes=annot_shapes,
+                annot_labels=annot_labels_dict,
             )
