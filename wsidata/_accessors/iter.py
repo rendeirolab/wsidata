@@ -281,8 +281,6 @@ class TileImage:
         id,
         x,
         y,
-        base_width,
-        base_height,
         tissue_id,
         image,
         annot_mask=None,
@@ -292,22 +290,26 @@ class TileImage:
         self.id = id
         self.x = x
         self.y = y
-        self.base_width = base_width
-        self.base_height = base_height
         self.tissue_id = tissue_id
         self.image = image
         self.annot_mask = annot_mask
         self.annot_shapes = annot_shapes
         self.annot_labels = annot_labels
 
+    @property
+    def width(self):
+        return self.image.shape[1]
+
+    @property
+    def height(self):
+        return self.image.shape[0]
+
     @cached_property
     def norm_annot_shapes(self):
         if self.annot_shapes is not None:
             new_shapes = []
             for shape, name, label in self.annot_shapes:
-                norm_shape = _normalize_polygon(
-                    shape, (0, 0, self.base_width, self.base_height)
-                )
+                norm_shape = _normalize_polygon(shape, (0, 0, self.width, self.height))
                 new_shapes.append((norm_shape, name, self.annot_labels[name]))
             return new_shapes
 
@@ -662,7 +664,7 @@ class IterAccessor(object):
             if create_annot_mask:
                 annot_shapes = []
                 sel = annot_tb.geometry.intersects(tile_bbox)  # return a boolean mask
-                anno_mask = np.zeros(mask_size, dtype=mask_dtype)
+                annot_mask = np.zeros(mask_size, dtype=mask_dtype)
                 if sel.sum() > 0:
                     sel = sel.values
                     geos = annot_tb.geometry[sel]
@@ -681,8 +683,8 @@ class IterAccessor(object):
                         holes = [
                             np.array(h.coords, dtype=np.int32) for h in geo.interiors
                         ]
-                        cv2.fillPoly(anno_mask, [cnt], int(label))  # noqa
-                        cv2.fillPoly(anno_mask, holes, 0)  # noqa
+                        cv2.fillPoly(annot_mask, [cnt], int(label))  # noqa
+                        cv2.fillPoly(annot_mask, holes, 0)  # noqa
                         # Clip the annotation by the tile
                         # May not be valid after clipping
                         output_geo = clip_by_rect(geo, 0, 0, *mask_size)
@@ -699,8 +701,6 @@ class IterAccessor(object):
                 id=ix,
                 x=x,
                 y=y,
-                base_width=tile_spec.base_width,
-                base_height=tile_spec.base_height,
                 tissue_id=tix,
                 image=img,
                 annot_mask=annot_mask,
