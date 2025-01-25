@@ -15,7 +15,7 @@ from ome_zarr.io import parse_url
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
-from .._accessors import FetchAccessor, IterAccessor, DatasetAccessor
+from ..accessors import FetchAccessor, IterAccessor, DatasetAccessor
 from .._utils import find_stack_level
 from ..reader import ReaderBase, SlideProperties
 
@@ -26,99 +26,80 @@ class WSIData(SpatialData):
     and a whole slide image reader.
 
     .. note::
-     Use the :func:`open_wsi` function to create a WSIData object.
+       Use the :func:`open_wsi` function to create a WSIData object.
 
     By default, the whole slide image is not attached to the SpatialData.
     A thumbnail version of the whole slide image is attached for visualization purpose.
 
-    The WSIData contains four main components:
-
     .. list-table::
-     :header-rows: 1
+       :header-rows: 1
 
-     * -
-       - Whole slide image
-       - Tissue contours
-       - Tile locations
-       - Features
+       * - **Content**
+         - **Default key**
+         - **Slot**
+         - **Type**
 
-     * - **SpatialData Slot**
-       - :bdg-danger:`images`
-       - :bdg-danger:`shapes`
-       - :bdg-danger:`shapes`
-       - :bdg-danger:`tables`
+       * - Whole slide image
+         - :bdg-info:`wsi_thumbnail`
+         - :bdg-danger:`images`
+         - :class:`DataArray <xarray.DataArray>` (c, y, x) format
 
-     * - **Default Key**
-       - :bdg-info:`wsi_thumbnail`
-       - :bdg-info:`tissues`
-       - :bdg-info:`tiles`
-       - :bdg-info:`\{feature_key\}_\{tile_key\}`
+       * - Slide Properties
+         - :bdg-info:`slide_properties`
+         - :bdg-danger:`attrs`
+         - :class:`SlideProperties <wsidata.reader.SlideProperties>`
 
-     * - | **Attributes**
-         | **Slot**
-         | **Key**
-       - | :class:`SlideProperties <wsidata.reader.SlideProperties>`
-         | :bdg-danger:`tables`
-         | :bdg-info:`slide_properties`
-       -
-       - | :class:`TileSpec <wsidata.TileSpec>`
-         | :bdg-danger:`tables`
-         | :bdg-info:`tile_spec`
-       -
+       * - Tissue contours
+         - :bdg-info:`tissues`
+         - :bdg-danger:`shapes`
+         - :class:`GeoDataFrame <geopandas.GeoDataFrame>`
 
-     * - **Content**
-       - | :class:`DataArray <xarray.DataArray>`
-         | (c, y, x) format.
-       - | :class:`GeoDataFrame <geopandas.GeoDataFrame>` with columns:
-         | :bdg-black:`tissue_id`
-         | :bdg-black:`geometry`
-       - | :class:`GeoDataFrame <geopandas.GeoDataFrame>` with columns:
-         | :bdg-black:`tile_id`
-         | :bdg-black:`x`, :bdg-black:`y`
-         | :bdg-black:`tissue_id`
-         | :bdg-black:`geometry`
-       - | :class:`AnnData <anndata.AnnData>` with:
-         | :code:`X`: The feature matrix
-         | :code:`varm`: :bdg-black:`agg_slide`, :bdg-black:`agg_tissue`
+       * - Tile locations
+         - :bdg-info:`tiles`
+         - :bdg-danger:`shapes`
+         - :class:`GeoDataFrame <geopandas.GeoDataFrame>`
+
+       * - Tile specifications
+         - :bdg-info:`tile_spec`
+         - :bdg-danger:`attrs`
+         - :class:`TileSpec <wsidata.TileSpec>`
+
+       * - Features
+         - :bdg-info:`{feature_key}_{tile_key}`
+         - :bdg-danger:`tables`
+         - :class:`AnnData <anndata.AnnData>`
 
 
+    You can interact with WSIData using the following accessors:
 
-     You can interact with WSIData using the following accessors:
+    - :class:`fetch <wsidata.FetchAccessor>`: Access data from the WSIData object.
+    - :class:`iter <wsidata.IterAccessor>`: Iterate over data in the WSIData object.
+    - :class:`ds <wsidata.DatasetAccessor>`: Create deep learning datasets from the WSIData object.
+    - To implement your own accessors, use :func:`register_wsidata_accessor <wsidata.register_wsidata_accessor>`.
 
-     - :class:`get <wsidata.GetAccessor>`: Access data from the WSIData object.
-     - :class:`iter <wsidata.IterAccessor>`: Iterate over data in the WSIData object.
-     - :class:`ds <wsidata.DatasetAccessor>`: Create deep learning datasets from the WSIData object.
-     - To implement your own accessors, use :func:`register_wsidata_accessor <wsidata.register_wsidata_accessor>`.
+    For analysis purpose, you can override two slide properties:
 
-     For analysis purpose, you can override two slide properties:
+    - **microns per pixel (mpp)**: Using the :meth:`set_mpp` method.
+    - **bounds**: Using the :meth:`set_bounds` method.
 
-     - microns per pixel (mpp): Using the :meth:`set_mpp` method.
-     - bounds: Using the :meth:`set_bounds` method.
+    Other Parameters
+    ----------------
+    reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
+        A reader object that can interface with the whole slide image file.
+    slide_properties_source : {'slide', 'sdata'}, default: 'sdata'
+        The source of the slide properties.
 
-     Parameters
-     ----------
-     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
-         A reader object that can interface with the whole slide image file.
-     sdata : :class:`SpatialData <spatialdata.SpatialData>`
-         A SpatialData object for storing analysis data.
-     backed_file : str or Path
-         Storage location to the SpatialData object.
-     slide_properties_source : {'slide', 'sdata'}, default: 'sdata'
-         The source of the slide properties.
+        - "slide": load from the reader object.
+        - "sdata": load from the SpatialData object.
 
-         - "slide": load from the reader object.
-         - "sdata": load from the SpatialData object.
-
-     Attributes
-     ----------
-     properties : :class:`SlideProperties <wsidata.reader.SlideProperties>`
-         The properties of the whole slide image.
-     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
-         The reader object for interfacing with the whole slide image.
-     sdata : :class:`SpatialData <spatialdata.SpatialData>`
-         The SpatialData object containing the spatial data.
-     backed_file : Path
-         The path to the backed file.
+    Attributes
+    ----------
+    properties : :class:`SlideProperties <wsidata.reader.SlideProperties>`
+        The properties of the whole slide image.
+    reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
+        The reader object for interfacing with the whole slide image.
+    wsi_store :
+        The store path for the whole slide image.
 
     """
 
@@ -186,9 +167,11 @@ class WSIData(SpatialData):
         )
 
     def set_exclude_elements(self, elements):
+        """Set the elements to be excluded from serialize to the WSIData object on disk."""
         self._exclude_elements.update(elements)
 
     def set_wsi_store(self, store: str | Path):
+        """Set the on disk path for the WSIData."""
         self._wsi_store = Path(store)
 
     def _gen_elements(
@@ -379,10 +362,17 @@ class WSIData(SpatialData):
 class TileSpec:
     """Data class for storing tile specifications.
 
-    # There are 3 levels of tile size that we should record:
-    # 1. The destined tile size requested by the user
-    # 2. The tile size used by the image reader to optimize the performance
-    # 3. The actual tile size at the level 0
+    To enable efficient tils generation, there are 3 levels of tile size:
+
+    1. The destined tile size and level requested by the user
+    2. The tile size and level used by the image reader to optimize the performance
+    3. The actual tile size at the level 0
+
+    This enables user to request tile size and level that are not exist in the image pyramids.
+    For example, if our slide is mpp=0.5 (20X) with pyramids of mpp=[0.5, 2.0, 4.0],
+    and user request mpp=1.0 (10X) with tile size 512x512. There is no direct level to read from,
+    we need to read from mpp=0.5 with tile size of 1024x1024 and downsample to 512x512.
+
 
     Parameters
     ----------
@@ -404,7 +394,7 @@ class TileSpec:
     tissue_name : str, optional
         The name of the tissue.
 
-    Properties
+    Attributes
     ----------
     ops_{height, width} : int
         The height/width of the tile when retrieving images.

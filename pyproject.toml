@@ -13,8 +13,8 @@ requires-python = ">=3.10"
 dynamic = ["version", "description"]
 
 dependencies = [
-    "spatialdata>=0.2.7rc0",
-    "opencv-python",
+    "spatialdata>=0.3.0",
+    "opencv-python-headless",
     "openslide-python",
     "openslide-bin",
     "tiffslide",

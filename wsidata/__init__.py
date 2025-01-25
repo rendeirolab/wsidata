@@ -5,7 +5,7 @@ __version__ = "0.3.0"
 import wsidata.dataset as dataset
 from ._model import WSIData, TileSpec
 from .io import open_wsi, agg_wsi
-from ._accessors import (
+from .accessors import (
     register_wsidata_accessor,
     FetchAccessor,
     IterAccessor,

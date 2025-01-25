@@ -18,7 +18,7 @@ def open_wsi(
     wsi,
     store=None,
     reader=None,
-    download=True,
+    download=None,
     name=None,
     cache_dir=None,
     pbar=True,
@@ -102,9 +102,13 @@ def open_wsi(
     format = Path(wsi).suffix
     ReaderCls = get_reader(reader, format=format)
 
-    if download and fs.protocol != "file":
-        downloader = CacheDownloader(wsi_path, name=name, cache_dir=cache_dir)
-        wsi = downloader.download(pbar)
+    if fs.protocol != "file":
+        if download is None:
+            download = True
+
+        if download:
+            downloader = CacheDownloader(wsi_path, name=name, cache_dir=cache_dir)
+            wsi = downloader.download(pbar)
 
     reader_obj = ReaderCls(wsi)
     wsi = Path(wsi)

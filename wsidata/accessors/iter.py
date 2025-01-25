@@ -61,10 +61,21 @@ PALETTE = (
 
 
 class TissueContour:
-    tissue_id: int
-    shape: Polygon
-    as_array: bool
-    dtype: np.dtype
+    """The data container return by :meth:`wsidata.iter.tissue_contours <wsidata.IterAccessor.tissue_contours>`
+
+    Attributes
+    ----------
+    tissue_id : int
+        The id of tissue
+    contour : :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>`
+        The contour of the tissue
+    holes : array of :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>`
+        The holes of the tissue
+    as_array : bool
+        Whether to return the result as array or polygon, can be set to True or False.
+
+
+    """
 
     def __init__(self, tissue_id, shape, as_array=False, dtype=None):
         self.tissue_id = tissue_id
@@ -76,18 +87,23 @@ class TissueContour:
     def as_array(self):
         return self._as_array
 
+    @as_array.setter
+    def as_array(self, v):
+        self._as_array = v
+
     @property
     def dtype(self):
         return self._dtype
 
-    @cached_property
+    @property
     def contour(self) -> np.ndarray | Polygon:
+        """The contour of the tissue"""
         if self.as_array:
             return np.array(self.shape.exterior.coords, dtype=self.dtype)
         else:
             return Polygon(self.shape.exterior.coords)
 
-    @cached_property
+    @property
     def holes(self) -> List[np.ndarray | Polygon]:
         if self.as_array:
             return [
@@ -161,10 +177,6 @@ class TissueContour:
 
 
 class TissueImage(TissueContour):
-    image: np.ndarray
-    format: str
-    mask_bg: int | None
-
     def __init__(
         self,
         tissue_id,
@@ -329,7 +341,7 @@ class TileImage:
             f"TileImage(id={self.id}, x={self.x}, y={self.y}, "
             f"tissue_id={self.tissue_id}) {shapes_repr} "
             f"with attributes: \n"
-            f"image, annot_mask, annot_shapes"
+            f"image, has_annot, annot_mask, annot_shapes, normed_annot_shapes, annot_labels, tissue_id, x, y"
         )
 
     def plot(
@@ -353,10 +365,11 @@ class TileImage:
         ax.imshow(self.image, **kwargs)
 
         # Create palette
-        if palette is None:
-            palette = {k: v for k, v in zip(self.annot_labels.keys(), PALETTE)}
+        if self.has_annot:
+            if palette is None:
+                palette = {k: v for k, v in zip(self.annot_labels.keys(), PALETTE)}
 
-        if show_annots and self.annot_shapes is not None:
+        if show_annots and self.has_annot:
             for shape, name, label in self.annot_shapes:
                 path = Path.make_compound_path(
                     Path(np.asarray(shape.exterior.coords)[:, :2]),
@@ -379,7 +392,7 @@ class TileImage:
                     alpha=alpha,
                 )
                 ax.add_patch(fill)
-        if legend:
+        if legend and self.has_annot:
             from legendkit import cat_legend
 
             cat_legend(
@@ -395,7 +408,11 @@ class TileImage:
 class IterAccessor(object):
     """An accessor to iterate over the WSI data.
 
-    Usage: `wsidata.iter`
+    Usage: :code:`wsidata.iter`
+
+    The iter accessor will return a data container,
+    you can access the data within container using attributes.
+    All container has :code:`.plot()` method to visualize its content.
 
     """
 
@@ -427,12 +444,10 @@ class IterAccessor(object):
 
         Returns
         -------
-        TissueContour
-            A named tuple with fields:
+        :class:`TissueContour <wsi.accessors.iter.TissueContour>`
 
-            - tissue_id : The tissue id.
-            - contour : The tissue contour as a shapely geometry or an array.
-            - holes : The holes in the tissue contour.
+        - tissue_id : The tissue id.
+        - shape : :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>` The tissue shape as a shapely geometry or an array.
 
         """
 
@@ -486,14 +501,13 @@ class IterAccessor(object):
 
         Returns
         -------
-        TissueImage
-            A named tuple with fields:
+        :class:`TissueImage <wsi.accessors.iter.TissueImage>`
 
-            - tissue_id : The tissue id.
-            - x : The x-coordinate of the image.
-            - y : The y-coordinate of the image.
-            - image : The tissue image.
-            - mask : The tissue mask.
+        - tissue_id : The tissue id.
+        - x : The x-coordinate of the image.
+        - y : The y-coordinate of the image.
+        - image : The tissue image.
+        - mask : The tissue mask.
 
         """
         import cv2

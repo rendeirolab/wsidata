@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, asdict, field
 from functools import singledispatch, cached_property
-from typing import Optional, List, Mapping
+from typing import Optional, List, Mapping, Dict
 
 import cv2
 import numpy as np
@@ -218,6 +218,11 @@ class ReaderBase:
         if self._reader is None:
             self.create_reader()
         return self._reader
+
+    @property
+    def associated_images(self) -> Dict[str, np.ndarray]:
+        """By default, there is no associated images"""
+        return {}
 
 
 @singledispatch

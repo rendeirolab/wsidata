@@ -94,3 +94,12 @@ class TileImagesDataset(Dataset):
                 "tissue_id": int(tid),
             }
         return {"image": tile, "x": int(x), "y": int(y), "tissue_id": int(tid)}
+
+
+class TileImageDiskDataset(Dataset):
+    def __init__(
+        self,
+        wsi: WSIData,
+        output_dir: str = None,  # Default to a temporary directory
+    ):
+        pass
