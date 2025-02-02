@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import NamedTuple, Sequence, Dict, List, Tuple
+from typing import Sequence, Dict, List, Tuple, Generator
 
 import cv2
 import numpy as np
-from shapely import MultiPolygon, Polygon, box, clip_by_rect
+from shapely import MultiPolygon, Polygon, clip_by_rect
 from shapely.affinity import translate, scale
 
 
@@ -182,7 +182,7 @@ class TissueImage(TissueContour):
         tissue_id,
         shape,
         image,
-        format="xyc",
+        format="yxc",
         mask_bg=None,
         as_array=False,
         dtype=None,
@@ -213,7 +213,8 @@ class TissueImage(TissueContour):
     @property
     def image(self):
         if self.format == "cyx":
-            return self._image.transpose(1, 2, 0)
+            # "yxc" -> "cyx"
+            return self._image.transpose(2, 0, 1)
         return self._image
 
     @cached_property
@@ -226,7 +227,7 @@ class TissueImage(TissueContour):
             coords = np.array(self.shape.exterior.coords) - [offset_x, offset_y]
             coords = coords.astype(np.int32)
             # Fill the contour with 1
-            cv2.fillPoly(mask, [coords], 1)
+            cv2.fillPoly(mask, [coords], 1)  # noqa
 
             # Fill the holes with 0
             for hole in self.holes:
@@ -234,7 +235,7 @@ class TissueImage(TissueContour):
                     hole = np.array(hole.exterior.coords)
                 hole -= [offset_x, offset_y]
                 hole = hole.astype(np.int32)
-                cv2.fillPoly(mask, [hole], 0)
+                cv2.fillPoly(mask, [hole], 0)  # noqa
             mask = mask.astype(bool)
         return mask
 
@@ -251,8 +252,6 @@ class TissueImage(TissueContour):
             # (which is background) with 0
             image[mask != 1] = self.mask_bg
 
-        if self.format == "cyx":
-            image = image.transpose(2, 0, 1)
         return image
 
     def __repr__(self):
@@ -426,7 +425,7 @@ class IterAccessor(object):
         dtype: np.dtype = None,
         shuffle: bool = False,
         seed: int = 0,
-    ) -> TissueContour:
+    ) -> Generator[TissueContour]:
         """A generator to extract tissue contours from the WSI.
 
         Parameters
@@ -472,12 +471,12 @@ class IterAccessor(object):
         level=-1,
         mask_bg=False,
         color_norm: str = None,
-        format: str = "xyc",
+        format: str = "yxc",
         as_array: bool = False,
         dtype: np.dtype = None,
         shuffle: bool = False,
         seed: int = 0,
-    ) -> TissueImage:
+    ) -> Generator[TissueImage]:
         """Extract tissue images from the WSI.
 
         Parameters
@@ -496,7 +495,7 @@ class IterAccessor(object):
             If an integer, the background is masked with the given value.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
-        format : str, {"xyc", "cyx"}, default: "xyc"
+        format : str, {"yxc", "cyx"}, default: "yxc"
             The channel format of the image.
 
         Returns
@@ -510,7 +509,6 @@ class IterAccessor(object):
         - mask : The tissue mask.
 
         """
-        import cv2
 
         # Determine if we should mask the background
         if isinstance(mask_bg, bool):
@@ -559,7 +557,7 @@ class IterAccessor(object):
         self,
         key,
         color_norm: str = None,
-        format: str = "xyc",
+        format: str = "yxc",
         annot_key: str = None,
         annot_names: str | Sequence[str] = None,
         annot_labels: str | Dict[str, int] = None,
@@ -567,7 +565,7 @@ class IterAccessor(object):
         shuffle: bool = False,
         sample_n: int = None,
         seed: int = 0,
-    ) -> TileImage:
+    ) -> Generator[TileImage]:
         """Extract tile images from the WSI.
 
         Parameters
@@ -576,7 +574,7 @@ class IterAccessor(object):
             The tile key.
         color_norm : str, {"macenko", "reinhard"}, default: None
             Color normalization method.
-        format : str, {"xyc", "cyx"}, default: "xyc"
+        format : str, {"yxc", "cyx"}, default: "yxc"
             The channel format of the image.
         annot_key : str, default: None
             The key to the annotation table in :bdg-danger:`shapes` slot.

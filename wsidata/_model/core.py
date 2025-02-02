@@ -161,9 +161,7 @@ class WSIData(SpatialData):
 
     def __repr__(self):
         return (
-            f"WSI: {self.reader.file}\n"
-            f"Reader: {self.reader.name}\n"
-            f"{super().__repr__()}"
+            f"WSI: {self.reader.file}\nReader: {self.reader.name}\n{super().__repr__()}"
         )
 
     def set_exclude_elements(self, elements):
@@ -467,7 +465,6 @@ class TileSpec:
             slide_mpp = wsi.properties.mpp
 
         # If user does not specify mpp, default to ops level is 0
-        ops_downsample = None
         if mpp is None:
             mpp = wsi.properties.mpp
             if ops_level is not None:

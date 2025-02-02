@@ -128,8 +128,7 @@ def get_reader(reader: str = None, format: str = None):
         reader = Reader(reader)
         if reader not in reader_candidates:
             raise ValueError(
-                f"Requested reader not available, "
-                f"must be one of {reader_candidates}"
+                f"Requested reader not available, must be one of {reader_candidates}"
             )
         else:
             used_reader = readers.get(reader)

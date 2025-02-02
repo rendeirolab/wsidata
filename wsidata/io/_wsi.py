@@ -3,13 +3,11 @@ from pathlib import Path
 
 import numpy as np
 from anndata import AnnData
-from fsspec.core import url_to_fs
 from rich.progress import track
 from spatialdata import read_zarr, SpatialData
 from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
-from ._download import CacheDownloader
 from .._model import WSIData
 from ..reader import get_reader, to_datatree
 
@@ -18,10 +16,6 @@ def open_wsi(
     wsi,
     store=None,
     reader=None,
-    download=None,
-    name=None,
-    cache_dir=None,
-    pbar=True,
     attach_images=False,
     image_key="wsi",
     save_images=False,
@@ -51,14 +45,8 @@ def open_wsi(
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
         Reader to use, by default "auto", choosing available reader, first openslide, then tifffile.
-    download : bool, optional
-        Whether to download the slide.
     name : str, optional
         The name of the slide.
-    cache_dir : str, optional
-        The cache directory, by default file will be stored in working direction.
-    pbar : bool, optional
-        Whether to show progress bar, by default True.
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
@@ -88,43 +76,35 @@ def open_wsi(
     .. code-block:: python
 
         >>> from wsidata import open_wsi
-        >>> wsi = open_wsi("https://bit.ly/3ZvbzVc")
+        >>> wsi = open_wsi("slide.svs")
 
     """
-
     # Check if the slide is a file or URL
-    wsi = str(wsi)
-    fs, wsi_path = url_to_fs(wsi)
-    if not fs.exists(wsi_path):
+    wsi = Path(wsi)
+    if not wsi.exists():
         raise ValueError(f"Slide {wsi} not existed or not accessible.")
 
     # Early attempt with reader
-    format = Path(wsi).suffix
-    ReaderCls = get_reader(reader, format=format)
+    ReaderClass = get_reader(reader, format=wsi.suffix)
 
-    if fs.protocol != "file":
-        if download is None:
-            download = True
-
-        if download:
-            downloader = CacheDownloader(wsi_path, name=name, cache_dir=cache_dir)
-            wsi = downloader.download(pbar)
-
-    reader_obj = ReaderCls(wsi)
-    wsi = Path(wsi)
+    reader_instance = ReaderClass(wsi)
     if store is None:
         store = wsi.with_suffix(".zarr")
     else:
-        # We also support write all backed file to a directory
-        backed_file_p = Path(store)
-        if backed_file_p.is_dir():
-            if is_zarr_dir(backed_file_p):
-                store = backed_file_p
+        store_path = Path(store)
+        # We also support write store to a directory
+        if store_path.is_dir():
+            # If the directory is a zarr directory, we just use it
+            if is_zarr_dir(store_path):
+                store = store_path
+            # Otherwise, we create a zarr file in that directory
             else:
-                zarr_name = Path(wsi).with_suffix(".zarr").name
-                store = backed_file_p / zarr_name
+                zarr_name = wsi.with_suffix(".zarr").name
+                store = store_path / zarr_name
+        # If store is a not a directory, we assume it is a valid zarr file
+        # WARNING: No guarantee
         else:
-            store = backed_file_p
+            store = store_path
 
     if store.exists():
         sdata = read_zarr(store)
@@ -134,18 +114,18 @@ def open_wsi(
     exclude_elements = []
 
     if attach_images and image_key not in sdata:
-        images_datatree = to_datatree(reader_obj)
+        images_datatree = to_datatree(reader_instance)
         sdata.images[image_key] = images_datatree
         if not save_images:
             exclude_elements.append(image_key)
 
     if attach_thumbnail and thumbnail_key not in sdata:
-        max_thumbnail_size = min(reader_obj.properties.shape)
+        max_thumbnail_size = min(reader_instance.properties.shape)
         if thumbnail_size > max_thumbnail_size:
             thumbnail_size = max_thumbnail_size
-        thumbnail = reader_obj.get_thumbnail(thumbnail_size)
+        thumbnail = reader_instance.get_thumbnail(thumbnail_size)
         thumbnail_shape = thumbnail.shape
-        origin_shape = reader_obj.properties.shape
+        origin_shape = reader_instance.properties.shape
         scale_x, scale_y = (
             origin_shape[0] / thumbnail_shape[0],
             origin_shape[1] / thumbnail_shape[1],
@@ -160,7 +140,7 @@ def open_wsi(
             if not save_thumbnail:
                 exclude_elements.append(thumbnail_key)
 
-    slide_data = WSIData.from_spatialdata(sdata, reader_obj)
+    slide_data = WSIData.from_spatialdata(sdata, reader_instance)
     slide_data.set_exclude_elements(exclude_elements)
     slide_data.set_wsi_store(store)
     return slide_data
@@ -203,8 +183,6 @@ def agg_wsi(
     AnnData
         The aggregated feature space.
     """
-    if wsi_col is None and store_col is None:
-        raise ValueError("Either wsi_col or store_col must be provided.")
 
     if store_col is not None:
         backed_files = slides_table[store_col]
@@ -212,6 +190,8 @@ def agg_wsi(
         backed_files = slides_table[wsi_col].apply(
             lambda x: Path(x).with_suffix(".zarr")
         )
+    else:
+        raise ValueError("Either wsi_col or store_col must be provided.")
 
     jobs = []
     with ThreadPoolExecutor() as executor:
@@ -291,7 +271,7 @@ def is_zarr_dir(path):
     Detect if the given directory is a Zarr storage using the Zarr library.
 
     Parameters:
-        path (str): The path to the directory.
+        path : The path to the directory.
 
     Returns:
         bool: True if the directory is a Zarr storage, False otherwise.
@@ -299,7 +279,7 @@ def is_zarr_dir(path):
     import zarr
 
     try:
-        zarr.open_group(path, mode="r")
+        zarr.open_group(str(path), mode="r")
         return True
     except Exception:
         return False

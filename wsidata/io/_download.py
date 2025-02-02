@@ -125,3 +125,15 @@ class CacheDownloader:
                     with open(self.dest, "rb") as fdst:
                         f.write(self._hash_file(fdst))
             return self.dest
+
+
+def download_wsi(url, cache_dir=None, pbar=True):
+    """Download a slide from URL.
+
+    Currently only support download self-contained slides.
+
+    Formats like .mrxs or .vsi with multiple files are not supported.
+
+    """
+    downloader = CacheDownloader(url, cache_dir=cache_dir)
+    return downloader.download(pbar)

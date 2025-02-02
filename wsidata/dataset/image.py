@@ -1,7 +1,6 @@
 from functools import cached_property
 
 from torch.utils.data import Dataset
-from torchvision.transforms import Resize
 
 from .._model import WSIData
 
@@ -51,7 +50,6 @@ class TileImagesDataset(Dataset):
             self.targets = tiles[target_key].to_numpy()
         self.transform = transform
         self.target_transform = target_transform
-        self._resize = Resize((self.spec.height, self.spec.width), antialias=True)
 
         # Send reader to the worker instead of wsi
         self.reader = wsi.reader

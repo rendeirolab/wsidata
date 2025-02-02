@@ -97,7 +97,6 @@ class FetchAccessor(object):
         """
 
         sdata = self._obj
-
         feature_key = self._obj._check_feature_key(feature_key, tile_key)
         feature_adata = sdata.tables[feature_key]
         X = feature_adata.X  # Must be a numpy array
