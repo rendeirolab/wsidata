@@ -40,6 +40,8 @@ def test_tiffslide(test_slide):
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
 def test_bioformats(test_slide):
     run_reader_test("bioformats", test_slide)
+    # TODO: Add test for bioformats on vsi format
+    #       Add test for bioformats against openslide reader
 
 
 @pytest.mark.skipif(skip_reader("cucim"), reason="cucim not installed")

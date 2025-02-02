@@ -49,20 +49,7 @@ class TestWSIData:
             wsidata,
             "test_tile",
             tiles,
-            tile_spec=TileSpec(
-                height=256,
-                width=256,
-                raw_height=256,
-                raw_width=256,
-                stride_height=256,
-                stride_width=256,
-                raw_stride_height=256,
-                raw_stride_width=256,
-                tissue_name="test_tissue",
-                level=0,
-                downsample=1,
-                mpp=0.5,
-            ),
+            tile_spec=TileSpec.from_wsidata(wsidata, 25, tissue_name="test_tissue"),
             tissue_ids=np.random.randint(0, 2, self.n_tiles),
         )
 
