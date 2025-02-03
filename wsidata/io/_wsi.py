@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 from rich.progress import track
 from spatialdata import read_zarr, SpatialData
@@ -13,25 +17,24 @@ from ..reader import get_reader, to_datatree
 
 
 def open_wsi(
-    wsi,
-    store=None,
-    reader=None,
-    attach_images=False,
-    image_key="wsi",
-    save_images=False,
-    attach_thumbnail=True,
-    thumbnail_key="wsi_thumbnail",
-    thumbnail_size=2000,
-    save_thumbnail=True,
+    wsi: str | Path,
+    store: str = None,
+    reader: Literal["openslide", "tiffslide", "bioformats"] = None,
+    attach_images: bool = False,
+    image_key: str = "wsi",
+    save_images: bool = False,
+    attach_thumbnail: bool = True,
+    thumbnail_key: str = "wsi_thumbnail",
+    thumbnail_size: int = 2000,
+    save_thumbnail: bool = True,
     **kwargs,
 ):
     """Open a whole slide image.
 
-    You can open a whole slide image from a URL or a local file.
-    If load from remote URL, the image will be downloaded and cached (default to current the working directory).
-    You can also attach images and thumbnail to the SpatialData object. By default, only the thumbnail is attached,
-    the thumbnail is a downsampled version of the whole slide image, the original image is not attached to save disk space
-    when you save the WSIData object on disk.
+    You can attach images and thumbnail to the SpatialData object. By default, only the thumbnail is attached,
+    the thumbnail is a downsampled version of the whole slide image,
+    the original image is not attached as it will make unnecessary copies of the data on disk
+    when saving the SpatialData object.
 
     Parameters
     ----------
@@ -45,8 +48,6 @@ def open_wsi(
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
         Reader to use, by default "auto", choosing available reader, first openslide, then tifffile.
-    name : str, optional
-        The name of the slide.
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
@@ -147,13 +148,13 @@ def open_wsi(
 
 
 def agg_wsi(
-    slides_table,
-    feature_key,
-    tile_key="tiles",
-    agg_key="agg",
-    wsi_col=None,
-    store_col=None,
-    error="raise",
+    slides_table: pd.DataFrame,
+    feature_key: str,
+    tile_key: str = "tiles",
+    agg_key: str = "agg",
+    wsi_col: str = None,
+    store_col: str = None,
+    error: Literal["raise", "skip"] = "raise",
 ):
     """
     Aggregate feature from a whole slide image.
@@ -212,7 +213,6 @@ def agg_wsi(
         mask = np.asarray([r is not None for r in results])
         X = np.vstack(np.asarray(results, dtype=object)[mask])
         slides_table = slides_table[mask]
-
     else:
         X = np.vstack(results)
 

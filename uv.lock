@@ -2,7 +2,6 @@ version = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
-    "python_version < '0'",
     "python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux'",
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux')",
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
@@ -306,11 +305,11 @@ wheels = [
 
 [[package]]
 name = "babel"
-version = "2.16.0"
+version = "2.17.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2a/74/f1bc80f23eeba13393b7222b11d95ca3af2c1e28edca18af487137eefed9/babel-2.16.0.tar.gz", hash = "sha256:d1f3554ca26605fe173f3de0c65f750f5a42f924499bf134de6423582298e316", size = 9348104 }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/6b/d52e42361e1aa00709585ecc30b3f9684b3ab62530771402248b1b1d6240/babel-2.17.0.tar.gz", hash = "sha256:0c54cffb19f690cdcc52a3b50bcbf71e07a808d1c80d549f2459b9d2cf0afb9d", size = 9951852 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/20/bc79bc575ba2e2a7f70e8a1155618bb1301eaa5132a8271373a6903f73f8/babel-2.16.0-py3-none-any.whl", hash = "sha256:368b5b98b37c06b7daf6696391c3240c938b37767d4584413e8438c5c435fa8b", size = 9587599 },
+    { url = "https://files.pythonhosted.org/packages/b7/b8/3fe70c75fe32afc4bb507f75563d39bc5642255d1d94f1f23604725780bf/babel-2.17.0-py3-none-any.whl", hash = "sha256:4d0b53093fdfb4b21c92b5213dba5a1b23885afa8383709427046b21c366e5f2", size = 10182537 },
 ]
 
 [[package]]
@@ -1029,11 +1028,11 @@ wheels = [
 
 [[package]]
 name = "fsspec"
-version = "2024.12.0"
+version = "2025.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ee/11/de70dee31455c546fbc88301971ec03c328f3d1138cfba14263f651e9551/fsspec-2024.12.0.tar.gz", hash = "sha256:670700c977ed2fb51e0d9f9253177ed20cbde4a3e5c0283cc5385b5870c8533f", size = 291600 }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/79/68612ed99700e6413de42895aa725463e821a6b3be75c87fcce1b4af4c70/fsspec-2025.2.0.tar.gz", hash = "sha256:1c24b16eaa0a1798afa0337aa0db9b256718ab2a89c425371f5628d22c3b6afd", size = 292283 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/86/5486b0188d08aa643e127774a99bac51ffa6cf343e3deb0583956dca5b22/fsspec-2024.12.0-py3-none-any.whl", hash = "sha256:b520aed47ad9804237ff878b504267a3b0b441e97508bd6d2d8774e3db85cee2", size = 183862 },
+    { url = "https://files.pythonhosted.org/packages/e2/94/758680531a00d06e471ef649e4ec2ed6bf185356a7f9fbfbb7368a40bd49/fsspec-2025.2.0-py3-none-any.whl", hash = "sha256:9de2ad9ce1f85e1931858535bc882543171d197001a0a5eb2ddc04f1781ab95b", size = 184484 },
 ]
 
 [package.optional-dependencies]
@@ -3123,6 +3122,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pyright"
+version = "1.1.393"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/c1/aede6c74e664ab103673e4f1b7fd3d058fef32276be5c43572f4067d4a8e/pyright-1.1.393.tar.gz", hash = "sha256:aeeb7ff4e0364775ef416a80111613f91a05c8e01e58ecfefc370ca0db7aed9c", size = 3790430 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/47/f0dd0f8afce13d92e406421ecac6df0990daee84335fc36717678577d3e0/pyright-1.1.393-py3-none-any.whl", hash = "sha256:8320629bb7a44ca90944ba599390162bf59307f3d9fb6e27da3b7011b8c17ae5", size = 5646057 },
+]
+
+[[package]]
 name = "pytest"
 version = "8.3.4"
 source = { registry = "https://pypi.org/simple" }
@@ -3506,16 +3518,16 @@ wheels = [
 
 [[package]]
 name = "s3fs"
-version = "2024.12.0"
+version = "2025.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobotocore" },
     { name = "aiohttp" },
     { name = "fsspec" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/88/e2fc4fc2a618126ac3cea9b16a4abc5a37dff2522067c9730b5d72d67ac3/s3fs-2024.12.0.tar.gz", hash = "sha256:1b0f3a8f5946cca5ba29871d6792ab1e4528ed762327d8aefafc81b73b99fd56", size = 76578 }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/28/6754f35bfca41a706f77d556e2e681c16a3cbc747fa8656beb080cc352cf/s3fs-2025.2.0.tar.gz", hash = "sha256:d94b985f55add51c655e9ca9b4ceecb5c4b6389aecde162bdebc89f489a4e9f2", size = 76700 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/af/eaec1466887348d7f6cc9d3a668b30b62a4629fb187d0268146118ba3d5e/s3fs-2024.12.0-py3-none-any.whl", hash = "sha256:d8665549f9d1de083151582437a2f10d5f3b3227c1f8e67a2b0b730db813e005", size = 30196 },
+    { url = "https://files.pythonhosted.org/packages/63/92/3c53f932cd1ce09e6c91044eed3dfbebea549b45d24c5484aa74ac0be7e1/s3fs-2025.2.0-py3-none-any.whl", hash = "sha256:4b66b773519c1983e3071e13a42a2f2498d87da13dee40fda0622f4ed1b55664", size = 30235 },
 ]
 
 [[package]]
@@ -4410,6 +4422,7 @@ dev = [
     { name = "numpydoc" },
     { name = "pre-commit" },
     { name = "pydata-sphinx-theme" },
+    { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -4434,7 +4447,7 @@ requires-dist = [
     { name = "scyjava", marker = "extra == 'bioformats'" },
     { name = "spatialdata", specifier = ">=0.3.0" },
     { name = "tiffslide" },
-    { name = "torch", specifier = ">=2.6.0" },
+    { name = "torch", specifier = ">=2.0.0" },
     { name = "torchstain", marker = "extra == 'stain'" },
 ]
 
@@ -4447,6 +4460,7 @@ dev = [
     { name = "numpydoc", specifier = ">=1.8.0" },
     { name = "pre-commit", specifier = ">=4.1.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
+    { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.4" },

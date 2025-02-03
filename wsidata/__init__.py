@@ -11,4 +11,4 @@ from .accessors import (
     IterAccessor,
     DatasetAccessor,
 )
-from .reader import get_reader
+from .reader import get_reader, SlideProperties

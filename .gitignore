@@ -69,7 +69,9 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+docs/build/
+docs/.jupyter_cache/
+docs/jupyter_execute
 
 # PyBuilder
 .pybuilder/
@@ -169,3 +171,4 @@ work/
 # pixi environments
 .pixi
 *.egg-info
+

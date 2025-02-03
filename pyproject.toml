@@ -4,14 +4,29 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wsidata"
-authors = []
+description = "Data structures and I/O functions for whole-slide images (WSIs)."
 readme = "README.md"
-classifiers = [
-    "License :: OSI Approved :: MIT License",
-]
 requires-python = ">=3.10"
-dynamic = ["version", "description"]
-
+license = "MIT"
+authors = [
+    {name = "Yimin Zheng", email = "yzheng@cemm.at"},
+    {name = "Ernesto Abila", email = "eabila@cemm.at"},
+    {name = "André F. Rendeiro", email = "arendeiro@cemm.at"},
+]
+keywords = ["histopathology", "whole slide image", "image analysis", "data structure"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: File Formats",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+Documentation = "https://wsidata.readthedocs.io"
+repository = "https://github.com/rendeirolab/wsidata"
+dynamic = ["version"]
 dependencies = [
     "spatialdata>=0.3.0",
     "opencv-python-headless",
@@ -20,7 +35,7 @@ dependencies = [
     "tiffslide",
     "rich",
     "numba>=0.61.0",
-    "torch>=2.6.0",
+    "torch>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +65,9 @@ include = [
     "wsidata",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["wsidata", "README.md", "LICENSE", "pyproject.toml"]
+
 [tool.ruff]
 lint.ignore = ["F401"]
 line-length = 88
@@ -58,7 +76,8 @@ line-length = 88
 hello = "echo Hello, World!"
 test = "pytest tests"
 doc-build = "sphinx-build -b html docs/source docs/build"
-doc-serve = "python -m http.server -d docs/build/html"
+doc-clean-build = "python docs/clean_up.py && sphinx-build -b html docs/source docs/build"
+doc-serve = "python -m http.server -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
 
 [tool.uv]
@@ -82,4 +101,5 @@ dev = [
     "torchstain>=1.4.1",
     "matplotlib>=3.10.0",
     "legendkit>=0.3.4",
+    "pyright>=1.1.393",
 ]
