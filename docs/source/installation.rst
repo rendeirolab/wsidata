@@ -66,13 +66,23 @@ Installation for slide readers
 
         `OpenSlide <https://openslide.org/>`_ is a C library that provides a simple interface to read whole-slide images.
 
+        OpenSlide is installed by default from v0.3.0. You don't need to install it manually.
+
+        You can easily install from PyPI
+
+        .. code-block:: bash
+
+            pip install openslide-python openslide-bin
+
+        In case that PyPI doesn't work for you:
+
         For Linux and OSX users, it's suggested that you install :code:`openslide` with conda or mamba:
 
         .. code-block:: bash
 
             conda install -c conda-forge openslide-python
             # or
-            mamba install -c conda-forge openslide-python
+            mamba install openslide-python
 
 
         For Windows users, you need to download compiled :code:`openslide` from

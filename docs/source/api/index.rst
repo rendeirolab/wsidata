@@ -2,66 +2,57 @@ API Reference
 =============
 
 
-IO and Utilities Functions
---------------------------
-
 .. currentmodule:: wsidata
 .. autosummary::
     :toctree: _autogen
-    :nosignatures:
-
-    open_wsi
-    agg_wsi
-    get_reader
-
-WSIData
--------
-
-.. currentmodule:: wsidata
-.. autosummary::
-    :toctree: _autogen
-    :template: wsidata
     :nosignatures:
 
     WSIData
     TileSpec
-
-Accessors
----------
-
-.. currentmodule:: wsidata
-.. autosummary::
-    :toctree: _autogen
-    :template: autosummary
-    :nosignatures:
-
-    register_wsidata_accessor
-    FetchAccessor
-    IterAccessor
-    DatasetAccessor
-
-Datasets
---------
-
-.. currentmodule:: wsidata.dataset
-.. autosummary::
-    :toctree: _autogen
-    :template: autosummary
-    :nosignatures:
-
-    TileImagesDataset
-
-Readers
--------
-
-.. currentmodule:: wsidata.reader
-.. autosummary::
-    :toctree: _autogen
-    :template: autosummary
-    :nosignatures:
-
-    ReaderBase
-    OpenSlideReader
-    TiffSlideReader
-    BioFormatsReader
     SlideProperties
+
+
+.. grid:: 1
+   :gutter: 2
+
+   .. grid-item-card:: IO
+      :link: io
+      :link-type: doc
+
+      IO and Utilities Functions
+
+   .. grid-item-card:: Accessors
+      :link: accessors
+      :link-type: doc
+
+      Accessors for WSIData
+
+   .. grid-item-card:: Readers
+      :link: readers
+      :link-type: doc
+
+      Readers for opening WSI files
+
+   .. grid-item-card:: Datasets
+      :link: datasets
+      :link-type: doc
+
+      Torch datasets for training/inference
+
+
+.. toctree::
+    :maxdepth: 2
+    :hidden:
+
+    io
+    accessors
+    datasets
+    readers
+
+
+
+
+
+
+
+

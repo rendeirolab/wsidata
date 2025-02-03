@@ -20,9 +20,18 @@ extensions = [
 ]
 autoclass_content = "class"
 autodoc_docstring_signature = True
-autodoc_default_options = {"members": None, "undoc-members": None}
+autodoc_default_options = {
+    "members": True,
+    "show-inheritance": True,
+    "no-undoc-members": True,
+    "special-members": "__call__",
+    "exclude-members": "__init__, __weakref__",
+    "class-doc-from": "class",
+}
 autodoc_typehints = "none"
 autosummary_generate = True
+numpydoc_show_class_members = False
+add_module_names = False
 
 templates_path = ["_templates"]
 exclude_patterns = []
@@ -50,27 +59,61 @@ intersphinx_mapping = {
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
     "geopandas": ("https://geopandas.org/en/stable/", None),
     "anndata": ("https://anndata.readthedocs.io/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 
-def autodoc_skip_member(app, what, name, obj, skip, options):
-    exclude_wsidata_attrs = {
-        "SLIDE_PROPERTIES_KEY",
-        "TILE_SPEC_KEY",
-    }
-
-    if isinstance(obj, property):
-        return True
-    elif isinstance(obj, cached_property):
-        return True
-
-    if hasattr(obj, "__qualname__"):
-        cls = obj.__qualname__.split(".")[0]
-        if (cls == "WSIData") & (name in exclude_wsidata_attrs):
-            return True
-        if cls == "SlideProperties":
-            print(what, obj, name)
-
-
-def setup(app):
-    app.connect("autodoc-skip-member", autodoc_skip_member)
+# def autodoc_skip_member(app, what, name, obj, skip, options):
+#     exclude = [
+#         (
+#             "WSIData",
+#             {
+#                 "SLIDE_PROPERTIES_KEY",
+#                 "TILE_SPEC_KEY",
+#             },
+#         ),
+#     ]
+#
+#     only = [
+#         (
+#             "TissueContour",
+#             {
+#                 "plot",
+#             },
+#         ),
+#         (
+#             "TissueImage",
+#             {
+#                 "plot",
+#             },
+#         ),
+#         (
+#             "TileImage",
+#             {
+#                 "plot",
+#             },
+#         ),
+#     ]
+#
+#     if isinstance(obj, property):
+#         return True
+#     elif isinstance(obj, cached_property):
+#         return True
+#
+#     if hasattr(obj, "__qualname__"):
+#         cls = obj.__qualname__.split(".")[0]
+#
+#         # Run exclude
+#         for cls_name, attrs in exclude:
+#             if cls == cls_name:
+#                 if name in attrs:
+#                     return True
+#         # Run only
+#         for cls_name, attrs in only:
+#             if cls == cls_name:
+#                 if name not in attrs:
+#                     return True
+#
+#
+# def setup(app):
+#     app.connect("autodoc-skip-member", autodoc_skip_member)
