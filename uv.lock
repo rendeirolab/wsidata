@@ -4418,20 +4418,22 @@ dev = [
     { name = "jupyterlab" },
     { name = "legendkit" },
     { name = "matplotlib" },
-    { name = "myst-nb" },
-    { name = "numpydoc" },
     { name = "pre-commit" },
-    { name = "pydata-sphinx-theme" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
-    { name = "sphinx" },
-    { name = "sphinx-copybutton" },
-    { name = "sphinx-design" },
     { name = "taskipy" },
     { name = "torchstain" },
     { name = "torchvision" },
+]
+docs = [
+    { name = "myst-nb" },
+    { name = "numpydoc" },
+    { name = "pydata-sphinx-theme" },
+    { name = "sphinx" },
+    { name = "sphinx-copybutton" },
+    { name = "sphinx-design" },
 ]
 
 [package.metadata]
@@ -4456,20 +4458,22 @@ dev = [
     { name = "jupyterlab", specifier = ">=4.3.5" },
     { name = "legendkit", specifier = ">=0.3.4" },
     { name = "matplotlib", specifier = ">=3.10.0" },
-    { name = "myst-nb", specifier = ">=1.1.2" },
-    { name = "numpydoc", specifier = ">=1.8.0" },
     { name = "pre-commit", specifier = ">=4.1.0" },
-    { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
     { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.4" },
-    { name = "sphinx", specifier = ">=8.1.3" },
-    { name = "sphinx-copybutton", specifier = ">=0.5.2" },
-    { name = "sphinx-design", specifier = ">=0.6.1" },
     { name = "taskipy", specifier = ">=1.14.1" },
     { name = "torchstain", specifier = ">=1.4.1" },
     { name = "torchvision", specifier = ">=0.21.0" },
+]
+docs = [
+    { name = "myst-nb", specifier = ">=1.1.2" },
+    { name = "numpydoc", specifier = ">=1.8.0" },
+    { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
+    { name = "sphinx", specifier = ">=8.1.3" },
+    { name = "sphinx-copybutton", specifier = ">=0.5.2" },
+    { name = "sphinx-design", specifier = ">=0.6.1" },
 ]
 
 [[package]]
