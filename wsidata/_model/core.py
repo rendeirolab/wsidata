@@ -114,6 +114,7 @@ class WSIData(SpatialData):
             shapes=sdata.shapes,
             tables=sdata.tables,
             points=sdata.points,
+            attrs=sdata.attrs,
             reader=reader,
             **kws,
         )
