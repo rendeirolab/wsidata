@@ -13,7 +13,7 @@ class TestFetchAccessor:
         assert "height" in tables.columns
 
     def test_get_features_anndata(self, wsidata):
-        tables = wsidata.fetch.features_anndata("features")
+        tables = wsidata.fetch.features_anndata("resnet50")
 
         assert isinstance(tables, AnnData)
         assert tables.X is not None
@@ -38,9 +38,9 @@ class TestIterAccessor:
         for it in wsidata.iter.tissue_images("tissues", mask_bg=mask_bg, format=format):
             pass
         if format == "yxc":
-            assert it.image.shape == (125, 100, 3)
+            assert it.image.shape == (2902, 1946, 3)
         else:
-            assert it.image.shape == (3, 125, 100)
+            assert it.image.shape == (3, 2902, 1946)
 
     def test_iter_tissues_plot(self, wsidata):
         it = next(wsidata.iter.tissue_images("tissues", mask_bg=True))

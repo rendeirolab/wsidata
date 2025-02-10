@@ -12,3 +12,19 @@ from .accessors import (
     DatasetAccessor,
 )
 from .reader import get_reader, SlideProperties
+from ._sample import sample
+
+__all__ = [
+    "open_wsi",
+    "agg_wsi",
+    "dataset",
+    "WSIData",
+    "TileSpec",
+    "register_wsidata_accessor",
+    "FetchAccessor",
+    "IterAccessor",
+    "DatasetAccessor",
+    "get_reader",
+    "SlideProperties",
+    "sample",
+]
