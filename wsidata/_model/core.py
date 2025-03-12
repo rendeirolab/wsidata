@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import base64
+import io
 import json
 import warnings
 from dataclasses import dataclass, asdict
 from functools import cached_property
-from numbers import Integral
+from numbers import Integral, Number
 from pathlib import Path
-from typing import Literal, Generator, Sequence
+from typing import Literal, Generator, Sequence, TYPE_CHECKING
 
 import numpy as np
 from PIL.Image import Image, fromarray
@@ -15,9 +17,12 @@ from ome_zarr.io import parse_url
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
-from ..accessors import FetchAccessor, IterAccessor, DatasetAccessor
 from .._utils import find_stack_level
+from ..accessors import FetchAccessor, IterAccessor, DatasetAccessor
 from ..reader import ReaderBase, SlideProperties
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 class WSIData(SpatialData):
@@ -47,7 +52,7 @@ class WSIData(SpatialData):
        * - Slide Properties
          - :bdg-info:`slide_properties`
          - :bdg-danger:`attrs`
-         - :class:`SlideProperties <wsidata.reader.SlideProperties>`
+         - :class:`SlideProperties <wsidata.SlideProperties>`
 
        * - Tissue contours
          - :bdg-info:`tissues`
@@ -94,7 +99,7 @@ class WSIData(SpatialData):
 
     Attributes
     ----------
-    properties : :class:`SlideProperties <wsidata.reader.SlideProperties>`
+    properties : :class:`SlideProperties <wsidata.SlideProperties>`
         The properties of the whole slide image.
     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
         The reader object for interfacing with the whole slide image.
@@ -160,10 +165,45 @@ class WSIData(SpatialData):
                         stacklevel=find_stack_level(),
                     )
 
+    def __repr_texts(self):
+        H, W = self.properties.shape
+        dimension_text = f"{H}×{W} (h×w)"
+        n_level = self.properties.n_level
+        pyramid_text = f"{n_level} {'Pyramid' if n_level == 1 else 'Pyramids'}"
+        mpp_text = "Unknown"
+        if self.properties.mpp is not None:
+            mpp_text = f"{self.properties.mpp} MPP"
+        if self.properties.magnification is not None:
+            mpp_text += f" ({int(self.properties.magnification)}X)"
+        return dimension_text, pyramid_text, mpp_text
+
     def __repr__(self):
+        dimension_text, pyramid_text, mpp_text = self.__repr_texts()
+
         return (
-            f"WSI: {self.reader.file}\nReader: {self.reader.name}\n{super().__repr__()}"
+            f"WSI: {self.reader.file}\n"
+            f"Reader: {self.reader.name}\n"
+            f"Dimensions: {dimension_text}, {pyramid_text}\n"
+            f"Pixel physical size: {self.properties.mpp} MPP\n"
+            f"{super().__repr__()}"
         )
+
+    def _repr_html_(self):
+        spatialdata_repr = super().__repr__()
+        dimension_text, pyramid_text, mpp_text = self.__repr_texts()
+
+        return f"""
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="data:image/png;base64,{self._html_thumbnail}" 
+                    style="border: 1px solid #ddd; border-radius: 8px; max-width: 300px;">
+                    <div>
+                        <b>WSI:</b> {self.reader.file}<br>
+                        <b>Reader:</b> {self.reader.name}<br>
+                        <b>Dimensions:</b> {dimension_text}, {pyramid_text}<br>
+                        <b>Pixel physical size:</b> {mpp_text}<br>
+                        <pre style="padding: 8px; border-radius: 4px; font-size: 8pt">{spatialdata_repr}</pre>
+                    </div>
+                </div>"""
 
     def set_exclude_elements(self, elements):
         """Set the elements to be excluded from serialize to the WSIData object on disk."""
@@ -185,26 +225,38 @@ class WSIData(SpatialData):
         self.reader.detach_reader()
 
     @property
-    def reader(self):
+    def reader(self) -> ReaderBase:
+        """The reader object for interfacing with the whole slide image."""
         return self._reader
 
     @property
     def properties(self) -> SlideProperties:
+        """The properties of the whole slide image. See :class:`SlideProperties <wsidata.SlideProperties>`."""
         return self.reader.properties
 
     @property
-    def wsi_store(self):
+    def wsi_store(self) -> str | Path:
+        """The zarr store path for the associated data of the whole slide image."""
         return self._wsi_store
 
     @property
-    def thumbnail(self):
+    def thumbnail(self) -> Image:
+        """The thumbnail of the whole slide image."""
         return self.get_thumbnail(size=500, as_array=False)
 
+    @cached_property
+    def _html_thumbnail(self) -> str:
+        buffer = io.BytesIO()
+        image = self.get_thumbnail(size=200, as_array=False)
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
     @property
-    def name(self):
+    def name(self) -> str:
+        """The file name of the whole slide image."""
         return Path(self.reader.file).name
 
-    def tile_spec(self, key: str) -> TileSpec:
+    def tile_spec(self, key: str) -> TileSpec | None:
         """
         Get the :class:`TileSpec` for a collection of tiles.
 
@@ -219,7 +271,16 @@ class WSIData(SpatialData):
             return TileSpec(**spec)
 
     def set_mpp(self, mpp):
-        """Set the microns per pixel (mpp) of the whole slide image."""
+        """Set the microns per pixel (mpp) of the whole slide image.
+        This will override the recorded mpp in the slide properties.
+        Could be useful when the mpp is not recorded in the image file.
+
+        Parameters
+        ----------
+        mpp : float
+            The microns per pixel.
+
+        """
         self.properties.mpp = mpp
         self.attrs[self.SLIDE_PROPERTIES_KEY]["mpp"] = mpp
 
@@ -297,6 +358,24 @@ class WSIData(SpatialData):
             overwrite=overwrite,
             consolidate_metadata=consolidate_metadata,
             format=format,
+        )
+
+    def to_spatialdata(self) -> SpatialData:
+        """
+        Convert the WSIData object to a SpatialData object.
+
+        .. note::
+            This is not a deep copy operation.
+            Any changes to the returned SpatialData will affect the original WSIData.
+
+        """
+        return SpatialData(
+            images=self.images,  # noqa
+            labels=self.labels,  # noqa
+            shapes=self.shapes,  # noqa
+            tables=self.tables,
+            points=self.points,  # noqa
+            attrs=self.attrs,
         )
 
     def _validate_can_safely_write_to_path(
@@ -432,17 +511,75 @@ class TileSpec:
         self.base_level = int(self.base_level)
         self.base_downsample = float(self.base_downsample)
 
+    def __repr__(self):
+        return (
+            f"Tile at {self.mpp} mpp, {self.height}×{self.width} (h×w)\n"
+            f"Stride: {self.stride_height}×{self.stride_width} ({self.overlap_y}×{self.overlap_x} overlap)\n"
+            f"Operation size: {self.ops_height}×{self.ops_width}, level={self.ops_level}\n"
+            f"Base size: {self.base_height}×{self.base_width}, level={self.base_level}\n"
+            f"Target tissue: '{self.tissue_name}'"
+        )
+
+    def _repr_html_(self):
+        scale = 100 / max(self.width, self.height)
+        scaled_w = np.floor(self.width * scale)
+        scaled_h = np.floor(self.height * scale)
+        scaled_stride_w = (
+            np.floor(self.stride_width * scale) + 2
+        )  # add 2 to account for the border
+        scaled_stride_h = (
+            np.floor(self.stride_height * scale) + 2
+        )  # add 2 to account for the border
+
+        tile_style = (
+            f"width: {int(scaled_w)}px; "
+            f"height: {int(scaled_h)}px; "
+            f"position: absolute; "
+            f"border: 2px solid #000; "
+        )
+        container_style = (
+            f"width: {int(scaled_w + scaled_stride_w)}px; "
+            f"height: {int(scaled_h + scaled_stride_h)}px; "
+            f"position: relative;"
+            f"border: 0;"
+        )
+        html = f"""
+        <div style="display: flex; align-item: center; gap: 10px;">
+            <div style='{container_style}'>
+                <div style='{tile_style}; top: 0px; left: 0px; border-color: #C68FE6'>
+                    <p style='padding-left: 3pt'>Tile 1</p>
+                </div>
+                <div style='{tile_style}; top: 0px; left: {scaled_stride_w}px; border-color: #F6DC43'>
+                    <p style='padding-left: 3pt'>Tile 2</p>
+                </div>
+                <div style='{tile_style}; top: {scaled_stride_w}px; left: 0px; border-color: #6A9C89'>
+                    <p style='padding-left: 3pt'>Tile 3</p>
+                </div>
+            </div>
+            <div>
+                <b>Tile at</b>: {self.mpp} mpp<br>
+                <b>Tile size</b>: {self.height}×{self.width} (h×w)<br>
+                <b>Stride</b>: {self.stride_height}×{self.stride_width} ({self.overlap_y}×{self.overlap_x} overlap)<br>
+                <b>Operation size</b>: {self.ops_height}×{self.ops_width}, level={self.ops_level}<br>
+                <b>Base size</b>: {self.base_height}×{self.base_width}, level={self.base_level}<br>
+                <b>Target tissue</b>: '{self.tissue_name}'
+            </div>
+        </div>
+        """
+        return html
+
     @classmethod
     def from_wsidata(
         cls,
         wsi: WSIData,
         tile_px: int | (int, int),
         stride_px: int | (int, int) = None,
+        overlap: float | (float, float) = None,
         mpp=None,
         ops_level=None,
         slide_mpp=None,
         tissue_name=None,
-    ):
+    ) -> Self:
         """Create a TileSpec from a WSIData object.
 
         To tile from the whole slide image, the user needs to specify the tile size and stride size.
@@ -453,12 +590,9 @@ class TileSpec:
         to maximize the performance.
 
         """
-        # Check if the tile size is valid
-        tile_w, tile_h = _check_width_height("tile_px", tile_px)
-
-        # Check if the stride size is valid
-        stride_w, stride_h = _check_width_height(
-            "stride_px", stride_px, default_w=tile_w, default_h=tile_h
+        # Check if the input params are valid
+        tile_w, tile_h, stride_w, stride_h = _preprocess_tile_params(
+            tile_px, stride_px, overlap
         )
 
         # If user does not override slide mpp, use the recorded slide mpp
@@ -537,9 +671,11 @@ class TileSpec:
         )
 
     def to_dict(self):
+        """Convert the TileSpec to a dictionary."""
         return asdict(self)
 
     def to_json(self):
+        """Convert the TileSpec to a JSON string."""
         return json.dumps(asdict(self))
 
     @cached_property
@@ -558,52 +694,105 @@ class TileSpec:
         return self.is_overlap_x or self.is_overlap_y
 
     @cached_property
+    def overlap_x(self) -> int:
+        """The overlap pixel size along the x-axis."""
+        return self.width - self.stride_width
+
+    @cached_property
+    def overlap_y(self) -> int:
+        """The overlap pixel size along the y-axis."""
+        return self.height - self.stride_height
+
+    @cached_property
     def ops_height(self) -> int:
+        """The height of the tile when retrieving images."""
         return int(self.height * self.ops_downsample)
 
     @cached_property
     def ops_width(self) -> int:
+        """The width of the tile when retrieving images."""
         return int(self.width * self.ops_downsample)
 
     @cached_property
     def ops_stride_height(self) -> int:
+        """The height of the stride when retrieving images."""
         return int(self.stride_height * self.ops_downsample)
 
     @cached_property
     def ops_stride_width(self) -> int:
+        """The width of the stride when retrieving images."""
         return int(self.stride_width * self.ops_downsample)
 
     @cached_property
     def base_height(self) -> int:
+        """The height of the tile at the level 0."""
         return int(self.height * self.base_downsample)
 
     @cached_property
     def base_width(self) -> int:
+        """The width of the tile at the level 0."""
         return int(self.width * self.base_downsample)
 
     @cached_property
     def base_stride_height(self) -> int:
+        """The height of the stride at the level 0."""
         return int(self.stride_height * self.base_downsample)
 
     @cached_property
     def base_stride_width(self) -> int:
+        """The width of the stride at the level 0."""
         return int(self.stride_width * self.base_downsample)
 
 
-def _check_width_height(name, length, default_w=None, default_h=None):
-    if length is None:
-        if default_w is None or default_h is None:
-            raise ValueError(f"{name} cannot be None.")
-        w, h = (default_w, default_h)
-    elif isinstance(length, Integral):
-        w, h = (length, length)
-    elif isinstance(length, Sequence):
-        w, h = (length[0], length[1])
+def _preprocess_tile_params(
+    tile_px: int | (int, int),
+    stride_px: int | (int, int) = None,
+    overlap: Number | (Number, Number) = 0.5,
+):
+    if isinstance(tile_px, Integral):
+        tile_w, tile_h = (tile_px, tile_px)
+    elif isinstance(tile_px, Sequence):
+        tile_w, tile_h = (tile_px[0], tile_px[1])
     else:
-        raise TypeError(
-            f"Input {name} of {length} is invalid. "
-            f"Please use either a tuple of (W, H), or a single integer."
-        )
-    if not (w > 0 and h > 0):
-        raise ValueError(f"{name} must be positive.")
-    return w, h
+        raise TypeError("tile_px must be an integer or a tuple of two integers.")
+
+    if tile_w <= 0 or tile_h <= 0:
+        raise ValueError("tile_px must be positive.")
+
+    if stride_px is not None and overlap is not None:
+        raise ValueError("Cannot specify both stride_px and overlap.")
+
+    stride_w, stride_h = tile_w, tile_h
+    if stride_px is not None:
+        if isinstance(stride_px, Integral):
+            stride_w, stride_h = (stride_px, stride_px)
+        elif isinstance(stride_px, Sequence):
+            stride_w, stride_h = (stride_px[0], stride_px[1])
+        else:
+            raise TypeError("stride_px must be an integer or a tuple of two integers.")
+        if stride_w <= 0 or stride_h <= 0:
+            raise ValueError("stride_px must be positive.")
+
+    if overlap is not None:
+        if isinstance(overlap, Number):
+            overlap_w, overlap_h = (overlap, overlap)
+        elif isinstance(overlap, Sequence):
+            overlap_w, overlap_h = (overlap[0], overlap[1])
+        else:
+            raise TypeError("overlap must be a number or a tuple of two numbers.")
+
+        if overlap_w < 0 or overlap_h < 0:
+            raise ValueError("overlap must be non-negative.")
+        # calculate stride px from overlap
+
+        if overlap_w < 1:
+            stride_w = int(tile_w * (1 - overlap_w))
+        else:
+            stride_w = int(tile_w - overlap_w)
+
+        if overlap_h < 1:
+            stride_h = int(tile_h * (1 - overlap_h))
+        else:
+            stride_h = int(tile_h - overlap_h)
+
+    return tile_w, tile_h, stride_w, stride_h

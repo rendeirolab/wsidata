@@ -4415,9 +4415,11 @@ stain = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "jupyter-cache" },
     { name = "jupyterlab" },
     { name = "legendkit" },
     { name = "matplotlib" },
+    { name = "pooch" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -4455,9 +4457,11 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "jupyter-cache", specifier = ">=1.0.1" },
     { name = "jupyterlab", specifier = ">=4.3.5" },
     { name = "legendkit", specifier = ">=0.3.4" },
     { name = "matplotlib", specifier = ">=3.10.0" },
+    { name = "pooch", specifier = ">=1.8.2" },
     { name = "pre-commit", specifier = ">=4.1.0" },
     { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=8.3.4" },

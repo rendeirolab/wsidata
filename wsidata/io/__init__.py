@@ -9,4 +9,3 @@ from ._elems import (
     update_shapes_data,
     subset_tiles,
 )
-from ._download import download_wsi

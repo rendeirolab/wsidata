@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import base64
+import io
 from functools import cached_property
-from typing import Sequence, Dict, List, Tuple, Generator
+from typing import Sequence, Dict, List, Tuple, Generator, TYPE_CHECKING, Literal
 
 import cv2
 import numpy as np
+from PIL.Image import fromarray
 from shapely import MultiPolygon, Polygon, clip_by_rect
 from shapely.affinity import translate, scale
+
+if TYPE_CHECKING:
+    from .._model import WSIData
 
 
 def _get_cn_func(color_norm):
@@ -59,6 +65,29 @@ PALETTE = (
     "#00bfa0",
 )
 
+REPR_BOX_STYLE = (
+    'style="border: 2px solid #C68FE6; border-radius: 8px;'
+    'padding: 10px 15px; display: inline-block;"'
+)
+
+
+def _html_attributes(attrs):
+    """Max 4 attributes per line, show in card style"""
+    n = 4
+    n_attr = len(attrs)
+    n_row = n_attr // n + 1
+    rows = []
+    for i in range(n_row):
+        row = attrs[i * n : (i + 1) * n]
+        row = "".join(
+            f"<p style='border: 1px solid #C68FE6; padding: 3pt; "
+            f"border-radius: 4px; text-align: center; margin-bottom: 2pt;'>"
+            f"{attr}</p>"
+            for attr in row
+        )
+        rows.append(row)
+    return "".join(f"<div style='display: inline-block;'>{row}</div>" for row in rows)
+
 
 class TissueContour:
     """The data container return by :meth:`wsidata.iter.tissue_contours <wsidata.IterAccessor.tissue_contours>`
@@ -67,59 +96,85 @@ class TissueContour:
     ----------
     tissue_id : int
         The id of tissue
-    contour : :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>`
+    shape : :class:`Polygon <shapely.Polygon>`
         The contour of the tissue
-    holes : array of :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>`
+    contour : :class:`Polygon <shapely.Polygon>`
+        The contour of the tissue
+    holes : array of :class:`Polygon <shapely.Polygon>`
         The holes of the tissue
-    as_array : bool
-        Whether to return the result as array or polygon, can be set to True or False.
-
+    x : int
+        The x-coordinate of the tissue
+    y : int
+        The y-coordinate of the tissue
+    width : int
+        The width of the tissue
+    height : int
+        The height of the tissue
 
     """
 
-    def __init__(self, tissue_id, shape, as_array=False, dtype=None):
+    def __init__(self, tissue_id, shape):
         self.tissue_id = tissue_id
         self.shape = shape
-        self._as_array = as_array
-        self._dtype = dtype
+
+    @cached_property
+    def x(self):
+        """The x-coordinate of the tissue"""
+        return int(self.shape.bounds[0])
+
+    @cached_property
+    def y(self):
+        """The y-coordinate of the tissue"""
+        return int(self.shape.bounds[1])
+
+    @cached_property
+    def width(self):
+        """The width of the tissue"""
+        return int(self.shape.bounds[2] - self.shape.bounds[0])
+
+    @cached_property
+    def height(self):
+        """The height of the tissue"""
+        return int(self.shape.bounds[3] - self.shape.bounds[1])
 
     @property
-    def as_array(self):
-        return self._as_array
-
-    @as_array.setter
-    def as_array(self, v):
-        self._as_array = v
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    @property
-    def contour(self) -> np.ndarray | Polygon:
+    def contour(self) -> Polygon:
         """The contour of the tissue"""
-        if self.as_array:
-            return np.array(self.shape.exterior.coords, dtype=self.dtype)
-        else:
-            return Polygon(self.shape.exterior.coords)
+        return Polygon(self.shape.exterior.coords)
 
     @property
-    def holes(self) -> List[np.ndarray | Polygon]:
-        if self.as_array:
-            return [
-                np.asarray(h.coords, dtype=self.dtype) for h in self.shape.interiors
-            ]
-        else:
-            return [Polygon(h) for h in self.shape.interiors]
+    def holes(self) -> List[Polygon]:
+        """The holes of the tissue"""
+        return [Polygon(h) for h in self.shape.interiors]
+
+    _attrs = [
+        "tissue_id",
+        "shape",
+        "contour",
+        "holes",
+        "x",
+        "y",
+        "width",
+        "height",
+    ]
 
     def __repr__(self):
-        n_holes = len(self.holes)
-        hole_text = "holes" if n_holes > 1 else "hole"
-        return (
-            f"TissueContour(tissue_id={self.tissue_id}, {n_holes} {hole_text}) "
-            f"with attributes: \n"
-            f"tissue_id, shape, contour, holes"
-        )
+        return f"TissueContour with attributes: \n{', '.join(self._attrs)}"
+
+    def _repr_html_(self):
+        return f"""
+                <div {REPR_BOX_STYLE}>
+                    <strong style="font-size: 1.1em; color: #C68FE6;">TissueContour</strong>
+                    <p style="margin-bottom: 0">Attributes:</p>
+                    <div style="display: flex; gap: 10px;">
+                        {_html_attributes(self._attrs)}
+                        <div style="width: 130px;">
+                            {self.shape._repr_svg_()}
+                        </div>
+                    </div>
+
+                </div>
+                """
 
     def plot(
         self,
@@ -177,38 +232,36 @@ class TissueContour:
 
 
 class TissueImage(TissueContour):
+    """
+    The data container return by :meth:`wsidata.iter.tissue_images <wsidata.IterAccessor.tissue_images>`
+
+    This container shares the same attributes as :class:`TissueContour <wsi.accessors.iter.TissueContour>`.
+
+    Attributes
+    ----------
+    image : :class:`np.ndarray <numpy.ndarray>`
+        The tissue image.
+    mask : :class:`np.ndarray <numpy.ndarray>`
+        The tissue mask.
+    masked_image : :class:`np.ndarray <numpy.ndarray>`
+        The masked image with the background masked.
+
+    """
+
     def __init__(
         self,
         tissue_id,
         shape,
         image,
-        format="yxc",
-        mask_bg=None,
-        as_array=False,
-        dtype=None,
+        format: Literal["cyx", "yxc"] = "yxc",
+        mask_bg: int = None,
         downsample=1.0,
     ):
-        super().__init__(tissue_id, shape, as_array, dtype)
+        super().__init__(tissue_id, shape)
         self._image = image
         self.format = format
         self.mask_bg = mask_bg
         self.downsample = downsample
-
-    @cached_property
-    def x(self):
-        return int(self.shape.bounds[0])
-
-    @cached_property
-    def y(self):
-        return int(self.shape.bounds[1])
-
-    @cached_property
-    def width(self):
-        return int(self.shape.bounds[2] - self.shape.bounds[0])
-
-    @cached_property
-    def height(self):
-        return int(self.shape.bounds[3] - self.shape.bounds[1])
 
     @property
     def image(self):
@@ -240,11 +293,11 @@ class TissueImage(TissueContour):
         return mask
 
     @cached_property
-    def masked_image(self) -> np.ndarray:
+    def masked_image(self) -> np.ndarray | None:
         """A masked image with the background masked will be returned
         if the mask_bg is not None."""
         if self.mask_bg is None:
-            return self.image
+            return None
         mask = self.mask
         image = self.image.copy()
         if mask is not None:
@@ -254,22 +307,69 @@ class TissueImage(TissueContour):
 
         return image
 
-    def __repr__(self):
-        n_holes = len(self.holes)
-        hole_text = "holes" if n_holes > 1 else "hole"
-        return (
-            f"TissueImage(tissue_id={self.tissue_id}, HW={self._image.shape[:2]}, {n_holes} {hole_text}) "
-            f"with attributes: \n"
-            f"tissue_id, image, mask, masked_image, shape, contour, holes, x, y, width, height"
-        )
+    _attrs = [
+        "tissue_id",
+        "shape",
+        "contour",
+        "holes",
+        "x",
+        "y",
+        "width",
+        "height",
+        "image",
+        "mask",
+        "masked_image",
+    ]
 
-    def plot(self, ax=None, masked: bool = False, **kwargs):
+    def __repr__(self):
+        return f"TissueImage with attributes: \n{', '.join(self._attrs)}"
+
+    @cached_property
+    def _html_thumbnail(self) -> str:
+        buffer = io.BytesIO()
+        image = self.image if self.mask_bg is None else self.masked_image
+        if self.format == "cyx":
+            image = image.transpose(1, 2, 0)
+        image = fromarray(image)
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    def _repr_html_(self):
+        return f"""
+                <div {REPR_BOX_STYLE}>
+                    <strong style="font-size: 1.1em; color: #C68FE6;">TissueImage</strong>
+                    <p style="margin-bottom: 0">Attributes:</p>
+                    <div style="display: flex; gap: 10px;">
+                        {_html_attributes(self._attrs)}
+                        <img src="data:image/png;base64,{self._html_thumbnail}" 
+                            style="width: 130px; border-radius: 8px;">
+                    </div>
+                </div>
+                """
+
+    def plot(self, ax=None, masked=None, **kwargs):
+        """
+        Plot the tissue image.
+
+        Parameters
+        ----------
+        ax : :class:`Axes <matplotlib.axes.Axes>`
+            The axes to plot the image.
+        masked : bool
+            Whether to show the masked image.
+        **kwargs
+            Additional keyword arguments for :meth:`imshow <matplotlib.axes.Axes.imshow>`.
+
+        """
         import matplotlib.pyplot as plt
 
         if ax is None:
             ax = plt.gca()
 
-        img = self.masked_image if masked else self.image
+        img = self.image
+        if masked is None:
+            if self.mask_bg is not None:
+                img = self.masked_image
         if self.format == "cyx":
             img = img.transpose(1, 2, 0)
         extent = (self.x, self.x + self.width, self.y + self.height, self.y)
@@ -278,6 +378,38 @@ class TissueImage(TissueContour):
 
 
 class TileImage:
+    """
+    The data container return by :meth:`wsidata.iter.tile_images <wsidata.IterAccessor.tile_images>`
+
+    Attributes
+    ----------
+    id : int
+        The tile id.
+    x : int
+        The x-coordinate of the tile.
+    y : int
+        The y-coordinate of the tile.
+    width : int
+        The width of the tile image.
+    height : int
+        The height of the tile image.
+    tissue_id : int
+        The tissue id.
+    image : :class:`np.ndarray <numpy.ndarray>`
+        The tile image.
+    annot_mask : :class:`np.ndarray <numpy.ndarray>`
+        The annotation mask.
+    annot_shapes : array of (:class:`Polygon <shapely.Polygon>`, name, label)
+        The annotation shapes.
+    annot_labels : dict
+        The annotation labels mapping.
+    norm_annot_shapes : array of (:class:`Polygon <shapely.Polygon>`, name, label)
+        The normalized annotation shapes, the coordinates are normalized to the 0-1 range.
+    has_annot : bool
+        Whether the tile has annotation.
+
+    """
+
     id: int
     x: int
     y: int
@@ -309,14 +441,17 @@ class TileImage:
 
     @property
     def width(self):
+        """The width of the tile image."""
         return self.image.shape[1]
 
     @property
     def height(self):
+        """The height of the tile image."""
         return self.image.shape[0]
 
     @cached_property
     def norm_annot_shapes(self):
+        """The normalized annotation shapes, the coordinates are normalized to the 0-1 range."""
         if self.annot_shapes is not None:
             new_shapes = []
             for shape, name, label in self.annot_shapes:
@@ -326,22 +461,60 @@ class TileImage:
 
     @property
     def has_annot(self):
+        """Whether the tile has annotation."""
         return self.annot_shapes is not None
+
+    _attrs = [
+        "id",
+        "x",
+        "y",
+        "width",
+        "height",
+        "tissue_id",
+        "image",
+        "annot_mask",
+        "annot_shapes",
+        "annot_labels",
+        "norm_annot_shapes",
+        "has_annot",
+    ]
 
     def __repr__(self):
         if self.annot_shapes is not None:
             n_shapes = len(self.annot_shapes)
             shape_text = "annotation" if n_shapes == 1 else "annotations"
-            shapes_repr = f"({n_shapes} {shape_text})"
+            shapes_repr = f" ({n_shapes} {shape_text})"
         else:
-            shapes_repr = None
+            shapes_repr = ""
 
         return (
             f"TileImage(id={self.id}, x={self.x}, y={self.y}, "
-            f"tissue_id={self.tissue_id}) {shapes_repr} "
+            f"tissue_id={self.tissue_id}){shapes_repr} "
             f"with attributes: \n"
-            f"image, has_annot, annot_mask, annot_shapes, normed_annot_shapes, annot_labels, tissue_id, x, y"
+            f"{', '.join(self._attrs)}"
         )
+
+    @cached_property
+    def _html_thumbnail(self) -> str:
+        buffer = io.BytesIO()
+        image = self.image
+        image = fromarray(image)
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    def _repr_html_(self):
+        return f"""
+                <div {REPR_BOX_STYLE}>
+                    <strong style="font-size: 1.1em; color: #C68FE6;">TileImage</strong>
+                    <p style="margin-bottom: 0">Attributes:</p>
+                    <div style="display: flex; gap: 10px;">
+                        {_html_attributes(self._attrs)}
+                        <img src="data:image/png;base64,{self._html_thumbnail}"
+                        style="width: 150px; border-radius: 8px;">
+                    </div>
+
+                </div>
+                """
 
     def plot(
         self,
@@ -353,6 +526,27 @@ class TileImage:
         linewidth=1,
         **kwargs,
     ):
+        """
+        Plot the tile image.
+
+        Parameters
+        ----------
+        ax : :class:`Axes <matplotlib.axes.Axes>`
+            The axes to plot the image.
+        show_annots : bool
+            Whether to show the annotations.
+        palette : dict
+            The palette for the annotation colors.
+        legend : bool
+            Whether to show the legend.
+        alpha : float
+            The transparency of the annotation.
+        linewidth : int
+            The width of the annotation line.
+        **kwargs
+            Additional keyword arguments for :meth:`imshow <matplotlib.axes.Axes.imshow>`.
+
+        """
         import matplotlib.pyplot as plt
 
         from matplotlib.patches import PathPatch
@@ -415,14 +609,12 @@ class IterAccessor(object):
 
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj: WSIData):
         self._obj = obj
 
     def tissue_contours(
         self,
         key,
-        as_array: bool = False,
-        dtype: np.dtype = None,
         shuffle: bool = False,
         seed: int = 0,
     ) -> Generator[TissueContour]:
@@ -432,21 +624,13 @@ class IterAccessor(object):
         ----------
         key : str
             The tissue key.
-        as_array : bool, default: False
-            Return the contour as an array.
-            If False, the contour is returned as a shapely geometry.
-        dtype : np.dtype, default: None
-            The data type of the array if as_array is True.
         shuffle : bool, default: False
             If True, return tissue contour in random order.
         seed : int, default: 0
 
         Returns
         -------
-        :class:`TissueContour <wsi.accessors.iter.TissueContour>`
-
-        - tissue_id : The tissue id.
-        - shape : :class:`Polygon <shapely.Polygon>` or :class:`np.ndarray <numpy.ndarray>` The tissue shape as a shapely geometry or an array.
+        :class:`TissueContour <wsidata.accessors.iter.TissueContour>`
 
         """
 
@@ -461,8 +645,6 @@ class IterAccessor(object):
             yield TissueContour(
                 tissue_id=tissue_id,
                 shape=cnt.geometry,
-                as_array=as_array,
-                dtype=dtype,
             )
 
     def tissue_images(
@@ -472,8 +654,6 @@ class IterAccessor(object):
         mask_bg=False,
         color_norm: str = None,
         format: str = "yxc",
-        as_array: bool = False,
-        dtype: np.dtype = None,
         shuffle: bool = False,
         seed: int = 0,
     ) -> Generator[TissueImage]:
@@ -500,13 +680,7 @@ class IterAccessor(object):
 
         Returns
         -------
-        :class:`TissueImage <wsi.accessors.iter.TissueImage>`
-
-        - tissue_id : The tissue id.
-        - x : The x-coordinate of the image.
-        - y : The y-coordinate of the image.
-        - image : The tissue image.
-        - mask : The tissue mask.
+        :class:`TissueImage <wsidata.accessors.iter.TissueImage>`
 
         """
 
@@ -546,8 +720,6 @@ class IterAccessor(object):
                 tissue_id=tissue_id,
                 shape=shape,
                 image=img,
-                as_array=as_array,
-                dtype=dtype,
                 format=format,
                 mask_bg=mask_bg,
                 downsample=level_downsample,
@@ -594,16 +766,7 @@ class IterAccessor(object):
 
         Returns
         -------
-        TileImage
-            A named tuple with fields:
-
-            - id: The tile id.
-            - x: The x-coordinate of the tile.
-            - y: The y-coordinate of the tile.
-            - tissue_id: The tissue id.
-            - image: The tile image.
-            - anno_mask: The annotation mask.
-            - anno_shapes: The annotation shapes.
+        :class:`TileImage <wsidata.accessors.iter.TileImage>`
 
         """
         tile_spec = self._obj.tile_spec(key)

@@ -123,7 +123,7 @@ class FetchAccessor(object):
 
         # uns slot
         uns = {
-            "tile_spec": self._obj.tile_spec(tile_key),
+            "tile_spec": self._obj.tile_spec(tile_key).to_dict(),
             "slide_properties": self._obj.properties.to_dict(),
         }
 
