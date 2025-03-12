@@ -60,60 +60,6 @@ intersphinx_mapping = {
     "geopandas": ("https://geopandas.org/en/stable/", None),
     "anndata": ("https://anndata.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "lazyslide": ("https://lazyslide.readthedocs.io/en/latest/", None),
 }
-
-
-# def autodoc_skip_member(app, what, name, obj, skip, options):
-#     exclude = [
-#         (
-#             "WSIData",
-#             {
-#                 "SLIDE_PROPERTIES_KEY",
-#                 "TILE_SPEC_KEY",
-#             },
-#         ),
-#     ]
-#
-#     only = [
-#         (
-#             "TissueContour",
-#             {
-#                 "plot",
-#             },
-#         ),
-#         (
-#             "TissueImage",
-#             {
-#                 "plot",
-#             },
-#         ),
-#         (
-#             "TileImage",
-#             {
-#                 "plot",
-#             },
-#         ),
-#     ]
-#
-#     if isinstance(obj, property):
-#         return True
-#     elif isinstance(obj, cached_property):
-#         return True
-#
-#     if hasattr(obj, "__qualname__"):
-#         cls = obj.__qualname__.split(".")[0]
-#
-#         # Run exclude
-#         for cls_name, attrs in exclude:
-#             if cls == cls_name:
-#                 if name in attrs:
-#                     return True
-#         # Run only
-#         for cls_name, attrs in only:
-#             if cls == cls_name:
-#                 if name not in attrs:
-#                     return True
-#
-#
-# def setup(app):
-#     app.connect("autodoc-skip-member", autodoc_skip_member)
