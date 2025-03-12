@@ -96,6 +96,8 @@ dev = [
     "matplotlib>=3.10.0",
     "legendkit>=0.3.4",
     "pyright>=1.1.393",
+    "pooch>=1.8.2",
+    "jupyter-cache>=1.0.1",
 ]
 docs = [
     "sphinx>=8.1.3",

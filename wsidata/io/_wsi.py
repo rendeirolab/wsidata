@@ -18,7 +18,7 @@ from ..reader import get_reader, to_datatree
 
 def open_wsi(
     wsi: str | Path,
-    store: str = None,
+    store: str = "auto",
     reader: Literal["openslide", "tiffslide", "bioformats"] = None,
     attach_images: bool = False,
     image_key: str = "wsi",
@@ -89,7 +89,7 @@ def open_wsi(
     ReaderClass = get_reader(reader, format=wsi.suffix)
 
     reader_instance = ReaderClass(wsi)
-    if store is None:
+    if store == "auto":
         store = wsi.with_suffix(".zarr")
     else:
         store_path = Path(store)
@@ -107,8 +107,11 @@ def open_wsi(
         else:
             store = store_path
 
-    if store.exists():
-        sdata = read_zarr(store)
+    if store is not None:
+        if store.exists():
+            sdata = read_zarr(store)
+        else:
+            sdata = SpatialData()
     else:
         sdata = SpatialData()
 

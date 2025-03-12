@@ -20,22 +20,22 @@ class SlideProperties:
 
     Attributes
     ----------
-    shape : [height, width]
+    shape : (height, width)
         The shape of the slide
     n_level : int
         The number of pyramids levels
-    level_shape : List[[height, width]]
+    level_shape : array of (height, width)
         The shape of each pyramid level
-    level_downsample : List[float]
+    level_downsample : array fo float
         The downsample factor of each pyramid level
-    mpp : Optional[float]
+    mpp : float
         The physical size of each pixel in microns
-    magnification : Optional[float]
+    magnification : float
         The magnification of the slide
-    bounds : Optional[SHAPE]
+    bounds : (x, y, width, height)
         The bounds of the slide, in the format [x, y, width, height]
         This is the region of the slide that contains tissue
-    raw : Optional[str]
+    raw : dict
         The raw metadata in serialized json format
 
     """
@@ -85,7 +85,7 @@ class ReaderBase:
     ----------
     file : str
         The path to the image file
-    properties : :class:`SlideProperties <wsi.reader.SlideProperties>`
+    properties : :class:`SlideProperties <wsidata.SlideProperties>`
         The properties of the slide
     name : str
         The name of the reader

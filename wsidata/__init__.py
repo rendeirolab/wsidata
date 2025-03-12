@@ -12,7 +12,8 @@ from .accessors import (
     DatasetAccessor,
 )
 from .reader import get_reader, SlideProperties
-from ._sample import sample
+from ._normalizer import ColorNormalizer
+
 
 __all__ = [
     "open_wsi",
@@ -26,5 +27,5 @@ __all__ = [
     "DatasetAccessor",
     "get_reader",
     "SlideProperties",
-    "sample",
+    "ColorNormalizer",
 ]
