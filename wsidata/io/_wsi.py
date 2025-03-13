@@ -92,28 +92,27 @@ def open_wsi(
     if store == "auto":
         store = wsi.with_suffix(".zarr")
     else:
-        store_path = Path(store)
-        # We also support write store to a directory
-        if store_path.is_dir():
-            # If the directory is a zarr directory, we just use it
-            if is_zarr_dir(store_path):
-                store = store_path
-            # Otherwise, we create a zarr file in that directory
+        if store is not None:
+            store_path = Path(store)
+            # We also support write store to a directory
+            if store_path.is_dir():
+                # If the directory is a zarr directory, we just use it
+                if is_zarr_dir(store_path):
+                    store = store_path
+                # Otherwise, we create a zarr file in that directory
+                else:
+                    zarr_name = wsi.with_suffix(".zarr").name
+                    store = store_path / zarr_name
+            # If store is a not a directory, we assume it is a valid zarr file
+            # WARNING: No guarantee
             else:
-                zarr_name = wsi.with_suffix(".zarr").name
-                store = store_path / zarr_name
-        # If store is a not a directory, we assume it is a valid zarr file
-        # WARNING: No guarantee
-        else:
-            store = store_path
-
-    if store is not None:
-        if store.exists():
-            sdata = read_zarr(store)
+                store = store_path
+            if store.exists():
+                sdata = read_zarr(store)
+            else:
+                sdata = SpatialData()
         else:
             sdata = SpatialData()
-    else:
-        sdata = SpatialData()
 
     exclude_elements = []
 
