@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 from functools import cached_property
 from typing import Sequence, Dict, List, Tuple, Generator, TYPE_CHECKING, Literal
 
@@ -162,15 +163,18 @@ class TissueContour:
         return f"TissueContour with attributes: \n{', '.join(self._attrs)}"
 
     def _repr_html_(self):
+        svg_shape = self.shape._repr_svg_()
+        svg_shape = re.sub(r'(<svg[^>]*?)width="[^"]*"', rf'\1width="{130}"', svg_shape)
+        svg_shape = re.sub(
+            r'(<svg[^>]*?)height="[^"]*"', rf'\1height="{130}"', svg_shape
+        )
         return f"""
                 <div {REPR_BOX_STYLE}>
                     <strong style="font-size: 1.1em; color: #C68FE6;">TissueContour</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
                     <div style="display: flex; gap: 10px;">
                         {_html_attributes(self._attrs)}
-                        <div style="width: 130px;">
-                            {self.shape._repr_svg_()}
-                        </div>
+                        {svg_shape}
                     </div>
 
                 </div>
