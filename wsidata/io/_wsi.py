@@ -85,6 +85,8 @@ def open_wsi(
     if not wsi.exists():
         raise ValueError(f"Slide {wsi} not existed or not accessible.")
 
+    sdata = None
+
     # Early attempt with reader
     ReaderClass = get_reader(reader, format=wsi.suffix)
 
@@ -107,12 +109,11 @@ def open_wsi(
             # WARNING: No guarantee
             else:
                 store = store_path
-            if store.exists():
-                sdata = read_zarr(store)
-            else:
-                sdata = SpatialData()
-        else:
-            sdata = SpatialData()
+    if store.exists():
+        sdata = read_zarr(store)
+
+    if sdata is None:
+        sdata = SpatialData()
 
     exclude_elements = []
 
@@ -145,7 +146,8 @@ def open_wsi(
 
     slide_data = WSIData.from_spatialdata(sdata, reader_instance)
     slide_data.set_exclude_elements(exclude_elements)
-    slide_data.set_wsi_store(store)
+    if store is not None:
+        slide_data.set_wsi_store(store)
     return slide_data
 
 

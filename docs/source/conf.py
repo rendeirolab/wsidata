@@ -48,8 +48,6 @@ html_theme_options = {
 
 html_sidebars = {"installation": [], "intro": []}
 
-nb_execution_mode = "cache"
-
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5," r"8}: "
 copybutton_prompt_is_regexp = True
 

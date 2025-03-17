@@ -172,7 +172,7 @@ class WSIData(SpatialData):
         pyramid_text = f"{n_level} {'Pyramid' if n_level == 1 else 'Pyramids'}"
         mpp_text = "Unknown"
         if self.properties.mpp is not None:
-            mpp_text = f"{self.properties.mpp} MPP"
+            mpp_text = f"{self.properties.mpp:.2f} MPP"
         if self.properties.magnification is not None:
             mpp_text += f" ({int(self.properties.magnification)}X)"
         return dimension_text, pyramid_text, mpp_text
@@ -352,6 +352,11 @@ class WSIData(SpatialData):
             if self.path is None:
                 self.path = file_path
         else:
+            if self._wsi_store is None and self.path is None:
+                raise ValueError(
+                    "The store path for the WSIData is not set. "
+                    "Please set the store path before saving."
+                )
             file_path = self._wsi_store
         super().write(
             file_path=file_path,
@@ -521,25 +526,27 @@ class TileSpec:
         )
 
     def _repr_html_(self):
+        BORDER_WIDTH = 2
         scale = 100 / max(self.width, self.height)
-        scaled_w = np.floor(self.width * scale)
-        scaled_h = np.floor(self.height * scale)
-        scaled_stride_w = (
-            np.floor(self.stride_width * scale) + 2
+        scaled_w = np.floor(self.width * scale) - BORDER_WIDTH
+        scaled_h = np.floor(self.height * scale) - BORDER_WIDTH
+        scaled_stride_w = np.floor(
+            self.stride_width * scale
         )  # add 2 to account for the border
-        scaled_stride_h = (
-            np.floor(self.stride_height * scale) + 2
+        scaled_stride_h = np.floor(
+            self.stride_height * scale
         )  # add 2 to account for the border
 
         tile_style = (
             f"width: {int(scaled_w)}px; "
             f"height: {int(scaled_h)}px; "
             f"position: absolute; "
-            f"border: 2px solid #000; "
+            f"box-sizing: content-box;"  # make sure the border is included in the size
+            f"border: {BORDER_WIDTH}px solid #000; "
         )
         container_style = (
-            f"width: {int(scaled_w + scaled_stride_w)}px; "
-            f"height: {int(scaled_h + scaled_stride_h)}px; "
+            f"width: {int(scaled_w + scaled_stride_w) + 2 * BORDER_WIDTH}px; "
+            f"height: {int(scaled_h + scaled_stride_h) + 2 * BORDER_WIDTH}px; "
             f"position: relative;"
             f"border: 0;"
         )
