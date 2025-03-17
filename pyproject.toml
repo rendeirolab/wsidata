@@ -77,7 +77,7 @@ hello = "echo Hello, World!"
 test = "pytest tests"
 doc-build = "sphinx-build -b html docs/source docs/build"
 doc-clean-build = "python docs/clean_up.py && sphinx-build -b html docs/source docs/build"
-doc-serve = "python -m http.server -d docs/build"
+doc-serve = "python -m http.server 12900 -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
 
 [tool.uv]
@@ -98,6 +98,7 @@ dev = [
     "pyright>=1.1.393",
     "pooch>=1.8.2",
     "jupyter-cache>=1.0.1",
+    "notebook>=7.3.3",
 ]
 docs = [
     "sphinx>=8.1.3",
