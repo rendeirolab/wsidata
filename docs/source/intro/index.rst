@@ -12,9 +12,9 @@ the analysis results in SpatialData format.
 
    01-read&write
    02-accessors
+   03-tiles
 
-
-.. grid:: 2
+.. grid:: 3
 
     .. grid-item-card:: Open a WSI
        :link: 01-read&write
@@ -27,3 +27,9 @@ the analysis results in SpatialData format.
        :link-type: doc
 
        What are accessors and how to use them?
+
+    .. grid-item-card:: Tiles
+       :link: 03-tiles
+       :link-type: doc
+
+       Tiles storage in wsidata
