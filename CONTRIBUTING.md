@@ -53,4 +53,4 @@ To serve the documentation, use:
 uv run task doc-serve
 ```
 
-This will start a local server at [http://localhost:8000](http://localhost:8000).
+This will start a local server at [http://localhost:12900](http://localhost:8000).
