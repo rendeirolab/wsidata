@@ -109,8 +109,9 @@ def open_wsi(
             # WARNING: No guarantee
             else:
                 store = store_path
-    if store.exists():
-        sdata = read_zarr(store)
+    if store is not None:
+        if store.exists():
+            sdata = read_zarr(store)
 
     if sdata is None:
         sdata = SpatialData()
