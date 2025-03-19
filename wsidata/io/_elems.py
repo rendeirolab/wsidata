@@ -62,7 +62,7 @@ def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
     w, h = tile_spec.base_width, tile_spec.base_height
     gdf = gpd.GeoDataFrame(
         data={
-            "id": np.arange(len(xys)),
+            "tile_id": np.arange(len(xys)),
             "x": xys[:, 0],
             "y": xys[:, 1],
             "tissue_id": tissue_ids,
@@ -92,7 +92,11 @@ def subset_tiles(wsidata, key, indices, new_key=None):
 
 
 def add_features(wsidata, key, tile_key, features, **kws):
-    tile_id = np.arange(len(features))
+    tile_tb = wsidata[tile_key]
+    if "tile_id" in tile_tb.columns:
+        tile_id = tile_tb["tile_id"].values
+    else:
+        tile_id = np.arange(len(features))
     library_id = pd.Categorical([tile_key])
 
     if "obs" in kws:
