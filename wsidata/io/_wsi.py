@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Literal
 
@@ -156,9 +156,10 @@ def agg_wsi(
     slides_table: pd.DataFrame,
     feature_key: str,
     tile_key: str = "tiles",
-    agg_key: str = "agg",
+    agg_key: str = "agg_slide",
     wsi_col: str = None,
     store_col: str = None,
+    pbar: bool = False,
     error: Literal["raise", "skip"] = "raise",
 ):
     """
@@ -181,6 +182,8 @@ def agg_wsi(
         The column name of the whole slide image paths.
     store_col: str
         The column name of the backed file.
+    pbar: bool, default: False
+        Whether to show progress bar.
     error: str
         Whether to raise error when file not existed.
 
@@ -209,7 +212,9 @@ def agg_wsi(
 
     results = []
     for job in track(
-        jobs,
+        as_completed(jobs),
+        total=len(jobs),
+        disable=not pbar,
         description=f"Aggregation of {len(jobs)} slides",
     ):
         results.append(job.result())
@@ -263,7 +268,10 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
         if feature_key not in available_keys:
             feature_key = f"{feature_key}_{tile_key}"
         s = read_zarr(f"{f}/tables/{feature_key}")
-        return np.squeeze(s.varm[agg_key])
+        if agg_key in s.varm:
+            return np.squeeze(s.varm[agg_key])
+        else:
+            raise ValueError(f"Aggregation key {agg_key} not found.")
     except Exception as e:
         if error == "raise":
             raise e
