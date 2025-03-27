@@ -267,8 +267,9 @@ class WSIData(SpatialData):
 
         """
         if self.TILE_SPEC_KEY in self.attrs:
-            spec = self.attrs[self.TILE_SPEC_KEY][key]
-            return TileSpec(**spec)
+            spec = self.attrs[self.TILE_SPEC_KEY].get(key)
+            if spec is not None:
+                return TileSpec(**spec)
 
     def set_mpp(self, mpp):
         """Set the microns per pixel (mpp) of the whole slide image.

@@ -41,7 +41,7 @@ class TileImagesDataset(Dataset):
     ):
         # Do not assign wsi to self to avoid pickling
         tiles = wsi[key]
-        self.tiles = tiles[["x", "y", "tissue_id"]].to_numpy()
+        self.tiles = tiles.bounds[["minx", "miny"]].to_numpy()
         self.spec = wsi.tile_spec(key)
         self.color_norm = color_norm
 
@@ -72,7 +72,7 @@ class TileImagesDataset(Dataset):
         return len(self.tiles)
 
     def __getitem__(self, idx):
-        x, y, tid = self.tiles[idx]
+        x, y = self.tiles[idx]
         tile = self.reader.get_region(
             x, y, self.spec.ops_width, self.spec.ops_height, level=self.spec.ops_level
         )
@@ -89,9 +89,8 @@ class TileImagesDataset(Dataset):
                 "target": tile_target,
                 "x": int(x),
                 "y": int(y),
-                "tissue_id": int(tid),
             }
-        return {"image": tile, "x": int(x), "y": int(y), "tissue_id": int(tid)}
+        return {"image": tile, "x": int(x), "y": int(y)}
 
 
 class TileImageDiskDataset(Dataset):

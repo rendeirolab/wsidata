@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import re
+import warnings
 from functools import cached_property
 from typing import Sequence, Dict, List, Tuple, Generator, TYPE_CHECKING, Literal
 
@@ -417,8 +418,8 @@ class TileImage:
     id: int
     x: int
     y: int
-    tissue_id: int
     image: np.ndarray
+    tissue_id: int | None = None
     annot_mask: np.ndarray | None = None
     annot_shapes: List[Tuple[Polygon, str, int]] | None = None
     annot_labels: Dict[str, int] | None = None
@@ -428,8 +429,8 @@ class TileImage:
         id,
         x,
         y,
-        tissue_id,
         image,
+        tissue_id=None,
         annot_mask=None,
         annot_shapes=None,
         annot_labels=None,
@@ -774,11 +775,18 @@ class IterAccessor(object):
 
         """
         tile_spec = self._obj.tile_spec(key)
-
         create_annot_mask = False
         annot_tb = None
         annot_labels_dict = None
-        mask_size = tile_spec.height, tile_spec.width
+        mask_size = None, None
+
+        if tile_spec is None:
+            warnings.warn(
+                f"Tile spec cannot be found for the {key}. It's not valid tiles. "
+                f"Tile image can still be extracted but may not be optimized."
+            )
+        else:
+            mask_size = tile_spec.height, tile_spec.width
 
         if annot_key is not None:
             create_annot_mask = True
@@ -818,12 +826,15 @@ class IterAccessor(object):
 
         cn_func = _get_cn_func(color_norm)
         downsample = tile_spec.base_downsample
+        has_tissue_id = "tissue_id" in points.columns
         for _, row in points.iterrows():
-            x = row["x"]
-            y = row["y"]
-            ix = row["id"]
-            tix = row["tissue_id"]
+            ix = row["tile_id"]
             tile_bbox = row["geometry"]
+            x, y = tile_bbox.bounds[:2]
+            if has_tissue_id:
+                tix = row["tissue_id"]
+            else:
+                tix = None
 
             img = self._obj.reader.get_region(
                 x,
@@ -880,8 +891,8 @@ class IterAccessor(object):
                 id=ix,
                 x=x,
                 y=y,
-                tissue_id=tix,
                 image=img,
+                tissue_id=tix,
                 annot_mask=annot_mask,
                 annot_shapes=annot_shapes,
                 annot_labels=annot_labels_dict,
