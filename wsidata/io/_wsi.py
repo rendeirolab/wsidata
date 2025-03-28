@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Sequence
 
 import numpy as np
 import pandas as pd
@@ -156,7 +156,8 @@ def agg_wsi(
     slides_table: pd.DataFrame,
     feature_key: str,
     tile_key: str = "tiles",
-    agg_key: str = "agg_slide",
+    agg_key: str = None,
+    agg_by: str | Sequence[str] = None,
     wsi_col: str = None,
     store_col: str = None,
     pbar: bool = False,
@@ -178,6 +179,8 @@ def agg_wsi(
         The tile key.
     agg_key: str
         The output aggregation key in the varm slot.
+    agg_by: str or array of str
+        The keys that have been used to aggregate the features.
     wsi_col: str
         The column name of the whole slide image paths.
     store_col: str
@@ -193,6 +196,11 @@ def agg_wsi(
         The aggregated feature space.
     """
 
+    if agg_key is None and agg_by is None:
+        agg_key = "agg_slide"
+    elif agg_key is None and agg_by is not None:
+        agg_key = f"agg_{'_'.join(agg_by)}"
+
     if store_col is not None:
         backed_files = slides_table[store_col]
     elif wsi_col is not None:
@@ -202,30 +210,43 @@ def agg_wsi(
     else:
         raise ValueError("Either wsi_col or store_col must be provided.")
 
+    slides_table = slides_table.copy()
+    slides_table["_job_id"] = np.arange(len(slides_table))
+
     jobs = []
     with ThreadPoolExecutor() as executor:
-        for backed_f in backed_files:
+        for job_id, backed_f in enumerate(backed_files):
             job = executor.submit(
                 _agg_wsi, backed_f, feature_key, tile_key, agg_key, error
             )
+            job.job_id = job_id
             jobs.append(job)
 
-    results = []
-    for job in track(
-        as_completed(jobs),
-        total=len(jobs),
-        disable=not pbar,
-        description=f"Aggregation of {len(jobs)} slides",
-    ):
-        results.append(job.result())
+        features = []
+        features_annos = []
+        for job in track(
+            as_completed(jobs),
+            total=len(jobs),
+            disable=not pbar,
+            description=f"Aggregation of {len(jobs)} slides",
+        ):
+            feature, feature_annos = job.result()
+            if feature is not None:
+                features.append(feature)
+                # we will have feature_annos only if aggregation not at slide level
+                if feature_annos is not None:
+                    feature_annos["_job_id"] = job.job_id
+                    features_annos.append(feature_annos)
 
-    if error != "raise":
-        mask = np.asarray([r is not None for r in results])
-        X = np.vstack(np.asarray(results, dtype=object)[mask])
-        slides_table = slides_table[mask]
-    else:
-        X = np.vstack(results)
+    mask = np.asarray([r is not None for r in features])
+    X = np.hstack(features).T
+    slides_table = slides_table.loc[mask]
+    if len(features_annos) > 0:
+        annos = pd.concat(features_annos, ignore_index=True)
+        # Add job_id to the slides table
+        slides_table = pd.merge(slides_table, annos, on="_job_id", how="left")
 
+    slides_table = slides_table.drop(columns="_job_id")
     # Convert index to string
     slides_table.index = slides_table.index.astype(str)
     return AnnData(X, obs=slides_table)
@@ -268,15 +289,27 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
         if feature_key not in available_keys:
             feature_key = f"{feature_key}_{tile_key}"
         s = read_zarr(f"{f}/tables/{feature_key}")
-        if agg_key in s.varm:
-            return np.squeeze(s.varm[agg_key])
-        else:
+
+        agg_ops = s.uns.get("agg_ops")
+        if agg_ops is None:
+            raise ValueError(
+                f"Aggregation operations not found for {f}. Did you run feature aggregation?"
+            )
+        agg_annos = agg_ops.get(agg_key)
+        if agg_annos is None or agg_key not in s.varm:
             raise ValueError(f"Aggregation key {agg_key} not found.")
+
+        feature = s.varm[agg_key]
+        feature_annos = None
+        if len(agg_annos) > 0:
+            feature_annos = pd.DataFrame(agg_annos["values"], columns=agg_annos["keys"])
+        return feature, feature_annos
+
     except Exception as e:
         if error == "raise":
             raise e
         else:
-            return None
+            return None, None
 
 
 def is_zarr_dir(path):
