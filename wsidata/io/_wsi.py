@@ -22,7 +22,7 @@ def open_wsi(
     reader: Literal["openslide", "tiffslide", "bioformats"] = None,
     attach_images: bool = False,
     image_key: str = "wsi",
-    save_images: bool = False,
+    save_images: bool = True,
     attach_thumbnail: bool = True,
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
@@ -52,7 +52,7 @@ def open_wsi(
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
         The key to store the whole slide image, by default "wsi_thumbnail".
-    save_images : bool, optional, default: False
+    save_images : bool, optional, default: True
         Whether to save the whole slide image to on the disk.
         Only works for wsi.save() method.
     attach_thumbnail : bool, optional, default: True
@@ -113,16 +113,15 @@ def open_wsi(
         if store.exists():
             sdata = read_zarr(store)
 
-    if sdata is None:
-        sdata = SpatialData()
-
     exclude_elements = []
+    sdata_images = {}
 
-    if attach_images and image_key not in sdata:
-        images_datatree = to_datatree(reader_instance)
-        sdata.images[image_key] = images_datatree
-        if not save_images:
-            exclude_elements.append(image_key)
+    if attach_images:
+        if sdata is None or image_key not in sdata:
+            images_datatree = to_datatree(reader_instance)
+            sdata_images[image_key] = images_datatree
+            if not save_images:
+                exclude_elements.append(image_key)
 
     if attach_thumbnail and thumbnail_key not in sdata:
         max_thumbnail_size = min(reader_instance.properties.shape)
@@ -137,13 +136,19 @@ def open_wsi(
         )
 
         if thumbnail is not None:
-            sdata.images[thumbnail_key] = Image2DModel.parse(
+            sdata_images[thumbnail_key] = Image2DModel.parse(
                 np.asarray(thumbnail).transpose(2, 0, 1),
                 dims=("c", "y", "x"),
                 transformations={"global": Scale([scale_x, scale_y], axes=("x", "y"))},
             )
             if not save_thumbnail:
                 exclude_elements.append(thumbnail_key)
+
+    if sdata is None:
+        sdata = SpatialData(images=sdata_images)
+    else:
+        for key, img in sdata_images.items():
+            sdata.images[key] = img
 
     slide_data = WSIData.from_spatialdata(sdata, reader_instance)
     slide_data.set_exclude_elements(exclude_elements)

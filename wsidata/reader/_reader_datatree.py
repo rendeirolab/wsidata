@@ -21,7 +21,7 @@ from zarr.util import json_dumps, normalize_storage_path, normalize_shape
 from ..reader import TiffSlideReader
 from ..reader.base import ReaderBase
 
-from xarray import open_zarr, DataArray, DataTree
+from xarray import open_zarr, DataArray, DataTree, Dataset
 from spatialdata.models import Image2DModel
 from spatialdata.transformations import Identity, Scale
 
@@ -53,8 +53,8 @@ def create_meta_store(reader: ReaderBase, tilesize: int) -> Dict[str, bytes]:
         init_array(
             store,
             path=str(i),
-            shape=normalize_shape((y, x, 4)),
-            chunks=(tilesize, tilesize, 4),
+            shape=normalize_shape((x, y, 3)),
+            chunks=(tilesize, tilesize, 3),
             fill_value=0,
             dtype="|u1",
             compressor=None,
@@ -81,10 +81,10 @@ class ReaderStore(Store):
     reader: Reader
         The reader object
     tilesize: int
-        Desired "chunk" size for zarr store (default: 512).
+        Desired "chunk" size for zarr store (default: 256).
     """
 
-    def __init__(self, reader: ReaderBase, tilesize: int = 512):
+    def __init__(self, reader: ReaderBase, tilesize: int = 256):
         self._reader = reader
         self._tilesize = tilesize
         self._store = create_meta_store(reader, tilesize)
@@ -168,25 +168,24 @@ class ReaderStore(Store):
 
 
 @singledispatch
-def create_reader_store(reader: ReaderBase, tilesize: int = 512) -> KVStore:
+def create_reader_store(reader: ReaderBase, tilesize: int = 256) -> KVStore:
     """Creates a ReaderStore from a Reader object."""
     return KVStore(ReaderStore(reader, tilesize=tilesize))
 
 
 @create_reader_store.register(TiffSlideReader)
-def _(reader: TiffSlideReader, tilesize: int = 512) -> KVStore:
+def _(reader: TiffSlideReader, tilesize: int = 256) -> KVStore:
     return reader.reader.zarr_group.store
 
 
 def to_datatree(
     reader,
-    chunks=(3, 512, 512),
+    chunks=(3, 256, 256),
 ) -> DataTree:
     store = create_reader_store(reader)
     img_dataset = open_zarr(store, consolidated=False, mask_and_scale=False)
-
     images = {}
-    for level, key in enumerate(list(img_dataset.keys())):
+    for level, key in enumerate(sorted(list(img_dataset.keys()), key=int)):
         suffix = key if key != "0" else ""
 
         scale_image = DataArray(
@@ -202,14 +201,14 @@ def to_datatree(
             transform = Scale([scale_factor, scale_factor], axes=("y", "x"))
 
         scale_image = Image2DModel.parse(
-            scale_image[:3, :, :],
+            scale_image,
             transformations={"global": transform},
-            c_coords=("r", "g", "b"),
+            c_coords=["r", "g", "b"],
         )
         scale_image.coords["y"] = scale_factor * scale_image.coords["y"]
         scale_image.coords["x"] = scale_factor * scale_image.coords["x"]
 
-        images[f"scale{key}"] = scale_image
+        images[f"scale{key}"] = Dataset({"image": scale_image})
 
     slide_image = DataTree.from_dict(images)
     slide_image.attrs = asdict(reader.properties)
