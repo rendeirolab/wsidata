@@ -123,26 +123,29 @@ def open_wsi(
             if not save_images:
                 exclude_elements.append(image_key)
 
-    if attach_thumbnail and thumbnail_key not in sdata:
-        max_thumbnail_size = min(reader_instance.properties.shape)
-        if thumbnail_size > max_thumbnail_size:
-            thumbnail_size = max_thumbnail_size
-        thumbnail = reader_instance.get_thumbnail(thumbnail_size)
-        thumbnail_shape = thumbnail.shape
-        origin_shape = reader_instance.properties.shape
-        scale_x, scale_y = (
-            origin_shape[0] / thumbnail_shape[0],
-            origin_shape[1] / thumbnail_shape[1],
-        )
-
-        if thumbnail is not None:
-            sdata_images[thumbnail_key] = Image2DModel.parse(
-                np.asarray(thumbnail).transpose(2, 0, 1),
-                dims=("c", "y", "x"),
-                transformations={"global": Scale([scale_x, scale_y], axes=("x", "y"))},
+    if attach_thumbnail:
+        if sdata is None or thumbnail_key not in sdata:
+            max_thumbnail_size = min(reader_instance.properties.shape)
+            if thumbnail_size > max_thumbnail_size:
+                thumbnail_size = max_thumbnail_size
+            thumbnail = reader_instance.get_thumbnail(thumbnail_size)
+            thumbnail_shape = thumbnail.shape
+            origin_shape = reader_instance.properties.shape
+            scale_x, scale_y = (
+                origin_shape[0] / thumbnail_shape[0],
+                origin_shape[1] / thumbnail_shape[1],
             )
-            if not save_thumbnail:
-                exclude_elements.append(thumbnail_key)
+
+            if thumbnail is not None:
+                sdata_images[thumbnail_key] = Image2DModel.parse(
+                    np.asarray(thumbnail).transpose(2, 0, 1),
+                    dims=("c", "y", "x"),
+                    transformations={
+                        "global": Scale([scale_x, scale_y], axes=("x", "y"))
+                    },
+                )
+                if not save_thumbnail:
+                    exclude_elements.append(thumbnail_key)
 
     if sdata is None:
         sdata = SpatialData(images=sdata_images)

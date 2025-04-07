@@ -54,7 +54,7 @@ class TestWSIData:
         )
 
         tile_table = wsidata["test_tile"]
-        assert "id" in tile_table.columns
+        assert "tile_id" in tile_table.columns
         assert "tissue_id" in tile_table.columns
         assert "x" in tile_table.columns
         assert "y" in tile_table.columns

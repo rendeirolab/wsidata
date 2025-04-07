@@ -107,7 +107,7 @@ class FetchAccessor(object):
 
         # obs slot
         tile_table = sdata.shapes[tile_key]
-        tile_xy = tile_table[["x", "y"]].values
+        tile_xy = tile_table.bounds[["minx", "miny"]].to_numpy()
         obs = tile_table.drop(columns=["geometry"])
         # To suppress anndata warning
         obs.index = obs.index.astype(str)
