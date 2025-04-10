@@ -1,6 +1,6 @@
 """Data structures and I/O functions for whole-slide images (WSIs)."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 import wsidata.dataset as dataset
 from ._model import WSIData, TileSpec
