@@ -13,7 +13,8 @@ from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
 from .._model import WSIData
-from ..reader import get_reader, to_datatree
+from ..reader import to_datatree
+from ..reader.utils import try_reader
 
 
 def open_wsi(
@@ -64,7 +65,7 @@ def open_wsi(
     save_thumbnail : bool, optional, default: True
         Whether to save the thumbnail to on the disk.
 
-        Only works for wsi.save() method.
+        Only works for wsi.write() method.
 
     Returns
     -------
@@ -88,9 +89,7 @@ def open_wsi(
     sdata = None
 
     # Early attempt with reader
-    ReaderClass = get_reader(reader, format=wsi.suffix)
-
-    reader_instance = ReaderClass(wsi)
+    reader_instance = try_reader(wsi, reader=reader)
     if store == "auto":
         store = wsi.with_suffix(".zarr")
     else:
@@ -207,6 +206,8 @@ def agg_wsi(
     if agg_key is None and agg_by is None:
         agg_key = "agg_slide"
     elif agg_key is None and agg_by is not None:
+        if isinstance(agg_by, str):
+            agg_by = [agg_by]
         agg_key = f"agg_{'_'.join(agg_by)}"
 
     if store_col is not None:
@@ -247,7 +248,7 @@ def agg_wsi(
                     features_annos.append(feature_annos)
 
     mask = np.asarray([r is not None for r in features])
-    X = np.hstack(features).T
+    X = np.vstack(features)
     slides_table = slides_table.loc[mask]
     if len(features_annos) > 0:
         annos = pd.concat(features_annos, ignore_index=True)
@@ -304,13 +305,19 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
                 f"Aggregation operations not found for {f}. Did you run feature aggregation?"
             )
         agg_annos = agg_ops.get(agg_key)
-        if agg_annos is None or agg_key not in s.varm:
+        if agg_annos is None:
             raise ValueError(f"Aggregation key {agg_key} not found.")
 
-        feature = s.varm[agg_key]
+        if "features" in agg_annos:
+            feature = agg_annos["features"]
+        else:
+            feature = s.varm[agg_key].T
         feature_annos = None
         if len(agg_annos) > 0:
-            feature_annos = pd.DataFrame(agg_annos["values"], columns=agg_annos["keys"])
+            if "values" in agg_annos:
+                feature_annos = pd.DataFrame(
+                    agg_annos["values"], columns=agg_annos["keys"]
+                )
         return feature, feature_annos
 
     except Exception as e:
