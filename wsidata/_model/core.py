@@ -195,7 +195,8 @@ class WSIData(SpatialData):
         return f"""
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <img src="data:image/png;base64,{self._html_thumbnail}" 
-                    style="border: 1px solid #ddd; border-radius: 8px; max-width: 300px;">
+                    style="border: 1px solid #ddd; border-radius: 8px; 
+                    max-width: 300px; max-height: 100%; object-fit: contain;">
                     <div>
                         <b>WSI:</b> {self.reader.file}<br>
                         <b>Reader:</b> {self.reader.name}<br>
@@ -247,7 +248,7 @@ class WSIData(SpatialData):
     @cached_property
     def _html_thumbnail(self) -> str:
         buffer = io.BytesIO()
-        image = self.get_thumbnail(size=200, as_array=False)
+        image = self.get_thumbnail(size=250, as_array=False)
         image.save(buffer, format="PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
