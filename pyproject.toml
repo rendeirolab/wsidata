@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wsidata"
-description = "Data structures and I/O functions for whole-slide images (WSIs)."
+description = "Data structures and I/O functions for whole-slide image (WSI)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
