@@ -164,8 +164,10 @@ def try_reader(img_path: PathLike, reader=None) -> ReaderBase | None:
         try:
             return ReaderObj(img_path)
         except Exception as _:
-            return None
-    return None
+            pass
+    raise ValueError(
+        f"None of the readers were able to read the image file: {img_path}"
+    )
 
 
 def get_reader(reader: str = None, format: str = None) -> Reader:

@@ -13,8 +13,7 @@ from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
 from .._model import WSIData
-from ..reader import to_datatree
-from ..reader.utils import try_reader
+from ..reader import to_datatree, try_reader
 
 
 def open_wsi(
@@ -32,7 +31,7 @@ def open_wsi(
 ):
     """Open a whole slide image.
 
-    You can attach images and thumbnail to the SpatialData object. By default, only the thumbnail is attached,
+    You can attach images and thumbnails to the SpatialData object. By default, only the thumbnail is attached,
     the thumbnail is a downsampled version of the whole slide image,
     the original image is not attached as it will make unnecessary copies of the data on disk
     when saving the SpatialData object.
