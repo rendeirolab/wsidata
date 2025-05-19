@@ -11,3 +11,4 @@ def graph_data(wsi: WSIData, key: str = "graph", target_key: str = None):
     if target_key in tables:
         targets = tables[target_key].to_numpy()
     return X, targets
+

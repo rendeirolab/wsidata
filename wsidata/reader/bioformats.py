@@ -207,7 +207,6 @@ class BioFormatsReader(ReaderBase):
                     mag=mag,
                 )
             )
-
         # Identify the pyramid with the highest resolution
         used_pyramids = sorted(multi_pyramids, key=lambda x: x.height * x.width)[-1]
         # Calculate the downsample for each level
@@ -248,7 +247,7 @@ class BioFormatsReader(ReaderBase):
             n_level=len(used_pyramids.level_shape),
             mpp=used_pyramids.mpp,
             magnification=used_pyramids.mag,
-            bounds=[0, 0, used_pyramids.height, used_pyramids.width],
+            bounds=[0, 0, used_pyramids.width, used_pyramids.height],
             # TODO: Attach raw metadata
         )
 
