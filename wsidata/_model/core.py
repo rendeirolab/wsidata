@@ -23,6 +23,7 @@ from ..reader import ReaderBase, SlideProperties
 
 if TYPE_CHECKING:
     from typing import Self
+    from wsidata.reader.base import AssociatedImages
 
 
 class WSIData(SpatialData):
@@ -234,6 +235,16 @@ class WSIData(SpatialData):
     def properties(self) -> SlideProperties:
         """The properties of the whole slide image. See :class:`SlideProperties <wsidata.SlideProperties>`."""
         return self.reader.properties
+
+    @property
+    def raw_properties(self) -> dict:
+        """The raw properties of the whole slide image."""
+        return self.reader.raw_properties
+
+    @property
+    def associated_images(self) -> AssociatedImages:
+        """The associated images in a key-value pair."""
+        return self.reader.associated_images
 
     @property
     def wsi_store(self) -> str | Path:

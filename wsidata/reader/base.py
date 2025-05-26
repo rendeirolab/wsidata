@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import base64
+import io
 from dataclasses import dataclass, asdict, field
-from functools import singledispatch, cached_property
+from functools import singledispatch, cached_property, lru_cache
 from typing import Optional, List, Mapping, Dict
 
 import cv2
@@ -76,6 +78,79 @@ class SlideProperties:
         )
 
 
+class AssociatedImages:
+    """A class to hold associated images
+
+    This class is used to hold the associated images in a key-value pair
+    where the key is the name of the image and the value is the image data.
+
+    Attributes
+    ----------
+    images : Dict[str, np.ndarray]
+        The associated images in a key-value pair
+
+    """
+
+    _base64_image_store = {}
+
+    def __init__(self, images: Optional[Dict[str, Image.Image]] = None):
+        self._images = images or {}
+
+    def __getitem__(self, key: str) -> np.ndarray:
+        """Get the image by key"""
+        if key in self._images:
+            return np.asarray(self._images[key], dtype=np.uint8)
+        raise KeyError(f"Image '{key}' not found in associated images.")
+
+    def __getattr__(self, key: str) -> np.ndarray:
+        """Get the image by attr"""
+        if key in self._images:
+            return self[key]
+        raise AttributeError(f"Image '{key}' not found in associated images.")
+
+    def __iter__(self):
+        return iter(self._images)
+
+    def __len__(self):
+        return len(self._images)
+
+    def __repr__(self):
+        return f"AssociatedImages({list(self._images.keys())})"
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._images
+
+    def _base64_image(self, key) -> str:
+        """Generate base64 for the image, each image is resized to max 128 pixels in width or height"""
+        img = self._images[key]
+        if key in self._base64_image_store:
+            return self._base64_image_store[key]
+
+        # Resize the image to max 128 pixels in width or height
+        max_size = 128
+        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        base64_str = f"data:image/png;base64,{base64_str}"
+        self._base64_image_store[key] = base64_str
+        return base64_str
+
+    def _repr_html_(self):
+        rows = []
+        # sort the keys to have a consistent order
+        for key in sorted(self._images.keys()):
+            base64_str = self._base64_image(key)
+            rows.append(
+                f"<tr><td>{key}</td><td><img src='{base64_str}' style='max-width: 200px;'></td></tr>"
+            )
+        return (
+            "<h4>Associated Images</h4><table><tr><th>Name</th><th>Image</th></tr>"
+            + "".join(rows)
+            + "</table>"
+        )
+
+
 class ReaderBase:
     """The base class for all reader
 
@@ -98,6 +173,7 @@ class ReaderBase:
     properties: SlideProperties
     name = "base"
     _reader = None
+    _associated_images: AssociatedImages = None
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.file}')"
@@ -113,6 +189,18 @@ class ReaderBase:
             levels[lv] = lv
             levels[-n_level + lv] = lv
         return levels
+
+    @cached_property
+    def raw_properties(self):
+        """Get the raw properties of the slide"""
+        return json.loads(self.properties.raw)
+
+    @property
+    def associated_images(self) -> AssociatedImages | Mapping:
+        """The associated images in a key-value pair"""
+        if self._associated_images is None:
+            return {}
+        return self._associated_images
 
     def translate_level(self, level):
         """Translate the level to the actual level
@@ -218,11 +306,6 @@ class ReaderBase:
         if self._reader is None:
             self.create_reader()
         return self._reader
-
-    @property
-    def associated_images(self) -> Dict[str, np.ndarray]:
-        """By default, there is no associated images"""
-        return {}
 
 
 @singledispatch

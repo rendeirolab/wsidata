@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from .base import ReaderBase, convert_image
+from .base import ReaderBase, convert_image, AssociatedImages
 
 
 class OpenSlideReader(ReaderBase):
@@ -72,3 +72,12 @@ class OpenSlideReader(ReaderBase):
         from openslide import OpenSlide
 
         self._reader = OpenSlide(self.file)
+
+    @property
+    def associated_images(self):
+        """The associated images in a key-value pair"""
+        if self._associated_images is None:
+            self._associated_images = AssociatedImages(
+                {k: v.convert("RGB") for k, v in self._reader.associated_images.items()}
+            )
+        return self._associated_images
