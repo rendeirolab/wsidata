@@ -4,7 +4,7 @@ import json
 import base64
 import io
 from dataclasses import dataclass, asdict, field
-from functools import singledispatch, cached_property, lru_cache
+from functools import singledispatch, cached_property
 from typing import Optional, List, Mapping, Dict
 
 import cv2
@@ -91,10 +91,9 @@ class AssociatedImages:
 
     """
 
-    _base64_image_store = {}
-
     def __init__(self, images: Optional[Dict[str, Image.Image]] = None):
         self._images = images or {}
+        self._base64_image_store = {}
 
     def __getitem__(self, key: str) -> np.ndarray:
         """Get the image by key"""
