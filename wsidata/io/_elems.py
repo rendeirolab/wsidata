@@ -11,16 +11,16 @@ __all__ = [
     "subset_tiles",
 ]
 
-from typing import Sequence, Mapping
+from typing import Mapping, Sequence
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 from anndata import AnnData
-from shapely import box, Polygon
+from shapely import Polygon, box
 from spatialdata.models import ShapesModel, TableModel
 
-from .._model import WSIData, TileSpec
+from .._model import TileSpec, WSIData
 
 
 def add_tissues(

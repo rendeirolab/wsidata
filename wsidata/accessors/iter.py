@@ -5,13 +5,13 @@ import io
 import re
 import warnings
 from functools import cached_property
-from typing import Sequence, Dict, List, Tuple, Generator, TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Dict, Generator, List, Literal, Sequence, Tuple
 
 import cv2
 import numpy as np
 from PIL.Image import fromarray
 from shapely import MultiPolygon, Polygon, clip_by_rect
-from shapely.affinity import translate, scale
+from shapely.affinity import scale, translate
 
 if TYPE_CHECKING:
     from .._model import WSIData
@@ -553,7 +553,6 @@ class TileImage:
 
         """
         import matplotlib.pyplot as plt
-
         from matplotlib.patches import PathPatch
         from matplotlib.path import Path
 

@@ -3,17 +3,17 @@
 __version__ = "0.6.2"
 
 import wsidata.dataset as dataset
-from ._model import WSIData, TileSpec
-from .io import open_wsi, agg_wsi
+
+from ._model import TileSpec, WSIData
+from ._normalizer import ColorNormalizer
 from .accessors import (
-    register_wsidata_accessor,
+    DatasetAccessor,
     FetchAccessor,
     IterAccessor,
-    DatasetAccessor,
+    register_wsidata_accessor,
 )
-from .reader import get_reader, SlideProperties
-from ._normalizer import ColorNormalizer
-
+from .io import agg_wsi, open_wsi
+from .reader import SlideProperties, get_reader
 
 __all__ = [
     "open_wsi",

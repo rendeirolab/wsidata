@@ -1,5 +1,7 @@
-import pytest
+import sys
 from importlib import import_module
+
+import pytest
 
 from wsidata import open_wsi
 
@@ -22,6 +24,7 @@ def skip_reader(reader):
 def run_reader_test(reader, test_slide):
     wsi = open_wsi(test_slide, reader=reader)
     wsi.read_region(0, 0, 10, 10, level=0)
+    wsi.associated_images
     wsi.thumbnail
     wsi.get_thumbnail(as_array=True)
     assert wsi.reader.translate_level(-1) == 0
@@ -38,6 +41,7 @@ def test_tiffslide(test_slide):
 
 
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
+@pytest.mark.skipif(sys.version_info >= (3, 13), reason="Not supported on Python 3.13+")
 def test_bioformats(test_slide):
     run_reader_test("bioformats", test_slide)
     # TODO: Add test for bioformats on vsi format

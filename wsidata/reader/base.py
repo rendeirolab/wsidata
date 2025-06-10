@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 import base64
 import io
-from dataclasses import dataclass, asdict, field
-from functools import singledispatch, cached_property
-from typing import Optional, List, Mapping, Dict
+import json
+from dataclasses import asdict, dataclass, field
+from functools import cached_property, singledispatch
+from typing import Dict, List, Mapping, Optional
 
 import cv2
 import numpy as np
@@ -314,12 +314,12 @@ def convert_image(img):
 
 @convert_image.register(Image.Image)
 def _(img: Image.Image):
-    return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGBA2RGB).astype(np.uint8)
+    return cv2.cvtColor(np.asarray(img, dtype=np.uint8), cv2.COLOR_RGBA2RGB)
 
 
 @convert_image.register(np.ndarray)
 def _(img: np.ndarray):
-    return cv2.cvtColor(img, cv2.COLOR_RGBA2RGB).astype(np.uint8)
+    return cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGBA2RGB)
 
 
 MAG_KEY = "objective-power"

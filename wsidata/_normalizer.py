@@ -17,8 +17,8 @@ class ColorNormalizer(torch.nn.Module):
         super().__init__()
 
         try:
-            import torchstain.torch.normalizers as norm
             import torchstain.torch.augmentors as aug
+            import torchstain.torch.normalizers as norm
         except (ImportError, ModuleNotFoundError):
             raise ImportError("To use color normalization, please install torchstain.")
 
