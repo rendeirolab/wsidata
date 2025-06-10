@@ -113,6 +113,6 @@ docs = [
     "sphinx-design>=0.6.1",
 ]
 readers = [
-    "cucim-cu12>=25.6.0; sys_platform != 'darwin'",
+    "cucim-cu12>=25.6.0; sys_platform == 'linux'",
     "scyjava>=1.10.1",
 ]

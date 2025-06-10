@@ -1,3 +1,4 @@
+import sys
 from importlib import import_module
 
 import pytest
@@ -40,6 +41,7 @@ def test_tiffslide(test_slide):
 
 
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
+@pytest.mark.skipif(sys.version_info >= (3, 13), reason="Not supported on Python 3.13+")
 def test_bioformats(test_slide):
     run_reader_test("bioformats", test_slide)
     # TODO: Add test for bioformats on vsi format
