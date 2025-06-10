@@ -3,8 +3,7 @@ import pandas as pd
 import pytest
 from shapely import Polygon
 
-from wsidata import TileSpec
-from wsidata import io
+from wsidata import TileSpec, io
 
 
 class TestWSIData:

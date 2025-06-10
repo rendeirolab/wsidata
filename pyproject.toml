@@ -71,6 +71,7 @@ packages = ["wsidata", "README.md", "LICENSE", "pyproject.toml"]
 [tool.ruff]
 lint.ignore = ["F401"]
 line-length = 88
+lint.extend-select = ["I"]
 
 [tool.taskipy.tasks]
 hello = "echo Hello, World!"

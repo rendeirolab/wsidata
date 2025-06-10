@@ -8,22 +8,21 @@ from functools import singledispatch
 from typing import Dict
 
 import numpy as np
+from spatialdata.models import Image2DModel
+from spatialdata.transformations import Identity, Scale
+from xarray import DataArray, Dataset, DataTree, open_zarr
 from zarr.storage import (
+    KVStore,
+    Store,
     _path_to_prefix,
     attrs_key,
     init_array,
     init_group,
-    Store,
-    KVStore,
 )
-from zarr.util import json_dumps, normalize_storage_path, normalize_shape
+from zarr.util import json_dumps, normalize_shape, normalize_storage_path
 
 from ..reader import TiffSlideReader
 from ..reader.base import ReaderBase
-
-from xarray import open_zarr, DataArray, DataTree, Dataset
-from spatialdata.models import Image2DModel
-from spatialdata.transformations import Identity, Scale
 
 
 def init_attrs(store, attrs, path: str = None):

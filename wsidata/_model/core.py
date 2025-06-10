@@ -4,25 +4,26 @@ import base64
 import io
 import json
 import warnings
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from functools import cached_property
 from numbers import Integral, Number
 from pathlib import Path
-from typing import Literal, Generator, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator, Literal, Sequence
 
 import numpy as np
-from PIL.Image import Image, fromarray
 from anndata import AnnData
 from ome_zarr.io import parse_url
+from PIL.Image import Image, fromarray
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
 from .._utils import find_stack_level
-from ..accessors import FetchAccessor, IterAccessor, DatasetAccessor
+from ..accessors import DatasetAccessor, FetchAccessor, IterAccessor
 from ..reader import ReaderBase, SlideProperties
 
 if TYPE_CHECKING:
     from typing import Self
+
     from wsidata.reader.base import AssociatedImages
 
 

@@ -1,11 +1,11 @@
-from ._wsi import open_wsi, agg_wsi
 from ._elems import (
-    add_tissues,
-    add_shapes,
-    add_tiles,
-    add_features,
     add_agg_features,
+    add_features,
+    add_shapes,
     add_table,
-    update_shapes_data,
+    add_tiles,
+    add_tissues,
     subset_tiles,
+    update_shapes_data,
 )
+from ._wsi import agg_wsi, open_wsi

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from rich.progress import track
-from spatialdata import read_zarr, SpatialData
+from spatialdata import SpatialData, read_zarr
 from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 

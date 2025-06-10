@@ -1,12 +1,12 @@
+import warnings
 from pathlib import Path
 from typing import Union
-import warnings
 
-from PIL import Image
 import numpy as np
+from PIL import Image
 
-from .base import ReaderBase, convert_image, SlideProperties, AssociatedImages
 from .._utils import find_stack_level
+from .base import AssociatedImages, ReaderBase, SlideProperties, convert_image
 
 
 class CuCIMReader(ReaderBase):
@@ -42,16 +42,18 @@ class CuCIMReader(ReaderBase):
         **kwargs,
     ):
         level = self.translate_level(level)
-        img = np.asarray(self.reader.read_region(
-            (x, y),
-            (int(width), int(height)),
-            level=level,
-            **kwargs,
-        ), dtype=self._dtype)
+        img = np.asarray(
+            self.reader.read_region(
+                (x, y),
+                (int(width), int(height)),
+                level=level,
+                **kwargs,
+            ),
+            dtype=self._dtype,
+        )
         return convert_image(img)
 
     def get_thumbnail(self, size, **kwargs):
-        
         if "thumbnail" in self.associated_images:
             return np.asarray(self.associated_images["thumbnail"])
 
@@ -84,22 +86,22 @@ class CuCIMReader(ReaderBase):
         self._dtype = reader.typestr
         mpp = None
         magnification = None
-        
+
         # CuCIM metadata
         resolutions = reader.resolutions
-        level_shape = resolutions.get('level_dimensions')
-        level_downsample = resolutions.get('level_downsamples')
-        n_level = resolutions.get('level_count', len(level_shape))
+        level_shape = resolutions.get("level_dimensions")
+        level_downsample = resolutions.get("level_downsamples")
+        n_level = resolutions.get("level_count", len(level_shape))
         if level_shape is not None:
             level_shape = [list(dim)[::-1] for dim in level_shape]
         if level_downsample is not None:
             level_downsample = list(level_downsample)
 
         # Aperio metadata
-        aperio_metadata = reader.metadata.get('aperio')
+        aperio_metadata = reader.metadata.get("aperio")
         if aperio_metadata is not None:
-            mpp = aperio_metadata.get('MPP')
-            magnification = aperio_metadata.get('AppMag')
+            mpp = aperio_metadata.get("MPP")
+            magnification = aperio_metadata.get("AppMag")
 
         self.properties = SlideProperties(
             shape=shape,
@@ -117,7 +119,7 @@ class CuCIMReader(ReaderBase):
         if self._reader is None:
             self.create_reader()
         return self._reader
-    
+
     @property
     def associated_images(self):
         """The associated images in a key-value pair"""
@@ -137,7 +139,7 @@ class CuCIMReader(ReaderBase):
                     except Exception as e:
                         warnings.warn(
                             f"Failed to convert associated image '{k}' to array: {e}",
-                            stacklevel=find_stack_level()
+                            stacklevel=find_stack_level(),
                         )
 
                 self._associated_images = AssociatedImages(imgs)

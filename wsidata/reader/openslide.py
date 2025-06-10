@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from .base import ReaderBase, AssociatedImages, convert_image
+from .base import AssociatedImages, ReaderBase, convert_image
 
 
 class OpenSlideReader(ReaderBase):

@@ -2,11 +2,11 @@
 # https://github.com/AllenCellModeling/aicsimageio/blob/main/aicsimageio/readers/bioformats_reader.py
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
 
 import numpy as np
 
-from .base import ReaderBase, convert_image, SlideProperties
+from .base import ReaderBase, SlideProperties, convert_image
 
 
 class BioFormatsReader(ReaderBase):
