@@ -21,8 +21,8 @@ from zarr.storage import (
 )
 from zarr.util import json_dumps, normalize_shape, normalize_storage_path
 
-from ..reader import TiffSlideReader
-from ..reader.base import ReaderBase
+from .base import ReaderBase
+from .tiffslide import TiffSlideReader
 
 
 def init_attrs(store, attrs, path: str = None):
