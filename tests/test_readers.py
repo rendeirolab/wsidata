@@ -22,6 +22,7 @@ def skip_reader(reader):
 def run_reader_test(reader, test_slide):
     wsi = open_wsi(test_slide, reader=reader)
     wsi.read_region(0, 0, 10, 10, level=0)
+    wsi.associated_images
     wsi.thumbnail
     wsi.get_thumbnail(as_array=True)
     assert wsi.reader.translate_level(-1) == 0
