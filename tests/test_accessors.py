@@ -1,4 +1,5 @@
 import pytest
+import torch
 from anndata import AnnData
 
 
@@ -67,3 +68,83 @@ class TestDatasetAccessor:
     def test_ds_tile_images(self, wsidata):
         dataset = wsidata.ds.tile_images("tiles")
         assert dataset.spec is not None
+
+    def test_ds_tile_feature(self, wsidata):
+        dataset = wsidata.ds.tile_feature("resnet50")
+
+        # Check that the dataset has the expected attributes
+        assert hasattr(dataset, "X")
+        assert hasattr(dataset, "tables")
+
+        # Check that the dataset has the expected length
+        assert len(dataset) > 0
+
+        # Check that __getitem__ returns the expected data type
+        item = dataset[0]
+        assert isinstance(item, (list, tuple)) or item.ndim >= 1
+
+    def test_ds_tile_feature_graph(self, wsidata):
+        try:
+            import numpy as np
+            import scipy.sparse as sp
+            import torch_geometric
+        except ImportError:
+            pytest.skip("torch_geometric or scipy not installed")
+
+        # Get the feature data
+        feature_key = "resnet50"
+        tile_key = "tiles"
+        graph_key = f"{tile_key}_graph"
+
+        # Create an AnnData object for the graph
+        feature_key = wsidata._check_feature_key(feature_key, tile_key)
+        features = wsidata.tables[feature_key]
+
+        # Get the number of tiles
+        n_tiles = features.X.shape[0]
+
+        # Create a simple connectivity matrix (each tile connects to the next one)
+        # This is just a simple example - in a real scenario, you'd compute actual connections
+        row = np.arange(n_tiles - 1)
+        col = np.arange(1, n_tiles)
+        data = np.ones(n_tiles - 1)
+
+        # Create sparse matrices for connectivity and distances
+        connectivities = sp.csr_matrix((data, (row, col)), shape=(n_tiles, n_tiles))
+
+        # Create distances (using simple Euclidean distance for this example)
+        distances = sp.csr_matrix(
+            (np.arange(1, n_tiles, dtype=float), (row, col)), shape=(n_tiles, n_tiles)
+        )
+
+        # Create an AnnData object with the graph data
+        graph_adata = AnnData(X=np.zeros((n_tiles, 1)))  # Placeholder X matrix
+        graph_adata.obsp["spatial_connectivities"] = connectivities
+        graph_adata.obsp["spatial_distances"] = distances
+        graph_adata.uns["spatial"] = {"method": "test"}
+
+        # Add the graph data to the WSIData object
+        wsidata.tables[graph_key] = graph_adata
+
+        # Test with default parameters
+        data = wsidata.ds.tile_feature_graph("resnet50")
+
+        # Check that the returned object has the expected attributes
+        assert hasattr(data, "x")
+        assert hasattr(data, "edge_index")
+        assert hasattr(data, "edge_attr")
+
+        # Check that the attributes have the expected types
+        assert isinstance(data.edge_index, torch.Tensor)
+        assert isinstance(data.x, torch.Tensor)
+        assert isinstance(data.edge_attr, torch.Tensor)
+
+        # Check that x has the expected shape (n_nodes, n_features)
+        assert data.x.dim() == 2
+
+        # Check that edge_index has the expected shape (2, n_edges)
+        assert data.edge_index.dim() == 2
+        assert data.edge_index.size(0) == 2
+
+        # Check that we have the expected number of edges
+        assert data.edge_index.size(1) == n_tiles - 1
