@@ -48,6 +48,7 @@ class DatasetAccessor(object):
     def tile_feature(
         self,
         feature_key: str,
+        tile_key: str = "tiles",
         target_key: str = None,
         target_transform=None,
     ):
@@ -58,6 +59,8 @@ class DatasetAccessor(object):
         ----------
         feature_key : str
             The key of the feature table.
+        tile_key : str, default: "tiles"
+            The key of the tile table.
         target_key : str
             The key of the target table.
         target_transform: callable
@@ -74,6 +77,49 @@ class DatasetAccessor(object):
         return TileFeatureDataset(
             self._obj,
             feature_key=feature_key,
+            tile_key=tile_key,
             target_key=target_key,
             target_transform=target_transform,
+        )
+
+    def tile_feature_graph(
+        self,
+        feature_key: str,
+        tile_key: str = "tiles",
+        graph_key: str = None,
+        target_key: str = None,
+    ):
+        """
+        Create a PyTorch Geometric Data object from the graph data in WSIData.
+
+        Parameters
+        ----------
+        feature_key : str
+            The key for the tile features.
+        tile_key : str, default: "tiles"
+            The key for the tiles.
+        graph_key : str, optional
+            The key for tile graph, defaults to "{tile_key}_graph".
+        target_key : str, optional
+            The key for the target data in the observation table.
+
+        Returns
+        -------
+        :class:`torch_geometric.data.Data`
+            A PyTorch Geometric Data object containing:
+            - x: Node features (image features)
+            - edge_index: Graph connectivity
+            - edge_attr: Edge attributes (distances)
+            - y: Target values (if target_key is provided)
+
+        """
+
+        from ..dataset.graph import graph_data
+
+        return graph_data(
+            self._obj,
+            feature_key=feature_key,
+            tile_key=tile_key,
+            graph_key=graph_key,
+            target_key=target_key,
         )

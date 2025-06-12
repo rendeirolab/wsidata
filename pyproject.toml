@@ -30,11 +30,10 @@ dynamic = ["version"]
 dependencies = [
     "spatialdata>=0.3.0",
     "opencv-python-headless",
-    "openslide-python",
-    "openslide-bin",
+    "openslide-python>=1.4.1",
+    "openslide-bin>=4.0.0.2",
     "tiffslide",
     "rich",
-    "numba>=0.61.0",
     "torch>=2.0.0",
 ]
 
@@ -70,8 +69,8 @@ packages = ["wsidata", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.ruff]
 lint.ignore = ["F401"]
-line-length = 88
 lint.extend-select = ["I"]
+line-length = 88
 
 [tool.taskipy.tasks]
 hello = "echo Hello, World!"
@@ -115,4 +114,7 @@ docs = [
 readers = [
     "cucim-cu12>=25.6.0; sys_platform == 'linux'",
     "scyjava>=1.10.1",
+]
+datasets = [
+    "torch-geometric>=2.6.1",
 ]

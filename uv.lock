@@ -4236,6 +4236,25 @@ wheels = [
 ]
 
 [[package]]
+name = "torch-geometric"
+version = "2.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "numpy" },
+    { name = "psutil" },
+    { name = "pyparsing" },
+    { name = "requests" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/81/e1b015494cb9e0bf4c47cc8426e49736120248733be0e22072a5628ae9ed/torch_geometric-2.6.1.tar.gz", hash = "sha256:1f18f9d0fc4d2239d526221e4f22606a4a3895b5d965a9856d27610a3df662c6", size = 771490, upload-time = "2024-09-26T08:11:30.25Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/9f/157e913626c1acfb3b19ce000b1a6e4e4fb177c0bc0ea0c67ca5bd714b5a/torch_geometric-2.6.1-py3-none-any.whl", hash = "sha256:8faeb353f9655f7dbec44c5e0b44c721773bdfb279994da96b9b8b12fd30f427", size = 1135632, upload-time = "2024-09-26T08:11:27.194Z" },
+]
+
+[[package]]
 name = "torchstain"
 version = "1.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4295,6 +4314,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/ae/c1b22d4524b0e10da2f29a176fb2890386f7bd1f63aacf186444873a88a0/tornado-6.4.2-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:932d195ca9015956fa502c6b56af9eb06106140d844a335590c1ec7f5277d10c", size = 437261, upload-time = "2024-11-22T03:06:32.458Z" },
     { url = "https://files.pythonhosted.org/packages/b5/25/36dbd49ab6d179bcfc4c6c093a51795a4f3bed380543a8242ac3517a1751/tornado-6.4.2-cp38-abi3-win32.whl", hash = "sha256:2876cef82e6c5978fde1e0d5b1f919d756968d5b4282418f3146b79b58556482", size = 438463, upload-time = "2024-11-22T03:06:34.71Z" },
     { url = "https://files.pythonhosted.org/packages/61/cc/58b1adeb1bb46228442081e746fcdbc4540905c87e8add7c277540934edb/tornado-6.4.2-cp38-abi3-win_amd64.whl", hash = "sha256:908b71bf3ff37d81073356a5fadcc660eb10c1476ee6e2725588626ce7e5ca38", size = 438907, upload-time = "2024-11-22T03:06:36.71Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
 
 [[package]]
@@ -4480,7 +4511,6 @@ wheels = [
 name = "wsidata"
 source = { editable = "." }
 dependencies = [
-    { name = "numba" },
     { name = "opencv-python-headless" },
     { name = "openslide-bin" },
     { name = "openslide-python" },
@@ -4506,6 +4536,9 @@ stain = [
 ]
 
 [package.dev-dependencies]
+datasets = [
+    { name = "torch-geometric" },
+]
 dev = [
     { name = "jupyter-cache" },
     { name = "jupyterlab" },
@@ -4540,10 +4573,9 @@ requires-dist = [
     { name = "cucim", marker = "extra == 'cucim'" },
     { name = "legendkit", marker = "extra == 'plot'" },
     { name = "matplotlib", marker = "extra == 'plot'" },
-    { name = "numba", specifier = ">=0.61.0" },
     { name = "opencv-python-headless" },
-    { name = "openslide-bin" },
-    { name = "openslide-python" },
+    { name = "openslide-bin", specifier = ">=4.0.0.2" },
+    { name = "openslide-python", specifier = ">=1.4.1" },
     { name = "rich" },
     { name = "scyjava", marker = "extra == 'bioformats'" },
     { name = "spatialdata", specifier = ">=0.3.0" },
@@ -4554,6 +4586,7 @@ requires-dist = [
 provides-extras = ["bioformats", "cucim", "plot", "stain"]
 
 [package.metadata.requires-dev]
+datasets = [{ name = "torch-geometric", specifier = ">=2.6.1" }]
 dev = [
     { name = "jupyter-cache", specifier = ">=1.0.1" },
     { name = "jupyterlab", specifier = ">=4.3.5" },
