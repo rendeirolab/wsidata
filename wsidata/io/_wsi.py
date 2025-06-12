@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Literal, Sequence
@@ -13,6 +14,7 @@ from spatialdata.models import Image2DModel
 from spatialdata.transformations import Scale
 
 from .._model import WSIData
+from .._utils import find_stack_level
 from ..reader import to_datatree, try_reader
 
 
@@ -89,6 +91,20 @@ def open_wsi(
 
     # Early attempt with reader
     reader_instance = try_reader(wsi, reader=reader)
+
+    # Check if the image is not pyramidal and too large
+    if reader_instance.properties.n_level <= 1:
+        height, width = reader_instance.properties.shape
+        if height > 10000 or width > 10000:
+            warnings.warn(
+                f"The image is not pyramidal (n_level={reader_instance.properties.n_level}) "
+                f"and has a large size ({width}x{height} pixels). "
+                "This may cause performance issues. "
+                "Consider generating pyramids for this image using vips or bioformats).",
+                UserWarning,
+                stacklevel=find_stack_level(),
+            )
+
     if store == "auto":
         store = wsi.with_suffix(".zarr")
     else:
