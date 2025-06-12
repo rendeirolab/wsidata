@@ -76,7 +76,7 @@ class TileImagesDataset(Dataset):
         tile = self.reader.get_region(
             x, y, self.spec.ops_width, self.spec.ops_height, level=self.spec.ops_level
         )
-        tile = self.reader.resize_img(tile, dsize=(self.spec.height, self.spec.width))
+        tile = self.reader.resize_img(tile, dsize=(self.spec.width, self.spec.height))
         tile = self._cn_func(tile)
         if self.transform:
             tile = self.transform(tile)
