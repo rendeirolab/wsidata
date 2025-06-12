@@ -24,9 +24,11 @@ class TileFeatureDataset(Dataset):
         self,
         wsi: WSIData,
         feature_key: str,
+        tile_key: str = "tiles",
         target_key: str = None,
         target_transform=None,
     ):
+        feature_key = wsi._check_feature_key(feature_key, tile_key)
         tables = wsi.tables[feature_key]
         self.X = tables.X
         self.tables = tables.obs
