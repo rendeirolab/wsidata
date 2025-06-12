@@ -295,10 +295,11 @@ class ReaderBase:
     ):
         dim = np.asarray(img.shape)
         if dsize is not None:
-            return cv2.resize(img, dsize)
+            return cv2.resize(img, dsize, interpolation=cv2.INTER_AREA)
         if scale is not None:
             dim = np.array(dim * scale, dtype=int)
-            return cv2.resize(img, dim)
+            return cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
+        return None
 
     @property
     def reader(self):
