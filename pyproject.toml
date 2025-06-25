@@ -110,6 +110,7 @@ docs = [
     "sphinx>=8.1.3",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
+    "sphinxext-opengraph[social-cards]>=0.10.0",
 ]
 readers = [
     "cucim-cu12>=25.6.0; sys_platform == 'linux'",

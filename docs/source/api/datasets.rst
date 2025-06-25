@@ -8,3 +8,5 @@ Torch Datasets
     :nosignatures:
 
     TileImagesDataset
+    TileFeatureDataset
+    graph_data
