@@ -1,5 +1,3 @@
-try:
-    from .image import TileImagesDataset
-
-except ImportError:
-    pass
+from .feature import TileFeatureDataset
+from .graph import graph_data
+from .image import TileImagesDataset

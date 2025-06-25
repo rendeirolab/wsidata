@@ -17,6 +17,7 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "myst_nb",
+    "sphinxext.opengraph",
 ]
 autoclass_content = "class"
 autodoc_docstring_signature = True
@@ -60,4 +61,5 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "lazyslide": ("https://lazyslide.readthedocs.io/en/latest/", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest", None),
 }
