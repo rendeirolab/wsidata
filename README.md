@@ -19,6 +19,11 @@ for whole slide image (WSI) analysis.
 
 ## Installation
 
+Via pip:
 ```bash
 pip install wsidata
+```
+Or through conda:
+```bash
+conda install conda-forge::wsidata
 ```
