@@ -2,7 +2,7 @@ import logging
 import os
 
 
-def _setup_logger() -> "logging.Logger":
+def _setup_logger() -> logging.Logger:
     from rich.console import Console
     from rich.logging import RichHandler
 
