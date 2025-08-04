@@ -246,7 +246,8 @@ def agg_wsi(
             job.job_id = job_id
             jobs.append(job)
 
-        features = []
+        # Store results with their job_ids to maintain original order
+        features_with_ids = []
         features_annos = []
         for job in track(
             as_completed(jobs),
@@ -256,11 +257,16 @@ def agg_wsi(
         ):
             feature, feature_annos = job.result()
             if feature is not None:
-                features.append(feature)
+                # Store feature with its job_id to preserve original order
+                features_with_ids.append((job.job_id, feature))
                 # we will have feature_annos only if aggregation not at slide level
                 if feature_annos is not None:
                     feature_annos["_job_id"] = job.job_id
                     features_annos.append(feature_annos)
+
+        # Sort features by job_id to restore original order
+        features_with_ids.sort(key=lambda x: x[0])
+        features = [feature for _, feature in features_with_ids]
 
     mask = np.asarray([r is not None for r in features])
     X = np.vstack(features)
