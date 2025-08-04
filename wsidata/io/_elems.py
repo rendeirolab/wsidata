@@ -148,5 +148,18 @@ def update_shapes_data(wsidata, key: str, data: Mapping | pd.DataFrame):
 
 
 def sync_tile_spec(wsidata, from_key, to_key):
+    """
+    Sync `TileSpec` between tile tables
+
+    Parameters
+    ----------
+    wsidata : :class:`wsidata.WSIData`
+        The wsidata to sync
+    from_key : str
+        The key of the tile table to be synced
+    to_key : str
+        The key of the tile table to sync with
+
+    """
     spec_data = wsidata.attrs[wsidata.TILE_SPEC_KEY]
     spec_data[to_key] = spec_data[from_key]
