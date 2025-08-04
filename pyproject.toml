@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
 
 [project]
 name = "wsidata"
-description = "Data structures and I/O functions for whole-slide image (WSI)."
+description = "Efficient data structures and IO for whole slide image analysis"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -44,7 +44,13 @@ cucim = ["cucim"]
 plot = ["matplotlib", "legendkit"]
 
 [tool.hatch.version]
-path = "wsidata/__init__.py"
+source = "uv-dynamic-versioning"
+
+[tool.hatch.build.hooks.version]
+path = "wsidata/_version.py"
+template = '''
+version = "{version}"
+'''
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -75,8 +81,8 @@ line-length = 88
 [tool.taskipy.tasks]
 hello = "echo Hello, World!"
 test = "pytest tests"
-doc-build = "sphinx-build -b html docs/source docs/build"
-doc-clean-build = "python docs/clean_up.py && sphinx-build -b html docs/source docs/build"
+doc-build = "sphinx-build -b html -j auto docs/source docs/build"
+doc-clean-build = "python docs/clean_up.py && sphinx-build -b html -j auto docs/source docs/build"
 doc-serve = "python -m http.server 12900 -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
 

@@ -172,3 +172,5 @@ work/
 .pixi
 *.egg-info
 
+# Ignore version file
+*_version.py
