@@ -9,6 +9,7 @@ __all__ = [
     "add_table",
     "update_shapes_data",
     "subset_tiles",
+    "sync_tile_spec",
 ]
 
 from typing import Mapping, Sequence
@@ -144,3 +145,8 @@ def update_shapes_data(wsidata, key: str, data: Mapping | pd.DataFrame):
         data = data.to_dict(orient="series")
     for k, v in data.items():
         shapes[k] = v
+
+
+def sync_tile_spec(wsidata, from_key, to_key):
+    spec_data = wsidata.attrs[wsidata.TILE_SPEC_KEY]
+    spec_data[to_key] = spec_data[from_key]
