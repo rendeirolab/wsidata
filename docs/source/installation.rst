@@ -17,32 +17,9 @@ different slide readers to support variety of file formats.
 
     .. tab-item:: Conda
 
-        The alternative installation.
-
         .. code-block:: bash
 
             conda install conda-forge::wsidata
-
-
-    .. tab-item:: Conda
-
-        .. warning::
-
-           Not available yet.
-
-        .. code-block:: bash
-
-            conda install -c conda-forge wsidata
-
-    .. tab-item:: Mamba
-
-        .. warning::
-
-           Not available yet.
-
-        .. code-block:: bash
-
-            mamba install wsidata
 
     .. tab-item:: Development
 
