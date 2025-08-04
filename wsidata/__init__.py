@@ -1,6 +1,8 @@
 """Data structures and I/O functions for whole-slide images (WSIs)."""
 
-__version__ = "0.7.0"
+from ._version import version
+
+__version__ = version
 
 import wsidata.dataset as dataset
 
