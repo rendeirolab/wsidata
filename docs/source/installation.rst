@@ -15,26 +15,11 @@ different slide readers to support variety of file formats.
 
             pip install wsidata
 
-
     .. tab-item:: Conda
 
-        .. warning::
-
-           Not available yet.
-
         .. code-block:: bash
 
-            conda install -c conda-forge wsidata
-
-    .. tab-item:: Mamba
-
-        .. warning::
-
-           Not available yet.
-
-        .. code-block:: bash
-
-            mamba install wsidata
+            conda install conda-forge::wsidata
 
     .. tab-item:: Development
 
