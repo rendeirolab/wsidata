@@ -5,6 +5,8 @@ def transform(tensor):
     # Convert to float32 and scale (assuming input is uint8 or another dtype)
     if not isinstance(tensor, torch.Tensor):
         tensor = torch.tensor(tensor)
+    if tensor.shape[-1] == 3:
+        tensor = tensor.permute(2, 0, 1)
     tensor = tensor.to(torch.float32)
     # Scale if needed (assuming input is originally in [0,1] or [0,255])
     if tensor.max() <= 1:  # If already normalized in [0,1], scale to [0,255]
@@ -43,6 +45,9 @@ class ColorNormalizer(torch.nn.Module):
 
     def __repr__(self):
         return f"ColorNormalizer(method='{self.method}')"
+
+    def fit(self, imgs):
+        self.normalizer.fit(imgs)
 
     def forward(self, img):
         t_img = transform(img)
