@@ -41,8 +41,7 @@ class ColorNormalizer(torch.nn.Module):
             normalizer = aug.TorchMacenkoAugmentor()
         else:
             raise NotImplementedError(f"Requested method '{method}' not implemented")
-        # self.normalizer = normalizer
-        self.register_module("normalizer", normalizer)
+        self.normalizer = normalizer
 
     def __repr__(self):
         return f"ColorNormalizer(method='{self.method}')"
