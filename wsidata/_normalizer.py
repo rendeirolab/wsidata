@@ -41,7 +41,8 @@ class ColorNormalizer(torch.nn.Module):
             normalizer = aug.TorchMacenkoAugmentor()
         else:
             raise NotImplementedError(f"Requested method '{method}' not implemented")
-        self.normalizer = normalizer
+        # self.normalizer = normalizer
+        self.register_module("normalizer", normalizer)
 
     def __repr__(self):
         return f"ColorNormalizer(method='{self.method}')"
@@ -49,6 +50,7 @@ class ColorNormalizer(torch.nn.Module):
     def fit(self, imgs):
         self.normalizer.fit(imgs)
 
+    @torch.inference_mode
     def forward(self, img):
         t_img = transform(img)
         if self.method == "macenko":

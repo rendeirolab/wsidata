@@ -47,6 +47,7 @@ class TestIterAccessor:
         it = next(wsidata.iter.tissue_images("tissues", mask_bg=True))
         it.plot()
 
+    @pytest.mark.parametrize("color_norm", ["macenko", "reinhard"])
     def test_iter_tiles(self, wsidata):
         for it in wsidata.iter.tile_images("tiles"):
             pass
