@@ -48,8 +48,8 @@ class TestIterAccessor:
         it.plot()
 
     @pytest.mark.parametrize("color_norm", ["macenko", "reinhard"])
-    def test_iter_tiles(self, wsidata):
-        for it in wsidata.iter.tile_images("tiles"):
+    def test_iter_tiles(self, wsidata, color_norm):
+        for it in wsidata.iter.tile_images("tiles", color_norm=color_norm):
             pass
 
     def test_iter_tiles_plot(self, wsidata):
