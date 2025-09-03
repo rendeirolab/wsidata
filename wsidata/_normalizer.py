@@ -49,6 +49,7 @@ class ColorNormalizer(torch.nn.Module):
     def fit(self, imgs):
         self.normalizer.fit(imgs)
 
+    @torch.inference_mode
     def forward(self, img):
         t_img = transform(img)
         if self.method == "macenko":
