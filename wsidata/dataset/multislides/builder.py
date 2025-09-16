@@ -30,19 +30,39 @@ class FeaturesDatasetBuilder(DatasetBuilder):
     """
     Build train and test dataset from multiple slides.
 
+    The train/val/test split is guaranteed with no overlap between slides.
+
     .. note::
         This is still a provisional API, may change in the future without notice.
 
     Parameters
     ----------
 
-    slides : list
+    stores : list
+        A list of paths pointing to the WSIData stores, must be .zarr file
+    tile_key : str
+        The key of the tile table.
+    feature_key : str
+        The key for the tile features.
+    target_key : str
+        The key for the Y variable in the observation table.
+    skip_class : list
+        The classes to skip.
+    sampler: {'no-balance', 'undersample'}
+        How to sample the tile features for dataset construction.
+        The no-balance option will return all the tiles for each class.
+        The undersample option will ensure that each class has the same number of tiles.
+    n_per_class: int
+        The number of tiles to sample for each class.
+    in_memory: bool
+        If True, load the dataset into memory.
+        If False, an IterableDataset will be returned.
 
     """
 
     def __init__(
         self,
-        slides,  # Can be wsi path, store path
+        stores,  # Can be wsi path, store path
         tile_key=None,
         feature_key=None,
         target_key=None,
@@ -63,11 +83,11 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         tiles = []
         with ThreadPoolExecutor() as executor:
             tasks = []
-            for f in slides:
+            for f in stores:
                 task = executor.submit(self._get_targets, f)
                 tasks.append(task)
 
-            for s, t in zip(slides, tasks):
+            for s, t in zip(stores, tasks):
                 targets = t.result()
                 if target_transform is not None:
                     targets = target_transform(targets)
