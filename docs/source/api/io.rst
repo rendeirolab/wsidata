@@ -8,4 +8,5 @@ IO and Utilities Functions
 
     open_wsi
     agg_wsi
+    concat_feature_anndata
     get_reader
