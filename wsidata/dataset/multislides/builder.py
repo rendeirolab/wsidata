@@ -4,6 +4,7 @@ import warnings
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Type
 
 import geopandas as gpd
 import numpy as np
@@ -60,6 +61,8 @@ class FeaturesDatasetBuilder(DatasetBuilder):
 
     """
 
+    sampler: Type[BaseTileDatasetSampler]
+
     def __init__(
         self,
         stores,  # Can be wsi path, store path
@@ -79,6 +82,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         self.target_transform = target_transform
         self.n_per_class = n_per_class
         self.in_memory = in_memory
+        self.seed = seed
 
         tiles = []
         with ThreadPoolExecutor() as executor:
@@ -170,6 +174,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         s = self.sampler(
             self._dataset_table["table_path"].values,
             self._dataset_table[self.target_key].values,
+            self.seed,
         )
         s.split(val_size=val, test_size=test, stratify=True)
 

@@ -87,18 +87,20 @@ class BaseTileDatasetSampler(ABC):
         if test_size > 0:
             splits["test"] = set()
             keys.append("test")
-        slides = self.data["slide"].unique()
+        slides = sorted(self.data["slide"].unique())
         # This part ensures that minority class is presented in train, val and test when possible
         # Get minority class
         minor_cls = self.data["target"].value_counts().sort_index().index[0]
         # Count the number of minority labels in each slide
         self.data.groupby("slide", observed=True).value_counts(subset=["target"])
         # Get slides that contain at least one minority class
-        candidate_slides = list(
-            self.data[self.data["target"] == minor_cls]
-            .groupby("slide", observed=True)
-            .size()
-            .index
+        candidate_slides = sorted(
+            list(
+                self.data[self.data["target"] == minor_cls]
+                .groupby("slide", observed=True)
+                .size()
+                .index
+            )
         )
 
         self.rng.shuffle(candidate_slides)
@@ -143,7 +145,7 @@ class BaseTileDatasetSampler(ABC):
         return splits
 
     def _random_split(self, train_size, val_size, test_size):
-        slides = list(self.data["slide"].unique())
+        slides = sorted(list(self.data["slide"].unique()))
         self.rng.shuffle(slides)
 
         n_train, n_val, n_test = split_integer(
