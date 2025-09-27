@@ -1,5 +1,9 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anndata import AnnData
+
 import pandas as pd
-from anndata import AnnData
 
 
 class FetchAccessor(object):
@@ -71,7 +75,7 @@ class FetchAccessor(object):
 
     def features_anndata(
         self, feature_key, tile_key="tiles", tile_graph=True
-    ) -> AnnData:
+    ) -> "AnnData":
         """Return the feature table as an AnnData object.
 
         Parameters
@@ -95,6 +99,7 @@ class FetchAccessor(object):
             - uns : Metadata including tile specifications and slide properties.
 
         """
+        from anndata import AnnData
 
         sdata = self._obj
         feature_key = self._obj._check_feature_key(feature_key, tile_key)

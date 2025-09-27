@@ -17,7 +17,6 @@ from typing import Mapping, Sequence
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from shapely import Polygon, box
 from spatialdata.models import ShapesModel, TableModel
 
@@ -93,6 +92,8 @@ def subset_tiles(wsidata, key, indices, new_key=None):
 
 
 def add_features(wsidata, key, tile_key, features, **kws):
+    from anndata import AnnData
+
     tile_tb = wsidata[tile_key]
     if "tile_id" in tile_tb.columns:
         tile_id = tile_tb["tile_id"].values
