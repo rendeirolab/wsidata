@@ -14,12 +14,13 @@ from .accessors import (
     IterAccessor,
     register_wsidata_accessor,
 )
-from .io import agg_wsi, open_wsi
+from .io import agg_wsi, concat_feature_anndata, open_wsi
 from .reader import SlideProperties, get_reader
 
 __all__ = [
     "open_wsi",
     "agg_wsi",
+    "concat_feature_anndata",
     "dataset",
     "WSIData",
     "TileSpec",

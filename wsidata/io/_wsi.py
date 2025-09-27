@@ -7,7 +7,6 @@ from typing import Literal, Sequence
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from rich.progress import track
 from spatialdata import SpatialData, read_zarr
 from spatialdata.models import Image2DModel
@@ -217,6 +216,7 @@ def agg_wsi(
     AnnData
         The aggregated feature space.
     """
+    from anndata import AnnData
 
     if agg_key is None and agg_by is None:
         agg_key = "agg_slide"
@@ -346,6 +346,128 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
             raise e
         else:
             return None, None
+
+
+def concat_feature_anndata(
+    slides_table: pd.DataFrame,
+    feature_key,
+    tile_key,
+    wsi_col: str = None,
+    store_col: str = None,
+    pbar: bool = False,
+    error: Literal["raise", "skip"] = "raise",
+    as_anncollection: bool = False,
+):
+    """Aggregates features from multiple slides into an AnnData or AnnCollection object.
+
+    This function collects and combines data from slide datasets specified in a given
+    table, allowing flexible aggregation by feature and tile keys.
+
+    Parameters
+    ----------
+    slides_table : pandas.DataFrame
+        The dataframe specifying slides to aggregate, their feature
+        and tile keys, as well as optional storage or WSI column information.
+    feature_key : str
+        Key or identifier for the feature within the datasets. Details should
+        be specific to the slide data format.
+    tile_key : str
+        Key or identifier for the tile data within the datasets. Details should
+        be specific to the data structure.
+    wsi_col : str, optional
+        Optional name of the column in the table that contains whole slide image (WSI)
+        paths. Either `wsi_col` or `store_col` must be provided.
+    store_col : str, optional
+        Optional name of the column specifying storage information for slides.
+        Either `store_col` or `wsi_col` is required.
+    pbar : bool, default False
+        A flag to toggle progress bar visibility during processing.
+    error : {"raise", "skip"}, default "raise"
+        Policy for error handling during individual slide aggregation. Valid options are
+        "raise" to terminate on error or "skip" to skip files with errors.
+    as_anncollection : bool, default False
+        Flag to determine if the return type is an AnnCollection object instead
+        of a concatenated AnnData object. If True, returns AnnCollection.
+
+    Returns
+    -------
+    AnnData or AnnCollection
+        Aggregated data from slides either as an AnnData or AnnCollection object,
+        depending on the value of `as_anncollection`.
+    """
+    from anndata import concat
+
+    if store_col is not None:
+        backed_files = slides_table[store_col]
+    elif wsi_col is not None:
+        backed_files = slides_table[wsi_col].apply(
+            lambda x: Path(x).with_suffix(".zarr")
+        )
+    else:
+        raise ValueError("Either wsi_col or store_col must be provided.")
+
+    slides_table = slides_table.copy()
+    slides_table["_job_id"] = np.arange(len(slides_table))
+
+    jobs = []
+    with ThreadPoolExecutor() as executor:
+        for job_id, backed_f in enumerate(backed_files):
+            job = executor.submit(
+                _concat_feature_anndata, backed_f, feature_key, tile_key, error
+            )
+            job.job_id = job_id
+            jobs.append(job)
+
+        adatas = {}
+        for job in track(
+            as_completed(jobs),
+            total=len(jobs),
+            disable=not pbar,
+            description=f"Aggregation of {len(jobs)} slides",
+        ):
+            adatas[job.job_id] = job.result()
+
+        if as_anncollection:
+            from anndata.experimental import AnnCollection
+
+            return AnnCollection(
+                adatas,
+                join_obs=None,
+                join_vars=None,
+                join_obsm=None,
+                label="slide_name",
+                index_unique="-",
+            )
+        else:
+            return concat(
+                adatas,
+                join="outer",
+                label="slide_name",
+                index_unique="-",
+            )
+
+
+def _concat_feature_anndata(f, feature_key, tile_key, error="raise"):
+    if not Path(f).exists():
+        if error == "raise":
+            raise ValueError(f"File {f} not existed.")
+        else:
+            return None
+    try:
+        import zarr
+        from anndata import read_zarr
+
+        tables = zarr.open(f"{f}/tables")
+        available_keys = list(tables.keys())
+        if feature_key not in available_keys:
+            feature_key = f"{feature_key}_{tile_key}"
+        s = read_zarr(f"{f}/tables/{feature_key}")
+        return s
+    except Exception as e:
+        if error == "raise":
+            raise e
+        else:
+            return None
 
 
 def is_zarr_dir(path):

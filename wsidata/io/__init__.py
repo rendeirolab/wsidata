@@ -9,4 +9,4 @@ from ._elems import (
     sync_tile_spec,
     update_shapes_data,
 )
-from ._wsi import agg_wsi, open_wsi
+from ._wsi import agg_wsi, concat_feature_anndata, open_wsi
