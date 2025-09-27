@@ -119,11 +119,13 @@ class BaseTileDatasetSampler(ABC):
             )
 
         # Fill the remaining, according to proportions
-        remaining = list(
-            set(slides)
-            - splits["train"]
-            - splits.get("val", set())
-            - splits.get("test", set())
+        remaining = sorted(
+            list(
+                set(slides)
+                - splits["train"]
+                - splits.get("val", set())
+                - splits.get("test", set())
+            )
         )
         self.rng.shuffle(remaining)
         # Calculate the remaining number that needs to be filled
