@@ -84,7 +84,7 @@ def open_wsi(
     # Check if the slide is a file or URL
     wsi = Path(wsi)
     if not wsi.exists():
-        raise ValueError(f"Slide {wsi} not existed or not accessible.")
+        raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
 
     sdata = None
 
