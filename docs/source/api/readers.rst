@@ -11,3 +11,4 @@ WSI Readers
     OpenSlideReader
     TiffSlideReader
     BioFormatsReader
+    SpatialDataImage2DReader

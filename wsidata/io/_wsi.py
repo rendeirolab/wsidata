@@ -18,11 +18,11 @@ from ..reader import to_datatree, try_reader
 
 
 def open_wsi(
-    wsi: str | Path,
+    wsi: str | Path | SpatialData,
     store: str = "auto",
     reader: Literal["openslide", "tiffslide", "bioformats"] = None,
     attach_images: bool = False,
-    image_key: str = "wsi",
+    image_key: str = None,
     save_images: bool = True,
     attach_thumbnail: bool = True,
     thumbnail_key: str = "wsi_thumbnail",
@@ -53,6 +53,7 @@ def open_wsi(
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
         The key to store the whole slide image, by default "wsi_thumbnail".
+        If the wsi is a SpatialData object, the image from this key will be used as the whole slide image.
     save_images : bool, optional, default: True
         Whether to save the whole slide image to on the disk.
         Only works for wsi.save() method.
@@ -82,94 +83,104 @@ def open_wsi(
 
     """
     # Check if the slide is a file or URL
-    wsi = Path(wsi)
-    if not wsi.exists():
-        raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
-
-    sdata = None
-
-    # Early attempt with reader
-    reader_instance = try_reader(wsi, reader=reader)
-
-    # Check if the image is not pyramidal and too large
-    if reader_instance.properties.n_level <= 1:
-        height, width = reader_instance.properties.shape
-        if height > 10000 or width > 10000:
-            warnings.warn(
-                f"The image is not pyramidal (n_level={reader_instance.properties.n_level}) "
-                f"and has a large size ({width}x{height} pixels). "
-                "This may cause performance issues. "
-                "Consider generating pyramids for this image using vips or bioformats).",
-                UserWarning,
-                stacklevel=find_stack_level(),
+    if isinstance(wsi, SpatialData):
+        if image_key is None:
+            raise ValueError(
+                "When reading from SpatialData, image_key must be provided."
             )
+        from ..reader import SpatialDataImage2DReader
 
-    if store == "auto":
-        store = wsi.with_suffix(".zarr")
+        reader_instance = SpatialDataImage2DReader(wsi[image_key], key=image_key)
+        return WSIData.from_spatialdata(wsi, reader_instance)
     else:
-        if store is not None:
-            store_path = Path(store)
-            # We also support write store to a directory
-            if store_path.is_dir():
-                # If the directory is a zarr directory, we just use it
-                if is_zarr_dir(store_path):
-                    store = store_path
-                # Otherwise, we create a zarr file in that directory
-                else:
-                    zarr_name = wsi.with_suffix(".zarr").name
-                    store = store_path / zarr_name
-            # If store is a not a directory, we assume it is a valid zarr file
-            # WARNING: No guarantee
-            else:
-                store = store_path
-    if store is not None:
-        if store.exists():
-            sdata = read_zarr(store)
+        sdata = None
+        wsi = Path(wsi)
+        if not wsi.exists():
+            raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
+        # Early attempt with reader
+        reader_instance = try_reader(wsi, reader=reader)
 
-    exclude_elements = []
-    sdata_images = {}
-
-    if attach_images:
-        if sdata is None or image_key not in sdata:
-            images_datatree = to_datatree(reader_instance)
-            sdata_images[image_key] = images_datatree
-            if not save_images:
-                exclude_elements.append(image_key)
-
-    if attach_thumbnail:
-        if sdata is None or thumbnail_key not in sdata:
-            max_thumbnail_size = min(reader_instance.properties.shape)
-            if thumbnail_size > max_thumbnail_size:
-                thumbnail_size = max_thumbnail_size
-            thumbnail = reader_instance.get_thumbnail(thumbnail_size)
-            thumbnail_shape = thumbnail.shape
-            origin_shape = reader_instance.properties.shape
-            scale_x, scale_y = (
-                origin_shape[0] / thumbnail_shape[0],
-                origin_shape[1] / thumbnail_shape[1],
-            )
-
-            if thumbnail is not None:
-                sdata_images[thumbnail_key] = Image2DModel.parse(
-                    np.asarray(thumbnail).transpose(2, 0, 1),
-                    dims=("c", "y", "x"),
-                    transformations={
-                        "global": Scale([scale_x, scale_y], axes=("x", "y"))
-                    },
+        # Check if the image is not pyramidal and too large
+        if reader_instance.properties.n_level <= 1:
+            height, width = reader_instance.properties.shape
+            if height > 10000 or width > 10000:
+                warnings.warn(
+                    f"The image is not pyramidal (n_level={reader_instance.properties.n_level}) "
+                    f"and has a large size ({width}x{height} pixels). "
+                    "This may cause performance issues. "
+                    "Consider generating pyramids for this image using vips or bioformats).",
+                    UserWarning,
+                    stacklevel=find_stack_level(),
                 )
-                if not save_thumbnail:
-                    exclude_elements.append(thumbnail_key)
 
-    if sdata is None:
-        sdata = SpatialData(images=sdata_images)
-    else:
-        for key, img in sdata_images.items():
-            sdata.images[key] = img
+        if store == "auto":
+            store = wsi.with_suffix(".zarr")
+        else:
+            if store is not None:
+                store_path = Path(store)
+                # We also support write store to a directory
+                if store_path.is_dir():
+                    # If the directory is a zarr directory, we just use it
+                    if is_zarr_dir(store_path):
+                        store = store_path
+                    # Otherwise, we create a zarr file in that directory
+                    else:
+                        zarr_name = wsi.with_suffix(".zarr").name
+                        store = store_path / zarr_name
+                # If store is a not a directory, we assume it is a valid zarr file
+                # WARNING: No guarantee
+                else:
+                    store = store_path
+        if store is not None:
+            if store.exists():
+                sdata = read_zarr(store)
 
-    slide_data = WSIData.from_spatialdata(sdata, reader_instance)
-    slide_data.set_exclude_elements(exclude_elements)
-    if store is not None:
-        slide_data.set_wsi_store(store)
+        exclude_elements = []
+        sdata_images = {}
+
+        if attach_images:
+            if image_key is None:
+                image_key = "wsi"
+            if sdata is None or image_key not in sdata:
+                images_datatree = to_datatree(reader_instance)
+                sdata_images[image_key] = images_datatree
+                if not save_images:
+                    exclude_elements.append(image_key)
+
+        if attach_thumbnail:
+            if sdata is None or thumbnail_key not in sdata:
+                max_thumbnail_size = min(reader_instance.properties.shape)
+                if thumbnail_size > max_thumbnail_size:
+                    thumbnail_size = max_thumbnail_size
+                thumbnail = reader_instance.get_thumbnail(thumbnail_size)
+                thumbnail_shape = thumbnail.shape
+                origin_shape = reader_instance.properties.shape
+                scale_x, scale_y = (
+                    origin_shape[0] / thumbnail_shape[0],
+                    origin_shape[1] / thumbnail_shape[1],
+                )
+
+                if thumbnail is not None:
+                    sdata_images[thumbnail_key] = Image2DModel.parse(
+                        np.asarray(thumbnail).transpose(2, 0, 1),
+                        dims=("c", "y", "x"),
+                        transformations={
+                            "global": Scale([scale_x, scale_y], axes=("x", "y"))
+                        },
+                    )
+                    if not save_thumbnail:
+                        exclude_elements.append(thumbnail_key)
+
+        if sdata is None:
+            sdata = SpatialData(images=sdata_images)
+        else:
+            for key, img in sdata_images.items():
+                sdata.images[key] = img
+
+        slide_data = WSIData.from_spatialdata(sdata, reader_instance)
+        slide_data.set_exclude_elements(exclude_elements)
+        if store is not None:
+            slide_data.set_wsi_store(store)
     return slide_data
 
 

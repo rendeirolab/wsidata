@@ -39,7 +39,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - name: Install project
-        run: uv sync --dev
+        run: uv sync --dev --group readers
       - name: Tests
         run: uv run task test
 
