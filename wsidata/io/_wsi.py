@@ -96,7 +96,7 @@ def open_wsi(
         sdata = None
         wsi = Path(wsi)
         if not wsi.exists():
-            raise ValueError(f"Slide {wsi} not existed or not accessible.")
+            raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
         # Early attempt with reader
         reader_instance = try_reader(wsi, reader=reader)
 
