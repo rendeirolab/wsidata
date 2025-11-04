@@ -58,6 +58,10 @@ class FeaturesDatasetBuilder(DatasetBuilder):
     in_memory: bool
         If True, load the dataset into memory.
         If False, an IterableDataset will be returned.
+    targets_mapping: dict[str, int] | None
+        Optional explicit mapping from class label to integer code to use across
+        train/val/test splits. If not provided, a deterministic mapping will be
+        derived from the observed labels (sorted by label name).
 
     """
 
@@ -66,6 +70,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
     def __init__(
         self,
         stores,  # Can be wsi path, store path
+        splits=None,
         tile_key=None,
         feature_key=None,
         target_key=None,
@@ -75,6 +80,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         n_per_class=None,
         in_memory=True,
         seed=0,
+        targets_mapping=None,
     ):
         self.tile_key = tile_key
         self.feature_key = feature_key
@@ -83,6 +89,8 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         self.n_per_class = n_per_class
         self.in_memory = in_memory
         self.seed = seed
+        self.recent_splits = None
+        self._targets_mapping = targets_mapping
 
         tiles = []
         with ThreadPoolExecutor() as executor:
@@ -115,10 +123,51 @@ class FeaturesDatasetBuilder(DatasetBuilder):
         if skip_class is not None:
             dataset_table = dataset_table[~dataset_table[target_key].isin(skip_class)]
         dataset_table = dataset_table.dropna(subset=[target_key]).reset_index(drop=True)
+        # Ensure categorical dtype for targets
         dataset_table[target_key] = dataset_table[self.target_key].astype("category")
+        # Build or validate targets mapping (label -> int) and keep it consistent
+        if self._targets_mapping is None:
+            cats = list(dataset_table[target_key].cat.categories)
+            # Deterministic order by category name to avoid randomness
+            cats = sorted(cats)
+            self._targets_mapping = {t: i for i, t in enumerate(cats)}
+            # Reorder categories to follow mapping order
+            dataset_table[target_key] = dataset_table[target_key].cat.set_categories(
+                list(self._targets_mapping.keys())
+            )
+        else:
+            # Validate provided mapping covers all labels
+            missing = set(dataset_table[target_key].unique()) - set(
+                self._targets_mapping.keys()
+            )
+            if len(missing) > 0:
+                raise ValueError(
+                    f"targets_mapping is missing labels: {sorted(missing)}"
+                )
+            # Reorder categories to follow mapping keys order for consistency
+            ordered_cats = list(self._targets_mapping.keys())
+            dataset_table[target_key] = dataset_table[target_key].cat.set_categories(
+                ordered_cats
+            )
         dataset_table["table_path"] = dataset_table["table_path"].astype("category")
         self._dataset_table = dataset_table
         self.set_sampler(sampler)
+
+        if splits is not None:
+            ss = pd.unique(splits)
+            assert all([s in {"train", "val", "test"} for s in ss]), (
+                "Only train/val/test splits are supported."
+            )
+            new_splits = {
+                "train": [],
+                "val": [],
+                "test": [],
+            }
+            for store, split in zip(stores, splits):
+                new_splits[split].append(f"{store}/tables/{self.feature_key}")
+            self.preset_splits = new_splits
+        else:
+            self.preset_splits = None
 
     def _get_targets(self, f, error="raise"):
         if not Path(f).exists():
@@ -168,6 +217,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
             split_data["table_path"].values,
             split_data["index"].values,
             split_data[self.target_key].values,
+            targets_mapping=self._targets_mapping,
         )
 
     def split(self, val=0.15, test=0.15):
@@ -176,7 +226,13 @@ class FeaturesDatasetBuilder(DatasetBuilder):
             self._dataset_table[self.target_key].values,
             self.seed,
         )
-        s.split(val_size=val, test_size=test, stratify=True)
+        splits = s.split(
+            val_size=val,
+            test_size=test,
+            stratify=True,
+            preset_splits=self.preset_splits,
+        )
+        self.recent_splits = splits
 
         ds = {}
         train_data = self._dataset_table.iloc[s.train_data]
@@ -190,10 +246,22 @@ class FeaturesDatasetBuilder(DatasetBuilder):
 
         return ds
 
-    def class_distribution(self, ax):
+    def class_distribution(self, ax=None):
         import matplotlib.pyplot as plt
 
         ax = plt.gca() if ax is None else ax
         ax.pie(
             self._dataset_table[self.target_key].value_counts(),
         )
+
+    @property
+    def targets_mapping(self):
+        """Mapping from class label to integer code used in all datasets."""
+        return dict(self._targets_mapping)
+
+    @property
+    def slides_splits(self):
+        if self.preset_splits is not None:
+            return self.preset_splits
+        else:
+            return self.recent_splits
