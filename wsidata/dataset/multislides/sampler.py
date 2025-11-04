@@ -165,20 +165,21 @@ class BaseTileDatasetSampler(ABC):
 
         return splits
 
-    def split(self, val_size=0.15, test_size=0.15, stratify=False):
-        train_size = 1 - val_size - test_size
-        if train_size <= 0:
-            raise ValueError("The validation size and test size are too large")
-
-        if stratify:
-            splits = self._stratified_split(train_size, val_size, test_size)
+    def split(self, val_size=0.15, test_size=0.15, stratify=False, preset_splits=None):
+        if preset_splits is not None:
+            splits = preset_splits
         else:
-            splits = self._random_split(train_size, val_size, test_size)
+            train_size = 1 - val_size - test_size
+            if train_size <= 0:
+                raise ValueError("The validation size and test size are too large")
+            if stratify:
+                splits = self._stratified_split(train_size, val_size, test_size)
+            else:
+                splits = self._random_split(train_size, val_size, test_size)
 
         df_train = self.data[self.data["slide"].isin(splits.get("train", set()))]
         df_val = self.data[self.data["slide"].isin(splits.get("val", set()))]
         df_test = self.data[self.data["slide"].isin(splits.get("test", set()))]
-
         # Apply balancing
         df_train = self.balance(df_train)
         # Only balance non-empty dataframes
@@ -194,6 +195,8 @@ class BaseTileDatasetSampler(ABC):
         self._test_data = (
             df_test["index"].values if len(df_test) > 0 else np.array([], dtype=int)
         )
+
+        return splits
 
 
 class NoBalance(BaseTileDatasetSampler, key="no-balance"):
