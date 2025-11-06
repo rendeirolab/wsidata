@@ -39,7 +39,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - name: Install project
-        run: uv sync --upgrade --dev --group readers
+        run: |
+          uv sync --upgrade --dev
+          uv pip install scyjava
+      - name: Install cucim reader on Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          uv pip install cucim-cu12
       - name: Tests
         run: uv run task test
 
