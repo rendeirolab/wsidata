@@ -87,7 +87,7 @@ doc-serve = "python -m http.server 12900 -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
 
 [tool.uv]
-default-groups = ["dev", "docs", "readers"]
+default-groups = ["dev", "docs"]
 
 [dependency-groups]
 dev = [
