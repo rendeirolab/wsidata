@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "wsidata"
 description = "Efficient data structures and IO for whole slide image analysis"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [
     {name = "Yimin Zheng", email = "yzheng@cemm.at"},
@@ -28,7 +28,7 @@ Documentation = "https://wsidata.readthedocs.io"
 repository = "https://github.com/rendeirolab/wsidata"
 dynamic = ["version"]
 dependencies = [
-    "spatialdata<0.6.0",
+    "spatialdata>=0.5.0",
     "opencv-python-headless",
     "openslide-python>=1.4.1",
     "openslide-bin>=4.0.0.2",
@@ -80,14 +80,14 @@ line-length = 88
 
 [tool.taskipy.tasks]
 hello = "echo Hello, World!"
-test = "pytest tests"
+test = "python -X faulthandler -m pytest tests -v --tb=short --disable-warnings"
 doc-build = "sphinx-build -b html -j auto docs/source docs/build"
 doc-clean-build = "python docs/clean_up.py && sphinx-build -b html -j auto docs/source docs/build"
 doc-serve = "python -m http.server 12900 -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
 
 [tool.uv]
-default-groups = ["dev", "docs", "readers"]
+default-groups = ["dev", "docs"]
 
 [dependency-groups]
 dev = [

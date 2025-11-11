@@ -217,9 +217,9 @@ class WSIData(SpatialData):
         self._wsi_store = Path(store)
 
     def _gen_elements(
-        self, include_table: bool = False
+        self, include_tables: bool = False
     ) -> Generator[tuple[str, str, SpatialElement | AnnData], None, None]:
-        for i in super()._gen_elements(include_table):
+        for i in super()._gen_elements(include_tables):
             if i[1] not in self._exclude_elements:
                 yield i
 

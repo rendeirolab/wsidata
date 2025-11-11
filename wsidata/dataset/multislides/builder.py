@@ -9,7 +9,11 @@ from typing import Type
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from zarr.errors import PathNotFoundError
+
+try:
+    from zarr.errors import PathNotFoundError as FeatureTableNotFoundError
+except ImportError:
+    from zarr.errors import GroupNotFoundError as FeatureTableNotFoundError
 
 from ..._utils import find_stack_level
 from .dataset import CachedFeaturesDataset, IterableFeaturesDataset
@@ -190,7 +194,7 @@ class FeaturesDatasetBuilder(DatasetBuilder):
             try:
                 s = read_zarr(f"{f}/tables/{feature_key}")
                 self.feature_key = feature_key
-            except PathNotFoundError:
+            except FeatureTableNotFoundError:
                 raise KeyError(
                     f"Neither {feature_key} nor {self.feature_key} are found."
                 )
