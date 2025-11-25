@@ -73,21 +73,30 @@ REPR_BOX_STYLE = (
 )
 
 
-def _html_attributes(attrs):
+def _html_attributes(obj, attrs, masked_attrs=None):
     """Max 4 attributes per line, show in card style"""
     n = 4
     n_attr = len(attrs)
     n_row = n_attr // n + 1
     rows = []
+    if masked_attrs is None:
+        masked_attrs = {}
+    else:
+        masked_attrs = set(masked_attrs)
     for i in range(n_row):
         row = attrs[i * n : (i + 1) * n]
-        row = "".join(
-            f"<p style='border: 1px solid #C68FE6; padding: 3pt; "
-            f"border-radius: 4px; text-align: center; margin-bottom: 2pt;'>"
-            f"{attr}</p>"
-            for attr in row
-        )
-        rows.append(row)
+        raw_html = ""
+        for attr in row:
+            base = (
+                "<p style='border: 1px solid #C68FE6; padding: 3pt; "
+                "border-radius: 4px; text-align: center; margin-bottom: 2pt;'>"
+            )
+            if attr in masked_attrs:
+                base += f"{attr}</p>"
+            else:
+                base += f"{attr}: {getattr(obj, attr)}</p>"
+            raw_html += base
+        rows.append(raw_html)
     return "".join(f"<div style='display: inline-block;'>{row}</div>" for row in rows)
 
 
@@ -174,7 +183,7 @@ class TissueContour:
                     <strong style="font-size: 1.1em; color: #C68FE6;">TissueContour</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
                     <div style="display: flex; gap: 10px;">
-                        {_html_attributes(self._attrs)}
+                        {_html_attributes(self, self._attrs, masked_attrs=["shape", "contour", "holes"])}
                         {svg_shape}
                     </div>
 
@@ -345,7 +354,20 @@ class TissueImage(TissueContour):
                     <strong style="font-size: 1.1em; color: #C68FE6;">TissueImage</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
                     <div style="display: flex; gap: 10px;">
-                        {_html_attributes(self._attrs)}
+                        {
+            _html_attributes(
+                self,
+                self._attrs,
+                masked_attrs=[
+                    "image",
+                    "mask",
+                    "masked_image",
+                    "shape",
+                    "contour",
+                    "holes",
+                ],
+            )
+        }
                         <img src="data:image/png;base64,{self._html_thumbnail}" 
                             style="width: 130px; border-radius: 8px;">
                     </div>
@@ -513,7 +535,19 @@ class TileImage:
                     <strong style="font-size: 1.1em; color: #C68FE6;">TileImage</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
                     <div style="display: flex; gap: 10px;">
-                        {_html_attributes(self._attrs)}
+                        {
+            _html_attributes(
+                self,
+                self._attrs,
+                masked_attrs=[
+                    "image",
+                    "annot_mask",
+                    "annot_shapes",
+                    "annot_labels",
+                    "norm_annot_shapes",
+                ],
+            )
+        }
                         <img src="data:image/png;base64,{self._html_thumbnail}"
                         style="width: 150px; border-radius: 8px;">
                     </div>
