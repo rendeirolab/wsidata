@@ -1179,14 +1179,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/01/c3/ed6a3e2adefb3dc7aeaa91263174a1414cef3d5d8f65a3fc5801335291e3/imagecodecs-2024.12.30-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:dcb40f08a1a74ea97317c032f30688a71c85b8f8b9414f0ace824862e21ead7b", size = 15065782, upload-time = "2024-12-30T01:43:24.013Z" },
     { url = "https://files.pythonhosted.org/packages/75/4e/d3cf901f399d0ef1c9c896f3ec36621c711ef4481103a3ac215a2fa2f391/imagecodecs-2024.12.30-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ff3fce17a03db6a7a9c3b6d2860815b697d2a6756f246ffdeb5462fcc2914fba", size = 44188124, upload-time = "2024-12-30T01:43:34.125Z" },
     { url = "https://files.pythonhosted.org/packages/88/2a/4e4e671c2b52bd980fbc701e0de16611a239b74e8d603878b09113efb955/imagecodecs-2024.12.30-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:227bdfc3476f57862e0602ab921a8f2bd1017c70227e122d42f1cdf6d1117af9", size = 45537461, upload-time = "2024-12-30T01:43:42.222Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/95/74c14f1a4f5ce74ea247b5a9886ab1561a8b2ba4e3422f98af288400407d/imagecodecs-2024.12.30-cp311-cp311-win32.whl", hash = "sha256:e722ee1bfaaf8173a37cc1dc11d7033e097dffc7d6f3d54a5e2b7333425b7a64", size = 24059057, upload-time = "2024-12-30T01:43:48.418Z" },
     { url = "https://files.pythonhosted.org/packages/bd/98/484ee34cc333018f5f8674113b61c7a4abf1b16d9917243b2fd850b7007f/imagecodecs-2024.12.30-cp311-cp311-win_amd64.whl", hash = "sha256:7acf874924cc49bb501c9194e6d9d12db95c83a06cd9bc3f9ed1adfe5f1b493f", size = 28842412, upload-time = "2024-12-30T01:43:53.159Z" },
     { url = "https://files.pythonhosted.org/packages/2b/70/16e0a4c11089e5037ed8f4aac559449d532edbf65363acf0cc4150c74582/imagecodecs-2024.12.30-cp311-cp311-win_arm64.whl", hash = "sha256:8bd17f6dcd0cc5b7bffcebd0d965d0158957c8fe0fe97e41c7b69e1284787cbf", size = 23799454, upload-time = "2024-12-30T01:43:58.416Z" },
     { url = "https://files.pythonhosted.org/packages/5f/22/f691b42e7a6418d55fefeede2c9db444c64e02f6f58c5eaf6eaf72e791e1/imagecodecs-2024.12.30-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:d296f144b2f2ef1c33fd397941a77f2dc79ebdf9a9169a377eccca8bb074c5c9", size = 18021922, upload-time = "2024-12-30T01:44:07.328Z" },
     { url = "https://files.pythonhosted.org/packages/a8/65/c66cc78e3d0c0aca017957d97759babf64d385454aa6dc8d5395665c3f6b/imagecodecs-2024.12.30-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:65d480431a2e99a9ecfb340f960e98ed70a634cd617dac274fddd855a9cac9a5", size = 15104045, upload-time = "2024-12-30T01:44:11.967Z" },
     { url = "https://files.pythonhosted.org/packages/4d/94/59eec628857f659ed6cb2e49414b032b209532fa6fad7acec95ebf0c035b/imagecodecs-2024.12.30-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4018bccb0c905c9e1f7a84bed23ca21ad60ec05771ff7fe904d5bd264743cbd2", size = 43689029, upload-time = "2024-12-30T01:44:17.523Z" },
     { url = "https://files.pythonhosted.org/packages/a9/02/2c0ec54c6e0746b7d5317de0bddce918d233476cd6f543e50ff4d378ca74/imagecodecs-2024.12.30-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b03211f1853a184a0f5e78eef5b5d121ba59c6b00cf73abb83c1561cc7edafb6", size = 45225562, upload-time = "2024-12-30T01:44:25.927Z" },
-    { url = "https://files.pythonhosted.org/packages/f8/08/139ebbedbcecd98af0d67b3584f23e0a64cdbe1668013257e2c02ed1c98b/imagecodecs-2024.12.30-cp312-cp312-win32.whl", hash = "sha256:3971078c5f2960c5086c5d63a0bb6db53000b959bc87ab418e4c7b6e715116bf", size = 24066349, upload-time = "2024-12-30T01:44:32.533Z" },
     { url = "https://files.pythonhosted.org/packages/be/ea/8e1046e82b812c409f96a340f10fcc2e1a4149de6543aca4a5535d7e1b11/imagecodecs-2024.12.30-cp312-cp312-win_amd64.whl", hash = "sha256:758ba651f74f0c6fc86e6d741e385121721610830eb4421703fbb69c2638ce8a", size = 28854922, upload-time = "2024-12-30T01:44:38.432Z" },
     { url = "https://files.pythonhosted.org/packages/4a/4e/ba473a4f4267a0abfed97f7623d22e777ce569422180b50e7ead4c3f5a75/imagecodecs-2024.12.30-cp312-cp312-win_arm64.whl", hash = "sha256:1dd4d32b6c8cdc3117687324f5b79b14e0378d496289b20dd82c724c56e7b082", size = 23766833, upload-time = "2024-12-30T01:44:42.949Z" },
     { url = "https://files.pythonhosted.org/packages/ee/43/1ae8be8f29e364be63ba7bc8505cf900bb5a7a700bc863a9412ac32bf2ce/imagecodecs-2024.12.30-cp313-cp313-macosx_10_14_x86_64.whl", hash = "sha256:cf4431927ebf59278d3f10047e164f2977b5e4f47a404dabd8a99f7490cc12d8", size = 17954267, upload-time = "2024-12-30T01:44:48.232Z" },
@@ -4154,7 +4152,6 @@ dependencies = [
     { name = "openslide-python" },
     { name = "rich" },
     { name = "spatialdata" },
-    { name = "tiffslide" },
     { name = "torch" },
 ]
 
@@ -4172,8 +4169,14 @@ plot = [
 stain = [
     { name = "torchstain" },
 ]
+tiffslide = [
+    { name = "tiffslide" },
+]
 
 [package.dev-dependencies]
+cucim = [
+    { name = "cucim-cu12", marker = "sys_platform == 'linux'" },
+]
 datasets = [
     { name = "torch-geometric" },
 ]
@@ -4190,7 +4193,9 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "scyjava" },
     { name = "taskipy" },
+    { name = "tiffslide" },
     { name = "torchstain" },
     { name = "torchvision" },
 ]
@@ -4203,10 +4208,6 @@ docs = [
     { name = "sphinx-design" },
     { name = "sphinxext-opengraph", extra = ["social-cards"] },
 ]
-readers = [
-    { name = "cucim-cu12", marker = "sys_platform == 'linux'" },
-    { name = "scyjava" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -4218,14 +4219,15 @@ requires-dist = [
     { name = "openslide-python", specifier = ">=1.4.1" },
     { name = "rich" },
     { name = "scyjava", marker = "extra == 'bioformats'" },
-    { name = "spatialdata", specifier = ">=0.5.0" },
-    { name = "tiffslide" },
+    { name = "spatialdata", specifier = ">=0.6.0" },
+    { name = "tiffslide", marker = "extra == 'tiffslide'" },
     { name = "torch", specifier = ">=2.0.0" },
     { name = "torchstain", marker = "extra == 'stain'" },
 ]
-provides-extras = ["bioformats", "cucim", "plot", "stain"]
+provides-extras = ["bioformats", "cucim", "plot", "stain", "tiffslide"]
 
 [package.metadata.requires-dev]
+cucim = [{ name = "cucim-cu12", marker = "sys_platform == 'linux'", specifier = ">=25.6.0" }]
 datasets = [{ name = "torch-geometric", specifier = ">=2.6.1" }]
 dev = [
     { name = "jupyter-cache", specifier = ">=1.0.1" },
@@ -4240,7 +4242,9 @@ dev = [
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.9.4" },
+    { name = "scyjava", specifier = ">=1.10.1" },
     { name = "taskipy", specifier = ">=1.14.1" },
+    { name = "tiffslide", specifier = ">=2.4.0" },
     { name = "torchstain", specifier = ">=1.4.1" },
     { name = "torchvision", specifier = ">=0.21.0" },
 ]
@@ -4252,10 +4256,6 @@ docs = [
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-design", specifier = ">=0.6.1" },
     { name = "sphinxext-opengraph", extras = ["social-cards"], specifier = ">=0.10.0" },
-]
-readers = [
-    { name = "cucim-cu12", marker = "sys_platform == 'linux'", specifier = ">=25.6.0" },
-    { name = "scyjava", specifier = ">=1.10.1" },
 ]
 
 [[package]]
