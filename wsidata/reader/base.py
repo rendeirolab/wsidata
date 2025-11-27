@@ -3,8 +3,10 @@ from __future__ import annotations
 import base64
 import io
 import json
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from functools import cached_property, singledispatch
+from importlib import import_module
 from typing import Dict, List, Mapping, Optional
 
 import cv2
@@ -150,7 +152,7 @@ class AssociatedImages:
         )
 
 
-class ReaderBase:
+class ReaderBase(ABC):
     """The base class for all reader
 
     This class defines the basic interface for all reader
@@ -170,7 +172,9 @@ class ReaderBase:
 
     file: str
     properties: SlideProperties
-    name = "base"
+    name: str = "ReaderBase"
+    pkg_namespaces: str | List[str]
+    pkgs: str | List[str] | None = None
     _reader = None
     _associated_images: AssociatedImages = None
 
@@ -217,11 +221,12 @@ class ReaderBase:
             raise ValueError(f"Level {level} doesn't exist.")
         return req_level
 
+    @abstractmethod
     def get_region(self, x, y, width, height, level=0, **kwargs):
         """Get a region from image with top-left corner
         This should return a numpy array in xyc format
         """
-        raise NotImplementedError
+        ...
 
     def get_center(self, x, y, width, height, level=0, **kwargs):
         """Get a patch from image with center"""
@@ -229,9 +234,10 @@ class ReaderBase:
         y -= height / 2
         return self.get_region(x, y, width, height, level=level, **kwargs)
 
+    @abstractmethod
     def get_thumbnail(self, size, **kwargs):
         """Get a thumbnail of the image"""
-        raise NotImplementedError
+        ...
 
     def get_level(self, level, in_bounds=False) -> np.ndarray[np.uint8]:
         """
@@ -260,18 +266,20 @@ class ReaderBase:
         else:
             self.properties = SlideProperties.from_mapping(properties)
 
+    @abstractmethod
     def create_reader(self):
         """Create the reader
 
         This function should be implemented in the subclass
 
         1. create the reader
-        2. assign the reader to self._reader
+        2. use set_reader to set the reader
 
         """
         # The basic fallback implementation to create reader
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def detach_reader(self):
         """Detach the reader
 
@@ -281,11 +289,32 @@ class ReaderBase:
         Please implement this function in the subclass
 
         1. Close the reader
-        2. Set self._reader to None
+        2. use set_reader to set the reader to None
         3. Clean up any resources that are not python-managed
 
         """
-        raise NotImplementedError
+        ...
+
+    @classmethod
+    def is_available(cls, raise_error=False):
+        try:
+            if isinstance(cls.pkg_namespaces, str):
+                cls.pkg_namespaces = [cls.pkg_namespaces]
+            for pkg in cls.pkg_namespaces:
+                import_module(pkg)
+        except ModuleNotFoundError:
+            if raise_error:
+                raise ModuleNotFoundError(
+                    f"Requested reader {cls.name} is not installed."
+                )
+            return False
+        except ImportError:
+            if raise_error:
+                raise ImportError(
+                    f"Requested reader {cls.name} is installed but failed to import."
+                )
+            return False
+        return True
 
     @staticmethod
     def resize_img(
@@ -306,6 +335,9 @@ class ReaderBase:
         if self._reader is None:
             self.create_reader()
         return self._reader
+
+    def set_reader(self, reader):
+        self._reader = reader
 
 
 @singledispatch

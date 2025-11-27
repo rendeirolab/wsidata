@@ -3,13 +3,14 @@ from importlib.metadata import version
 # Decide which datatree implementation to use
 from packaging.version import Version
 
+from ._reader_registry import READERS
 from .base import ReaderBase, SlideProperties
 from .bioformats import BioFormatsReader
 from .cucim import CuCIMReader
+from .fastslide import FastSlideReader
 from .openslide import OpenSlideReader
 from .spatialdata_image2d import SpatialDataImage2DReader
 from .tiffslide import TiffSlideReader
-from .utils import get_reader, try_reader
 
 zarr_version = Version(version("zarr"))
 if zarr_version.major >= 3:

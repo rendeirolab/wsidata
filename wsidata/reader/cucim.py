@@ -6,9 +6,11 @@ import numpy as np
 from PIL import Image
 
 from .._utils import find_stack_level
+from ._reader_registry import register
 from .base import AssociatedImages, ReaderBase, SlideProperties, convert_image
 
 
+@register(name="cucim")
 class CuCIMReader(ReaderBase):
     """
     Use CuCIM to interface with image files.
@@ -21,6 +23,9 @@ class CuCIMReader(ReaderBase):
         Path to image file on disk
 
     """
+
+    name = "cucim"
+    pkg_namespaces = "cucim"
 
     def __init__(
         self,
@@ -78,7 +83,7 @@ class CuCIMReader(ReaderBase):
     def create_reader(self):
         from cucim import CuImage
 
-        self._reader = CuImage(self.file)
+        self.set_reader(CuImage(self.file))
 
     def _process_cucim_properties(self, reader):
         shape = reader.shape[0:2]
@@ -113,12 +118,6 @@ class CuCIMReader(ReaderBase):
             bounds=bounds,
             raw=reader.metadata,
         )
-
-    @property
-    def reader(self):
-        if self._reader is None:
-            self.create_reader()
-        return self._reader
 
     @property
     def associated_images(self):
