@@ -27,7 +27,7 @@ class ReaderRegistry(MutableMapping):
         del self._readers[key]
 
     def __iter__(self) -> Iterator[type[ReaderBase]]:
-        return iter(self._readers)
+        return iter(self._readers.values())
 
     def __len__(self) -> int:
         return len(self._readers)
@@ -46,7 +46,9 @@ class ReaderRegistry(MutableMapping):
     def __repr__(self) -> str:
         lines = []
         for name, available in self._repr_reader_order():
-            lines.append(f"{name}  ({'✓ Available' if available else '✗ Not Install'})")
+            lines.append(
+                f"{name}  ({'✓ Available' if available else '✗ Not Installed'})"
+            )
 
         return "\n".join(lines)
 
@@ -60,7 +62,7 @@ class ReaderRegistry(MutableMapping):
         for name, available in self._repr_reader_order():
             rows.append(
                 f"<tr><td style='text-align:left'>{escape(str(name))}</td>"
-                f"<td style='text-align:left'>{'✓ Available' if available else '✗ Not Install'}</td></tr>"
+                f"<td style='text-align:left'>{'✓ Available' if available else '✗ Not Installed'}</td></tr>"
             )
         rows.append("</tbody>\n</table>")
         return "\n".join(rows)

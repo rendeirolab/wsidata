@@ -22,4 +22,4 @@ class TiffSlideReader(OpenSlideReader):
     def create_reader(self):
         from tiffslide import TiffSlide
 
-        self._reader = TiffSlide(self.file)
+        self.set_reader(TiffSlide(self.file))

@@ -165,7 +165,7 @@ class BioFormatsReader(ReaderBase):
         if self._series is not None:
             reader.setSeries(self._series)
 
-        self._reader = reader
+        self.set_reader(reader)
 
     def _get_loci_namespace(self):
         import jpype

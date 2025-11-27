@@ -63,10 +63,10 @@ class OpenSlideReader(ReaderBase):
         return convert_image(img)
 
     def detach_reader(self):
-        if self._reader is not None:
+        if self.reader is not None:
             try:
-                self._reader.close()
-                self._reader = None
+                self.reader.close()
+                self.set_reader(None)
             # There is a chance that the pointer
             # to C-library is already collected
             except TypeError:
@@ -75,7 +75,7 @@ class OpenSlideReader(ReaderBase):
     def create_reader(self):
         from openslide import OpenSlide
 
-        self._reader = OpenSlide(self.file)
+        self.set_reader(OpenSlide(self.file))
 
     @property
     def associated_images(self):

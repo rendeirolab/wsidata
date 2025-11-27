@@ -83,7 +83,7 @@ class CuCIMReader(ReaderBase):
     def create_reader(self):
         from cucim import CuImage
 
-        self._reader = CuImage(self.file)
+        self.set_reader(CuImage(self.file))
 
     def _process_cucim_properties(self, reader):
         shape = reader.shape[0:2]
@@ -118,12 +118,6 @@ class CuCIMReader(ReaderBase):
             bounds=bounds,
             raw=reader.metadata,
         )
-
-    @property
-    def reader(self):
-        if self._reader is None:
-            self.create_reader()
-        return self._reader
 
     @property
     def associated_images(self):
