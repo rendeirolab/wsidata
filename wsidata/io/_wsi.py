@@ -14,7 +14,7 @@ from spatialdata.transformations import Scale
 
 from .._model import WSIData
 from .._utils import find_stack_level
-from ..reader import to_datatree, try_reader
+from ..reader import READERS, to_datatree
 
 
 def open_wsi(
@@ -98,7 +98,7 @@ def open_wsi(
         if not wsi.exists():
             raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
         # Early attempt with reader
-        reader_instance = try_reader(wsi, reader=reader)
+        reader_instance = READERS.try_open(wsi, reader=reader)
 
         # Check if the image is not pyramidal and too large
         if reader_instance.properties.n_level <= 1:

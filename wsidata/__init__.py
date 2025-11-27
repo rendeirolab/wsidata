@@ -15,20 +15,20 @@ from .accessors import (
     register_wsidata_accessor,
 )
 from .io import agg_wsi, concat_feature_anndata, open_wsi
-from .reader import SlideProperties, get_reader
+from .reader import READERS, SlideProperties
 
 __all__ = [
     "open_wsi",
     "agg_wsi",
     "concat_feature_anndata",
     "dataset",
+    "READERS",
     "WSIData",
     "TileSpec",
     "register_wsidata_accessor",
     "FetchAccessor",
     "IterAccessor",
     "DatasetAccessor",
-    "get_reader",
     "SlideProperties",
     "ColorNormalizer",
 ]

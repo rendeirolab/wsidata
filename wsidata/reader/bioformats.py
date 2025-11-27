@@ -6,9 +6,11 @@ from typing import List, Union
 
 import numpy as np
 
+from ._reader_registry import register
 from .base import ReaderBase, SlideProperties, convert_image
 
 
+@register(name="bioformats")
 class BioFormatsReader(ReaderBase):
     """
     Use Bio-Formats to interface with image files.
@@ -23,6 +25,7 @@ class BioFormatsReader(ReaderBase):
     """
 
     name = "bioformats"
+    pkg_namespaces = "scyjava"
 
     def __init__(
         self,

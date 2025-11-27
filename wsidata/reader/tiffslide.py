@@ -1,6 +1,8 @@
+from ._reader_registry import register
 from .openslide import OpenSlideReader
 
 
+@register(name="tiffslide")
 class TiffSlideReader(OpenSlideReader):
     """
     Use TiffSlide to interface with image files.
@@ -15,6 +17,7 @@ class TiffSlideReader(OpenSlideReader):
     """
 
     name = "tiffslide"
+    pkg_namespaces = "tiffslide"
 
     def create_reader(self):
         from tiffslide import TiffSlide

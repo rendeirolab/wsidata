@@ -1,17 +1,14 @@
 from pathlib import Path
 from typing import Union
 
-from ._reader_registry import register
 from .base import AssociatedImages, ReaderBase, convert_image
 
 
-@register(name="openslide")
-class OpenSlideReader(ReaderBase):
+class FastSlideReader(ReaderBase):
     """
-    Use OpenSlide to interface with image files.
+    Use FastSlide to interface with image files.
 
-    Depends on `openslide-python <https://openslide.org/api/python/>`_
-    which wraps the `openslide <https://openslide.org/>`_ C library.
+    Depends on `fastslide <https://github.com/NKI-AI/fastslide>`_.
 
     Parameters
     ----------
@@ -20,9 +17,8 @@ class OpenSlideReader(ReaderBase):
 
     """
 
-    name = "openslide"
-    pkg_namespaces = "openslide"
-    pkgs = ["openslide-python", "openslide-bin"]
+    name = "fastslide"
+    pkg_namespaces = "fastslide"
 
     def __init__(
         self,
@@ -64,18 +60,13 @@ class OpenSlideReader(ReaderBase):
 
     def detach_reader(self):
         if self._reader is not None:
-            try:
-                self._reader.close()
-                self._reader = None
-            # There is a chance that the pointer
-            # to C-library is already collected
-            except TypeError:
-                pass
+            self._reader.close()
+            self._reader = None
 
     def create_reader(self):
-        from openslide import OpenSlide
+        from fastslide import FastSlide
 
-        self._reader = OpenSlide(self.file)
+        self._reader = FastSlide.from_file_path(self.file)
 
     @property
     def associated_images(self):
