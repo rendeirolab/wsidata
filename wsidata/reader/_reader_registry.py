@@ -54,7 +54,7 @@ class ReaderRegistry(MutableMapping):
         # HTML representation suitable for Jupyter rich display
         rows = [
             "<table>\n<thead>\n<tr><th style='text-align:left'>Name</th>"
-            "<th style='text-align:left'>Available</th></tr>\n</thead>",
+            "<th style='text-align:left'>Availability</th></tr>\n</thead>",
             "<tbody>",
         ]
         for name, available in self._repr_reader_order():
