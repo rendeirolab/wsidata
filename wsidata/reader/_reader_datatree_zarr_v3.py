@@ -41,6 +41,7 @@ class SlideZarrStore(Store):
         self.chunks = tuple(chunks)
         self.channels = 3
 
+        # self._reader.properties.level_shape is List[(height, width)]
         self._level_shape = list(self._reader.properties.level_shape)
         self._level_downsample = list(self._reader.properties.level_downsample)
         self.n_level = self._reader.properties.n_level
@@ -99,7 +100,7 @@ class SlideZarrStore(Store):
         We expose shape as (height, width, channels) and chunk shape (ch_h, ch_w, channels).
         dtype fixed as uint8 for typical H&E/brightfield slides.
         """
-        w, h = self._level_shape[level]
+        h, w = self._level_shape[level]
         ch_h, ch_w = self.chunks
         channels = self.channels
         shape = [h, w, channels]
@@ -132,7 +133,6 @@ class SlideZarrStore(Store):
           - "{level}/{row}.{col}" (chunk)
         """
         await self._ensure_open()
-        assert self._slide is not None
 
         # group metadata
         if key == ".zgroup":
@@ -157,7 +157,7 @@ class SlideZarrStore(Store):
         # validate level
         if level < 0 or level >= len(self._level_shape):
             return None
-        w, h = self._level_shape[level]
+        h, w = self._level_shape[level]
         ch_h, ch_w = self.chunks
 
         # chunk pixel dimensions (may be smaller at edges)
@@ -172,8 +172,7 @@ class SlideZarrStore(Store):
         y0 = row * ch_h * downsample
 
         arr = await asyncio.to_thread(
-            self.reader.read_region,
-            self._slide,
+            self._reader.get_region,
             x0,
             y0,
             chunk_w,
@@ -219,7 +218,7 @@ class SlideZarrStore(Store):
         level, row, col = parsed
         if not (0 <= level < len(self._level_shape)):
             return False
-        w, h = self._level_shape[level]
+        h, w = self._level_shape[level]
         ch_h, ch_w = self.chunks
         max_row = math.ceil(h / ch_h) - 1
         max_col = math.ceil(w / ch_w) - 1
@@ -239,7 +238,7 @@ class SlideZarrStore(Store):
         yield ".zgroup"
         for lvl in range(len(self._level_shape)):
             yield f"{lvl}/.zarray"
-            w, h = self._level_shape[lvl]
+            h, w = self._level_shape[lvl]
             ch_h, ch_w = self.chunks
             rows = math.ceil(h / ch_h)
             cols = math.ceil(w / ch_w)
@@ -272,9 +271,9 @@ class SlideZarrStore(Store):
                 yield next_token
 
     def close(self) -> None:
-        if self._slide is not None:
+        if self._reader is not None:
             try:
-                self._slide.close()
+                self._reader.detach_reader()
             except Exception:
                 pass
         super().close()
@@ -290,14 +289,14 @@ async def _fetch_chunk_as_array(
         # produce an array of zeros of the expected shape
         ch_h, ch_w = store.chunks
         channels = store.channels
-        w, h = store._level_dims[level]
+        h, w = store._level_shape[level]
         chunk_w = min(ch_w, w - col * ch_w)
         chunk_h = min(ch_h, h - row * ch_h)
         return np.zeros((chunk_h, chunk_w, channels), dtype=np.uint8)
     # Buffer 'buf' supports the buffer protocol; convert to numpy
     b = bytes(buf)
     # compute the expected shape
-    w, h = store._level_dims[level]
+    h, w = store._level_shape[level]
     ch_h, ch_w = store.chunks
     chunk_w = min(ch_w, w - col * ch_w)
     chunk_h = min(ch_h, h - row * ch_h)
@@ -312,7 +311,7 @@ def level_to_xarray(store: SlideZarrStore, level: int):
     Return an xarray.DataArray for the given level.
     This function is synchronous: it uses asyncio.run for simplicity; adjust if you already have an event loop.
     """
-    w, h = store._level_shape[level]
+    h, w = store._level_shape[level]
     ch_h, ch_w = store.chunks
     channels = store.channels
 
