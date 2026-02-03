@@ -142,7 +142,7 @@ class SpatialDataImage2DReader(ReaderBase):
                 break
         # Get the image at that level
         img = self.get_level(ix)
-        img = cv2.resize(img, size)
+        img = cv2.resize(img, size[::-1], interpolation=cv2.INTER_AREA)
         return img
 
     def detach_reader(self):
