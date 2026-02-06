@@ -74,7 +74,6 @@ include = [
 packages = ["wsidata", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.ruff]
-lint.ignore = ["F401"]
 lint.extend-select = ["I"]
 line-length = 88
 
