@@ -17,3 +17,18 @@ if zarr_version.major >= 3:
     from ._reader_datatree_zarr_v3 import to_datatree
 else:
     from ._reader_datatree_zarr_v2 import to_datatree
+
+__all__ = [
+    "version",
+    "Version",
+    "READERS",
+    "ReaderBase",
+    "OpenSlideReader",
+    "SlideProperties",
+    "BioFormatsReader",
+    "CuCIMReader",
+    "FastSlideReader",
+    "SpatialDataImage2DReader",
+    "TiffSlideReader",
+    "to_datatree",
+]

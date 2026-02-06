@@ -1,9 +1,8 @@
-from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import cv2
 
-from .base import AssociatedImages, ReaderBase, SlideProperties, convert_image
+from .base import ReaderBase, SlideProperties
 
 if TYPE_CHECKING:
     from spatialdata.models import Image2DModel
@@ -112,17 +111,16 @@ class SpatialDataImage2DReader(ReaderBase):
             img = self.img
 
         downsample_factor = self.properties.level_downsample[level]
-        # SpatialData coordinates must be translated to the respective level
-        x = x / downsample_factor
-        y = y / downsample_factor
-        width = width / downsample_factor
-        height = height / downsample_factor
         if self.is_multiscale:
             data = img.sel(
-                y=slice(y, y + height), x=slice(x, x + width)
+                y=slice(y, y + height * downsample_factor),
+                x=slice(x, x + width * downsample_factor),
             ).image.data.compute()
         else:
-            data = img.sel(y=slice(y, y + height), x=slice(x, x + width)).data.compute()
+            data = img.sel(
+                y=slice(y, y + height * downsample_factor),
+                x=slice(x, x + width * downsample_factor),
+            ).data.compute()
         return data.transpose(1, 2, 0)
 
     def get_thumbnail(self, size, **kwargs):
