@@ -17,6 +17,16 @@ def test_slide():
 
 
 @pytest.fixture(scope="session")
+def test_isyntax():
+    path = Path(__file__).parent / "data"
+    s = pooch.retrieve(
+        f"{ROOT_URL}/sample.isyntax", fname="sample.isyntax", known_hash=None, path=path
+    )
+
+    return s
+
+
+@pytest.fixture(scope="session")
 def test_store():
     path = Path(__file__).parent / "data"
     _ = pooch.retrieve(
