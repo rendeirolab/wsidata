@@ -41,6 +41,7 @@ stain = ["torchstain"]
 bioformats = ["scyjava"]
 cucim = ["cucim"]
 tiffslide = ["tiffslide"]
+isyntax = ["pyisyntax"]
 plot = ["matplotlib", "legendkit"]
 
 [tool.hatch.version]
@@ -107,6 +108,7 @@ dev = [
     "pandas-stubs>=2.3.0.250703",
     "tiffslide>=2.4.0",
     "scyjava>=1.10.1",
+    "pyisyntax>=0.1.5",
 ]
 docs = [
     "sphinx>=8.1.3",

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'darwin'",
@@ -2861,6 +2861,22 @@ wheels = [
 ]
 
 [[package]]
+name = "pyisyntax"
+version = "0.1.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cffi" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/a7/91d7c3fcbcfca442acc472a682dfbaa5de37f2fb53d9ff6bd5c80598bdbf/pyisyntax-0.1.5.tar.gz", hash = "sha256:a2954cb2f729968b2b03387dc40c90b13c1144b346488537a3b311bf3e0c5fdf", size = 251315, upload-time = "2025-04-18T01:21:31.333Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3c/f4/d27196e337f77cab85d07fd148a24df1ad76a467f362a7d94f700fef1cfe/pyisyntax-0.1.5-cp310-abi3-macosx_10_9_x86_64.whl", hash = "sha256:f94a9e69b928dbdec4c28b77bb0253db9526bc542b4e2cea62d39e8458ab6f26", size = 150836, upload-time = "2025-04-18T01:21:21.773Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/f6/2da858f6b383983a44865c4dd896f9fdc93e8f7d9b0955d5433eecc6ae1d/pyisyntax-0.1.5-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:9ac9ed080fc015ed0e1c7c79dd8d7021ec1def35dc266c2764a30014b7c87482", size = 137300, upload-time = "2025-04-18T01:21:23.523Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/68/6c14334b8c7d511b7cc5d3ead7e4432bc2eb3babea80c7f8f3f5c279d079/pyisyntax-0.1.5-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1ca728e1bcab43685471ed8091491b958d408ecfd3bde379b03e4af682a0b60b", size = 581390, upload-time = "2025-04-18T01:21:25.724Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/af/142117c80358de2ede26c8442e4eb8d250d276b85498b2393f64edeaac5e/pyisyntax-0.1.5-cp310-abi3-win_amd64.whl", hash = "sha256:7dc8198e13ec4449f085930511aa575ebf78f79bfbce42ae38305403fb6a0f60", size = 89542, upload-time = "2025-04-18T01:21:28.712Z" },
+]
+
+[[package]]
 name = "pyogrio"
 version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4162,6 +4178,9 @@ bioformats = [
 cucim = [
     { name = "cucim" },
 ]
+isyntax = [
+    { name = "pyisyntax" },
+]
 plot = [
     { name = "legendkit" },
     { name = "matplotlib" },
@@ -4189,6 +4208,7 @@ dev = [
     { name = "pandas-stubs" },
     { name = "pooch" },
     { name = "pre-commit" },
+    { name = "pyisyntax" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -4217,6 +4237,7 @@ requires-dist = [
     { name = "opencv-python-headless" },
     { name = "openslide-bin", specifier = ">=4.0.0.2" },
     { name = "openslide-python", specifier = ">=1.4.1" },
+    { name = "pyisyntax", marker = "extra == 'isyntax'" },
     { name = "rich" },
     { name = "scyjava", marker = "extra == 'bioformats'" },
     { name = "spatialdata", specifier = ">=0.6.0" },
@@ -4224,7 +4245,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.0.0" },
     { name = "torchstain", marker = "extra == 'stain'" },
 ]
-provides-extras = ["bioformats", "cucim", "plot", "stain", "tiffslide"]
+provides-extras = ["bioformats", "cucim", "isyntax", "plot", "stain", "tiffslide"]
 
 [package.metadata.requires-dev]
 cucim = [{ name = "cucim-cu12", marker = "sys_platform == 'linux'", specifier = ">=25.6.0" }]
@@ -4238,6 +4259,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">=2.3.0.250703" },
     { name = "pooch", specifier = ">=1.8.2" },
     { name = "pre-commit", specifier = ">=4.1.0" },
+    { name = "pyisyntax", specifier = ">=0.1.5" },
     { name = "pyright", specifier = ">=1.1.393" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
