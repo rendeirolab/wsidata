@@ -8,7 +8,7 @@ from .base import ReaderBase
 
 
 class ReaderRegistry(MutableMapping):
-    priority = ["openslide", "tiffslide", "fastslide", "bioformats", "cucim"]
+    priority = ["openslide", "tiffslide", "fastslide", "bioformats", "cucim", "isyntax"]
 
     def __init__(self):
         self._readers: Dict[str, type[ReaderBase]] = {}

@@ -20,7 +20,7 @@ from ..reader import READERS, to_datatree
 def open_wsi(
     wsi: str | Path | SpatialData,
     store: str = "auto",
-    reader: Literal["openslide", "tiffslide", "bioformats"] = None,
+    reader: Literal["openslide", "tiffslide", "bioformats", "isyntax"] = None,
     attach_images: bool = False,
     image_key: str = None,
     save_images: bool = True,

@@ -8,6 +8,7 @@ from .base import ReaderBase, SlideProperties
 from .bioformats import BioFormatsReader
 from .cucim import CuCIMReader
 from .fastslide import FastSlideReader
+from .isyntax import ISyntaxReader
 from .openslide import OpenSlideReader
 from .spatialdata_image2d import SpatialDataImage2DReader
 from .tiffslide import TiffSlideReader
@@ -28,6 +29,7 @@ __all__ = [
     "BioFormatsReader",
     "CuCIMReader",
     "FastSlideReader",
+    "ISyntaxReader",
     "SpatialDataImage2DReader",
     "TiffSlideReader",
     "to_datatree",
