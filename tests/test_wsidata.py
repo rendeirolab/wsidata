@@ -1,9 +1,12 @@
 import numpy as np
 import pandas as pd
 import pytest
+import tifffile
 from shapely import Polygon
+from spatialdata import read_zarr
+from spatialdata.models import Image2DModel
 
-from wsidata import TileSpec, io
+from wsidata import TileSpec, io, open_wsi
 
 
 class TestWSIData:
@@ -74,3 +77,52 @@ class TestWSIData:
 
     def test_save(self, wsidata, tmpdir):
         wsidata.write(tmpdir / "test.wsi")
+
+
+def _make_test_wsi(path, size=(256, 256)):
+    """Create a minimal RGB TIFF file for testing."""
+    img = np.random.randint(0, 255, (*size, 3), dtype=np.uint8)
+    res = 1e7 / 200
+    tifffile.imwrite(
+        path,
+        img,
+        tile=(64, 64),
+        photometric="rgb",
+        compression="deflate",
+        bigtiff=True,
+        resolution=(res, res),
+        resolutionunit="CENTIMETER",
+    )
+
+
+def test_write_preserves_existing_images(tmp_path):
+    """write() should not zero out images stored in a previous session.
+
+    Regression test: calling write() on an existing zarr store used to clear
+    the store before re-writing, which zeroed out dask-backed elements that
+    were loaded from that same store but not modified in the current session.
+    """
+    wsi_path = tmp_path / "tissue.tiff"
+    store_dir = tmp_path / "store.zarr"
+
+    _make_test_wsi(wsi_path)
+
+    # First session: write a non-zero ROI image.
+    wsi = open_wsi(wsi=wsi_path, store=str(store_dir), reader="openslide")
+    roi = np.random.rand(3, 256, 256).astype(np.float32) * 100.0
+    da = Image2DModel.parse(
+        roi, dims=("c", "y", "x"), c_coords=[f"c{i}" for i in range(3)]
+    )
+    wsi.images["roi"] = da
+    wsi.write(store_dir)
+
+    first_max = float(read_zarr(store_dir)["roi"].max().compute())
+    assert first_max > 0, "First write produced a zero ROI unexpectedly"
+
+    # Second session: re-open and call write() without touching the ROI.
+    wsi2 = open_wsi(wsi=wsi_path, store=str(store_dir), reader="openslide")
+    wsi2.write(store_dir)
+
+    second_max = float(read_zarr(store_dir)["roi"].max().compute())
+    assert second_max > 0, "Second write dropped / zeroed the existing ROI"
+    assert abs(first_max - second_max) < 1e-6, "ROI value changed after second write"

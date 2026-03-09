@@ -372,12 +372,38 @@ class WSIData(SpatialData):
                     "Please set the store path before saving."
                 )
             file_path = self._wsi_store
-        super().write(
-            file_path=file_path,
-            overwrite=overwrite,
-            consolidate_metadata=consolidate_metadata,
-            format=format,
-        )
+
+        # When the target store already exists, perform an incremental write to
+        # avoid clearing the store and zeroing out dask-backed elements that were
+        # loaded from the same store but not modified in this session.
+        if file_path is not None and file_path.exists():
+            # write_element() requires self.path to be set; ensure it reflects
+            # the target location before we proceed.
+            if self.path is None:
+                self.path = file_path
+
+            # Determine which elements are new (in-memory but not yet on disk).
+            on_disk = set(self.elements_paths_on_disk())
+            in_memory = set(self.elements_paths_in_memory())
+            new_elements = in_memory - on_disk
+
+            for element_type_name in new_elements:
+                parts = element_type_name.split("/", 1)
+                if len(parts) != 2:  # pragma: no cover
+                    continue
+                element_name = parts[1]
+                if element_name not in self._exclude_elements:
+                    self.write_element(element_name, overwrite=overwrite)
+
+            if consolidate_metadata:
+                self.write_consolidated_metadata()
+        else:
+            super().write(
+                file_path=file_path,
+                overwrite=overwrite,
+                consolidate_metadata=consolidate_metadata,
+                format=format,
+            )
 
     def to_spatialdata(self) -> SpatialData:
         """
