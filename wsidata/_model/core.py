@@ -16,6 +16,7 @@ from ome_zarr.io import parse_url
 from PIL.Image import Image, fromarray
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
+from xarray import DataArray
 
 from .._utils import find_stack_level
 from ..accessors import DatasetAccessor, FetchAccessor, IterAccessor
@@ -354,6 +355,25 @@ class WSIData(SpatialData):
         else:
             return fromarray(img)
 
+    def _materialize_images_backed_by_store(self) -> None:
+        """
+        Materialize in-memory any image elements that are backed by the same
+        zarr store we are about to overwrite, so write() does not read zeros
+        from the already-cleared store. Only DataArrays are re-wrapped as dask
+        so Image2DModel schema still validates; DataTrees (e.g. WSI pyramid)
+        are left as-is to avoid schema issues.
+        """
+        from dask import array as dask_array
+
+        for key in list(self.images.keys()):
+            el = self.images[key]
+            if isinstance(el, DataArray):
+                if hasattr(el.data, "dask") and el.data.dask is not None:
+                    computed = el.compute()
+                    self.images[key] = computed.copy(
+                        data=dask_array.from_array(computed.data, chunks=computed.shape)
+                    )
+
     def write(
         self,
         file_path=None,
@@ -372,6 +392,9 @@ class WSIData(SpatialData):
                     "Please set the store path before saving."
                 )
             file_path = self._wsi_store
+        if overwrite and self.path is not None:
+            if Path(file_path).absolute() == Path(self.path).absolute():
+                self._materialize_images_backed_by_store()
         super().write(
             file_path=file_path,
             overwrite=overwrite,
