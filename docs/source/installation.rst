@@ -15,6 +15,12 @@ different slide readers to support variety of file formats.
 
             pip install wsidata
 
+    .. tab-item:: uv
+
+        .. code-block:: bash
+
+            uv add wsidata
+
     .. tab-item:: Conda
 
         .. code-block:: bash
@@ -99,9 +105,14 @@ Installation for slide readers
 
         `CuCIM <https://github.com/rapidsai/cucim>`_ is a GPU-accelerated image I/O library.
 
-        .. warning::
-
-            CuCIM support is not available yet.
-
         Please refer to the `CuCIM GitHub <https://github.com/rapidsai/cucim>`_.
+
+    .. tab-item:: pyisyntax
+
+        `pyisyntax <https://github.com/anibali/pyisyntax>`_ a Python library for working with
+        pathology images in the iSyntax file format, powered by `libisyntax <https://github.com/amspath/libisyntax>`_.
+
+        .. code-block:: bash
+
+            pip install pyisyntax
 
