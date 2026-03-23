@@ -31,9 +31,9 @@ def test_store():
 
 
 @pytest.fixture(scope="class")
-def wsidata(test_slide, test_store):
+def wsidata(test_slide):
     from wsidata import open_wsi
 
-    wsi = open_wsi(test_slide, store=test_store)
+    wsi = open_wsi(test_slide)
 
     return wsi
