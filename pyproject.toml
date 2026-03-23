@@ -28,7 +28,7 @@ Documentation = "https://wsidata.readthedocs.io"
 repository = "https://github.com/rendeirolab/wsidata"
 dynamic = ["version"]
 dependencies = [
-    "spatialdata>=0.6.0",
+    "spatialdata>=0.7.0",
     "opencv-python-headless",
     "openslide-python>=1.4.1",
     "openslide-bin>=4.0.0.2",
@@ -101,7 +101,6 @@ dev = [
     "torchstain>=1.4.1",
     "matplotlib>=3.10.0",
     "legendkit>=0.3.4",
-    "pyright>=1.1.393",
     "pooch>=1.8.2",
     "jupyter-cache>=1.0.1",
     "notebook>=7.3.3",
@@ -109,6 +108,7 @@ dev = [
     "tiffslide>=2.4.0",
     "scyjava>=1.10.1",
     "pyisyntax>=0.1.5",
+    "huggingface-hub>=1.7.2",
 ]
 docs = [
     "sphinx>=8.1.3",
