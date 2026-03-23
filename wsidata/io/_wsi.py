@@ -320,7 +320,7 @@ def _agg_wsi(f, feature_key, tile_key, agg_key, error="raise"):
         if error == "raise":
             raise ValueError(f"File {f} not existed.")
         else:
-            return None
+            return None, None
     try:
         import zarr
         from anndata import read_zarr
