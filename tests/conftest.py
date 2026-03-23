@@ -1,33 +1,33 @@
 from pathlib import Path
 
-import pooch
 import pytest
+from huggingface_hub import hf_hub_download
 
-ROOT_URL = "https://lazyslide.blob.core.windows.net/lazyslide-data"
+REPO_ID = "RendeiroLab/LazySlide-data"
 
 
 @pytest.fixture(scope="session")
 def test_slide():
-    path = Path(__file__).parent / "data"
-    s = pooch.retrieve(
-        f"{ROOT_URL}/sample.svs", fname="sample.svs", known_hash=None, path=path
-    )
+    return hf_hub_download(REPO_ID, "sample.svs", repo_type="dataset")
 
-    return s
+
+@pytest.fixture(scope="session")
+def test_isyntax():
+    return hf_hub_download(REPO_ID, "testslide.isyntax", repo_type="dataset")
 
 
 @pytest.fixture(scope="session")
 def test_store():
-    path = Path(__file__).parent / "data"
-    _ = pooch.retrieve(
-        f"{ROOT_URL}/sample.zarr.zip",
-        fname="sample.zarr.zip",
-        known_hash=None,
-        path=path,
-        processor=pooch.Unzip(extract_dir="sample.zarr"),
-    )
+    slide_zarr_zip = hf_hub_download(REPO_ID, "sample.zarr.zip", repo_type="dataset")
+    slide_zarr = Path(slide_zarr_zip.replace(".zip", ""))
+    # Unzip the zarr file if it is a zip file
+    # But only if it is not already unzipped
+    if not slide_zarr.exists():
+        from zipfile import ZipFile
 
-    return str(path / "sample.zarr")
+        with ZipFile(slide_zarr_zip, "r") as zip_ref:
+            zip_ref.extractall(slide_zarr.parent)
+    return slide_zarr
 
 
 @pytest.fixture(scope="class")

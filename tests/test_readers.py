@@ -53,6 +53,11 @@ def test_cucim(test_slide):
     run_reader_test("cucim", test_slide)
 
 
+@pytest.mark.skipif(skip_reader("isyntax"), reason="pyisyntax not installed")
+def test_isyntax(test_isyntax):
+    run_reader_test("isyntax", test_isyntax)
+
+
 def test_spatialdata(test_slide):
     import numpy as np
     from spatialdata import SpatialData

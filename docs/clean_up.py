@@ -5,7 +5,7 @@ root = Path(__file__).parent  # ./docs
 
 target_folders = [
     root / "build",
-    root / "api" / "_autogen",
+    root / "source" / "api" / "_autogen",
 ]
 
 
