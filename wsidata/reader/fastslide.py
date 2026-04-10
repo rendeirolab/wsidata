@@ -1,9 +1,11 @@
 from pathlib import Path
 from typing import Union
 
+from ._reader_registry import register
 from .base import AssociatedImages, ReaderBase, convert_image
 
 
+@register(name="fastslide")
 class FastSlideReader(ReaderBase):
     """
     Use FastSlide to interface with image files.
