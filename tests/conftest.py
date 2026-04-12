@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from huggingface_hub import hf_hub_download
+from huggingface_hub.errors import EntryNotFoundError
 
 REPO_ID = "RendeiroLab/LazySlide-data"
 
@@ -14,6 +15,18 @@ def test_slide():
 @pytest.fixture(scope="session")
 def test_isyntax():
     return hf_hub_download(REPO_ID, "testslide.isyntax", repo_type="dataset")
+
+
+@pytest.fixture(scope="session")
+def test_czi():
+    # The sample.czi fixture is expected to be a small Bgr24 CZI file
+    # hosted alongside the other test slides in RendeiroLab/LazySlide-data.
+    # Until that file is uploaded, skip the pylibczi test cleanly so CI
+    # stays green.
+    try:
+        return hf_hub_download(REPO_ID, "sample.czi", repo_type="dataset")
+    except EntryNotFoundError:
+        pytest.skip("sample.czi fixture not yet uploaded to LazySlide-data")
 
 
 @pytest.fixture(scope="session")

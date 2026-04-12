@@ -8,7 +8,22 @@ from .base import ReaderBase
 
 
 class ReaderRegistry(MutableMapping):
-    priority = ["openslide", "tiffslide", "fastslide", "bioformats", "cucim", "isyntax"]
+    # ``pylibczi`` is deliberately placed ahead of ``bioformats`` because
+    # it is CZI-only: pyczi.open_czi raises on any non-CZI input, so
+    # ``try_open`` falls straight through to BioFormats for other formats.
+    # Placing it after BioFormats would mean a ``.czi`` file auto-detects
+    # to BioFormats on arm64 macOS, where the required JPEG-XR native lib
+    # is unavailable, and the user would only see the failure at first
+    # read.
+    priority = [
+        "openslide",
+        "tiffslide",
+        "fastslide",
+        "pylibczi",
+        "bioformats",
+        "cucim",
+        "isyntax",
+    ]
 
     def __init__(self):
         self._readers: Dict[str, type[ReaderBase]] = {}
