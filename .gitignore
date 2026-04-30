@@ -174,3 +174,6 @@ work/
 
 # Ignore version file
 *_version.py
+
+# LGPL-licensed test fixtures (downloaded at test time)
+tests/data/*.czi

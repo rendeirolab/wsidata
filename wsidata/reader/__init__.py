@@ -10,6 +10,7 @@ from .cucim import CuCIMReader
 from .fastslide import FastSlideReader
 from .isyntax import ISyntaxReader
 from .openslide import OpenSlideReader
+from .pylibczi import PylibCZIReader
 from .spatialdata_image2d import SpatialDataImage2DReader
 from .tiffslide import TiffSlideReader
 
@@ -30,6 +31,7 @@ __all__ = [
     "CuCIMReader",
     "FastSlideReader",
     "ISyntaxReader",
+    "PylibCZIReader",
     "SpatialDataImage2DReader",
     "TiffSlideReader",
     "to_datatree",

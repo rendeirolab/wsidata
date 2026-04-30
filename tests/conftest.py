@@ -5,6 +5,9 @@ from huggingface_hub import hf_hub_download
 
 REPO_ID = "RendeiroLab/LazySlide-data"
 
+# Zeiss CZI test file (LGPL-licensed, not redistributable via our HF repo)
+CZI_URL = "https://github.com/ZEISS/pylibczirw/raw/main/test_data/c1_bgr24.czi"
+
 
 @pytest.fixture(scope="session")
 def test_slide():
@@ -14,6 +17,19 @@ def test_slide():
 @pytest.fixture(scope="session")
 def test_isyntax():
     return hf_hub_download(REPO_ID, "testslide.isyntax", repo_type="dataset")
+
+
+@pytest.fixture(scope="session")
+def test_czi():
+    # Zeiss c1_bgr24.czi from pylibczirw repo (LGPL license, fetched directly)
+    from urllib.request import urlretrieve
+
+    data_dir = Path(__file__).parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    dest = data_dir / "c1_bgr24.czi"
+    if not dest.exists():
+        urlretrieve(CZI_URL, dest)
+    return str(dest)
 
 
 @pytest.fixture(scope="session")

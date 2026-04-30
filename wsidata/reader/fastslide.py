@@ -1,9 +1,11 @@
 from pathlib import Path
 from typing import Union
 
+from ._reader_registry import register
 from .base import AssociatedImages, ReaderBase, convert_image
 
 
+@register(name="fastslide")
 class FastSlideReader(ReaderBase):
     """
     Use FastSlide to interface with image files.
@@ -59,8 +61,8 @@ class FastSlideReader(ReaderBase):
         return convert_image(img)
 
     def detach_reader(self):
-        if self.reader is not None:
-            self.reader.close()
+        if self._reader is not None:
+            self._reader.close()
             self.set_reader(None)
 
     def create_reader(self):

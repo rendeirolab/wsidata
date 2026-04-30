@@ -17,6 +17,8 @@ def try_import(mod):
 def skip_reader(reader):
     if reader == "bioformats":
         return not try_import("scyjava")
+    elif reader == "pylibczi":
+        return not try_import("pylibCZIrw")
     else:
         return not try_import(reader)
 
@@ -56,6 +58,11 @@ def test_cucim(test_slide):
 @pytest.mark.skipif(skip_reader("isyntax"), reason="pyisyntax not installed")
 def test_isyntax(test_isyntax):
     run_reader_test("isyntax", test_isyntax)
+
+
+@pytest.mark.skipif(skip_reader("pylibczi"), reason="pylibCZIrw not installed")
+def test_pylibczi(test_czi):
+    run_reader_test("pylibczi", test_czi)
 
 
 def test_spatialdata(test_slide):

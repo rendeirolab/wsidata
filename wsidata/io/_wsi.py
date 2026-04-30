@@ -20,7 +20,7 @@ from ..reader import READERS, to_datatree
 def open_wsi(
     wsi: str | Path | SpatialData,
     store: str = "auto",
-    reader: Literal["openslide", "tiffslide", "bioformats", "isyntax"] = None,
+    reader: str = None,
     attach_images: bool = False,
     image_key: str = None,
     save_images: bool = True,
@@ -48,7 +48,7 @@ def open_wsi(
         If a directory is supplied, the zarr file will be created in that directory.
         This is useful when you want to store all zarr files in a specific location.
     reader : str, optional
-        Reader to use, by default "auto", choosing available reader, first openslide, then tiffslide, then bioformats.
+        Reader to use, by default "auto", to check avaiable readers: `print(wsidata.READERS)`
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional

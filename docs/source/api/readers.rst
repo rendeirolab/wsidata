@@ -32,4 +32,5 @@ To retrieve a reader class
     OpenSlideReader
     TiffSlideReader
     BioFormatsReader
+    PylibCZIReader
     SpatialDataImage2DReader

@@ -116,3 +116,23 @@ Installation for slide readers
 
             pip install pyisyntax
 
+    .. tab-item:: pylibCZIrw
+
+        `pylibCZIrw <https://github.com/ZEISS/pylibczirw>`_ is the official
+        Python binding to `libCZI <https://github.com/ZEISS/libczi>`_,
+        maintained by Zeiss, for reading and writing Zeiss CZI whole-slide
+        images. Unlike BioFormats, it decodes JPEG-XR natively on every
+        platform it ships wheels for - including ``arm64`` macOS, where
+        BioFormats cannot load the ``ome:jxrlib`` native library. It is
+        therefore the recommended backend for ``.czi`` files on Apple
+        Silicon.
+
+        .. code-block:: bash
+
+            pip install pylibCZIrw
+
+        Wheels are published for Linux (``x86_64`` and ``aarch64``),
+        macOS (``arm64``), and Windows (``x86_64``) on CPython 3.9-3.13.
+        There is no macOS ``x86_64`` wheel, so Intel Macs will need to
+        build from source or use BioFormats.
+

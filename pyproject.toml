@@ -41,7 +41,9 @@ stain = ["torchstain"]
 bioformats = ["scyjava"]
 cucim = ["cucim"]
 tiffslide = ["tiffslide"]
+fastslide = ["fastslide"]
 isyntax = ["pyisyntax"]
+pylibczi = ["pylibCZIrw"]
 plot = ["matplotlib", "legendkit"]
 
 [tool.hatch.version]
@@ -108,6 +110,7 @@ dev = [
     "tiffslide>=2.4.0",
     "scyjava>=1.10.1",
     "pyisyntax>=0.1.5",
+    "pylibCZIrw>=6.0.0",
     "huggingface-hub>=1.7.2",
 ]
 docs = [
