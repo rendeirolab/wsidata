@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 from huggingface_hub import hf_hub_download
-from huggingface_hub.errors import EntryNotFoundError
 
 REPO_ID = "RendeiroLab/LazySlide-data"
+
+# Zeiss CZI test file (LGPL-licensed, not redistributable via our HF repo)
+CZI_URL = "https://github.com/ZEISS/pylibczirw/raw/main/test_data/c1_bgr24.czi"
 
 
 @pytest.fixture(scope="session")
@@ -19,14 +21,13 @@ def test_isyntax():
 
 @pytest.fixture(scope="session")
 def test_czi():
-    # The sample.czi fixture is expected to be a small Bgr24 CZI file
-    # hosted alongside the other test slides in RendeiroLab/LazySlide-data.
-    # Until that file is uploaded, skip the pylibczi test cleanly so CI
-    # stays green.
-    try:
-        return hf_hub_download(REPO_ID, "sample.czi", repo_type="dataset")
-    except EntryNotFoundError:
-        pytest.skip("sample.czi fixture not yet uploaded to LazySlide-data")
+    # Zeiss c1_bgr24.czi from pylibczirw repo (LGPL license, fetched directly)
+    from urllib.request import urlretrieve
+
+    dest = Path(__file__).parent / "data" / "c1_bgr24.czi"
+    if not dest.exists():
+        urlretrieve(CZI_URL, dest)
+    return str(dest)
 
 
 @pytest.fixture(scope="session")
