@@ -63,9 +63,9 @@ class OpenSlideReader(ReaderBase):
         return convert_image(img)
 
     def detach_reader(self):
-        if self.reader is not None:
+        if self._reader is not None:
             try:
-                self.reader.close()
+                self._reader.close()
                 self.set_reader(None)
             # There is a chance that the pointer
             # to C-library is already collected

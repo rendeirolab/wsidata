@@ -61,8 +61,8 @@ class FastSlideReader(ReaderBase):
         return convert_image(img)
 
     def detach_reader(self):
-        if self.reader is not None:
-            self.reader.close()
+        if self._reader is not None:
+            self._reader.close()
             self.set_reader(None)
 
     def create_reader(self):
