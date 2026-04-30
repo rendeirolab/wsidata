@@ -24,7 +24,9 @@ def test_czi():
     # Zeiss c1_bgr24.czi from pylibczirw repo (LGPL license, fetched directly)
     from urllib.request import urlretrieve
 
-    dest = Path(__file__).parent / "data" / "c1_bgr24.czi"
+    data_dir = Path(__file__).parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    dest = data_dir / "c1_bgr24.czi"
     if not dest.exists():
         urlretrieve(CZI_URL, dest)
     return str(dest)
