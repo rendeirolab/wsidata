@@ -194,8 +194,7 @@ dependencies = [
     { name = "scipy" },
     { name = "scverse-misc", version = "0.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scverse-misc", version = "0.0.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "zarr", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "zarr" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9a/c9/9a595379ca1fb55886bf213f0c5bdf42f2b33657ef982d1167c97669d7df/anndata-0.12.11.tar.gz", hash = "sha256:80cad77bbd34c5478c6cd9b69a44590668807ac13bf80e10c19f04b8bf645e02", size = 2253517, upload-time = "2026-04-21T11:23:22.342Z" }
 wheels = [
@@ -2721,8 +2720,7 @@ dependencies = [
     { name = "spatial-image" },
     { name = "xarray" },
     { name = "xarray-dataclass" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "zarr", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "zarr" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/90/93/8cab41d5f2d11834e4d077d7a9dd7cdf74596fdc68290e31e77422d4edf2/multiscale_spatial_image-2.0.3.tar.gz", hash = "sha256:0b72b20785c5c8bbae7aea0608ca53e02d61fd76720b10473aeafb97e1616cab", size = 1310669, upload-time = "2025-08-07T17:06:58.697Z" }
 wheels = [
@@ -3231,8 +3229,7 @@ dependencies = [
     { name = "requests" },
     { name = "scikit-image" },
     { name = "toolz" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "zarr", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "zarr" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8b/ee/0e99c62dd3d453c9fb84d8c8cc9f64e255c2d7638546836516282fae2be5/ome_zarr-0.15.0.tar.gz", hash = "sha256:e9479d3a9849c194a616355290f6ae574a7d4402559c5f7005be20cf81945435", size = 81497, upload-time = "2026-04-08T11:57:25.475Z" }
 wheels = [
@@ -4868,8 +4865,7 @@ dependencies = [
     { name = "xarray" },
     { name = "xarray-spatial", version = "0.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "xarray-spatial", version = "0.9.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "zarr", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "zarr" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/b4/3cd97a7f473def2cf0fdb94d980efd5982274e8aedae944af144327b979c/spatialdata-0.7.2.tar.gz", hash = "sha256:17cfa4be157dd00d5dfc009038b2f0ba5ceaaad4fb15cf58cb8b53b7e28fc75e", size = 347975, upload-time = "2026-02-09T15:45:07.182Z" }
 wheels = [
@@ -5205,8 +5201,7 @@ dependencies = [
     { name = "tifffile", version = "2026.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "tifffile", version = "2026.4.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "typing-extensions" },
-    { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "zarr", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "zarr" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/ee/938f654be5d15320a80575c8bfcfeaefcd0be3518bd7e0b0754ecc40698e/tiffslide-3.0.0.tar.gz", hash = "sha256:d54ac1ca1d03989026da7762d8ff72a59eefd4c66fbcd9321a1293940e3037c4", size = 746522, upload-time = "2026-03-12T16:44:51.163Z" }
 wheels = [
@@ -6140,41 +6135,17 @@ wheels = [
 name = "zarr"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.12'",
-]
 dependencies = [
-    { name = "donfig", marker = "python_full_version < '3.12'" },
-    { name = "google-crc32c", marker = "python_full_version < '3.12'" },
-    { name = "numcodecs", marker = "python_full_version < '3.12'" },
-    { name = "numpy", marker = "python_full_version < '3.12'" },
-    { name = "packaging", marker = "python_full_version < '3.12'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "donfig" },
+    { name = "google-crc32c" },
+    { name = "numcodecs" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/31/5a/b8a0cf39a14c770c30bd1f2d120c54000c8cd9e84e8e79f38d9a7ce58071/zarr-3.1.6.tar.gz", hash = "sha256:d95e72cbea4b90e9a70679468b8266400331756232576ae2b43400ac5108d0eb", size = 386531, upload-time = "2026-03-23T17:25:18.748Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/7c/ba8ca8cbe9dbef8e83a95fc208fed8e6686c98b4719aaa0aa7f3d31fe390/zarr-3.1.6-py3-none-any.whl", hash = "sha256:b5a82c5079d1c3d4ee8f06746fa3b9a98a7d804300fa3f4be154362a33e1207e", size = 295655, upload-time = "2026-03-23T17:25:17.189Z" },
-]
-
-[[package]]
-name = "zarr"
-version = "3.2.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version >= '3.12' and python_full_version < '3.14'",
-]
-dependencies = [
-    { name = "donfig", marker = "python_full_version >= '3.12'" },
-    { name = "google-crc32c", marker = "python_full_version >= '3.12'" },
-    { name = "numcodecs", marker = "python_full_version >= '3.12'" },
-    { name = "numpy", marker = "python_full_version >= '3.12'" },
-    { name = "packaging", marker = "python_full_version >= '3.12'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/db/27/8f391a4304f503ab6f4df6e1724380ea2e35e78a5d1ba973ba2b1347df5b/zarr-3.2.0.tar.gz", hash = "sha256:5867fa8dd7910541075531368c8eaa6f35957ab5413c68c168830e83948665ed", size = 454948, upload-time = "2026-04-30T22:18:03.074Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/9e/2e99d08824f300046eba83b480d6be17f771f57eed80dd7c162381cbe4de/zarr-3.2.0-py3-none-any.whl", hash = "sha256:c693bd4ae24328f242e47e9e1ced221e919d9f62cad71030fd059e398320e555", size = 318784, upload-time = "2026-04-30T22:18:01.13Z" },
 ]
 
 [[package]]
