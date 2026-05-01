@@ -90,6 +90,15 @@ Installation for slide readers
             with os.add_dll_directory("path/to/openslide/bin")):
                 import openslide
 
+    .. tab-item:: fastslide
+
+        `FastSlide <https://github.com/NKI-AI/fastslide>`_ is a high-performance
+        whole-slide image reader built on top of OpenSlide.
+
+        .. code-block:: bash
+
+            pip install fastslide
+
     .. tab-item:: BioFormats
 
         `BioFormats <https://www.openmicroscopy.org/bio-formats/>`_ is a standalone Java library

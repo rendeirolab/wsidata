@@ -175,6 +175,7 @@ class ReaderBase(ABC):
     name: str = "ReaderBase"
     pkg_namespaces: str | List[str]
     pkgs: str | List[str] | None = None
+    extensions: tuple[str, ...] | None = None
     _reader = None
     _associated_images: AssociatedImages = None
 

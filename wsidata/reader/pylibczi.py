@@ -51,6 +51,7 @@ class PylibCZIReader(ReaderBase):
     name = "pylibczi"
     pkg_namespaces = "pylibCZIrw"
     pkgs = ["pylibCZIrw"]
+    extensions = (".czi",)
 
     # Number of synthetic pyramid levels to expose (1x, 2x, 4x, 8x, 16x, 32x).
     _N_LEVELS = 6
