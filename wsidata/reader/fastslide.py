@@ -21,6 +21,25 @@ class FastSlideReader(ReaderBase):
 
     name = "fastslide"
     pkg_namespaces = "fastslide"
+    extensions = (
+        ".svs",
+        ".ndpi",
+        ".vms",
+        ".vmu",
+        ".scn",
+        ".mrxs",
+        ".tiff",
+        ".tif",
+        ".ome.tiff",
+        ".ome.tif",
+        ".ome.zarr",
+        ".svslide",
+        ".bif",
+        ".isyntax",
+        ".dcm",
+        ".dicom",
+        ".czi",
+    )
 
     def __init__(
         self,

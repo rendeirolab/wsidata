@@ -23,6 +23,21 @@ class OpenSlideReader(ReaderBase):
     name = "openslide"
     pkg_namespaces = "openslide"
     pkgs = ["openslide-python", "openslide-bin"]
+    extensions = (
+        ".svs",
+        ".ndpi",
+        ".vms",
+        ".vmu",
+        ".scn",
+        ".mrxs",
+        ".tiff",
+        ".tif",
+        ".svslide",
+        ".bif",
+        ".czi",
+        ".dcm",
+        ".dicom",
+    )
 
     def __init__(
         self,

@@ -26,6 +26,7 @@ class CuCIMReader(ReaderBase):
 
     name = "cucim"
     pkg_namespaces = "cucim"
+    extensions = (".svs", ".tiff", ".tif")
 
     def __init__(
         self,

@@ -19,6 +19,7 @@ class SpatialDataImage2DReader(ReaderBase):
     """
 
     name = "spatialdata"
+    extensions = ()
 
     def __init__(
         self,

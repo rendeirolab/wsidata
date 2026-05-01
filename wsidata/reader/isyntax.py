@@ -28,6 +28,7 @@ class ISyntaxReader(ReaderBase):
     name = "isyntax"
     pkg_namespaces = "isyntax"
     pkgs = ["pyisyntax"]
+    extensions = (".isyntax",)
 
     def __init__(
         self,

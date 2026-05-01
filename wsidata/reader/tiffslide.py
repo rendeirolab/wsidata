@@ -18,6 +18,7 @@ class TiffSlideReader(OpenSlideReader):
 
     name = "tiffslide"
     pkg_namespaces = "tiffslide"
+    extensions = (".svs", ".ndpi", ".tiff", ".tif", ".scn", ".bif", ".qptiff")
 
     def create_reader(self):
         from tiffslide import TiffSlide
