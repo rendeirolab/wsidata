@@ -225,8 +225,6 @@ class TestConcatFeatureAnnData:
         )
 
         # Mock: first call succeeds, second call returns None (simulating skip)
-        # NOTE: The current implementation has a bug - it doesn't filter None values
-        # This causes concat() to fail when there are None values in the adatas dict
         mock_concat_feature_anndata.side_effect = [mock_adata, None]
 
         # Create slides table with two store paths
@@ -239,19 +237,21 @@ class TestConcatFeatureAnnData:
             }
         )
 
-        # Test concat_feature_anndata with error='skip'
-        # The current implementation will fail because it doesn't filter None values
-        with pytest.raises(AttributeError, match="'NoneType' object has no attribute"):
-            io.concat_feature_anndata(
-                slides_table=slides_table,
-                feature_key="test_feature",
-                tile_key="tiles",
-                store_col="store_path",
-                error="skip",
-            )
+        # None results are filtered out; only the successful slide is concatenated
+        result = io.concat_feature_anndata(
+            slides_table=slides_table,
+            feature_key="test_feature",
+            tile_key="tiles",
+            store_col="store_path",
+            error="skip",
+        )
 
         # Check that _concat_feature_anndata was called twice
         assert mock_concat_feature_anndata.call_count == 2
+        # Only the successful slide should be in the result
+        assert isinstance(result, AnnData)
+        assert result.X.shape[0] == n_obs
+        assert result.X.shape[1] == n_vars
 
     @patch("wsidata.io._wsi._concat_feature_anndata")
     def test_concat_feature_anndata_multiple_slides(
@@ -309,14 +309,17 @@ class TestConcatFeatureAnnData:
         # Create empty slides table
         slides_table = pd.DataFrame({"slide_id": [], "store_path": []})
 
-        # Test concat_feature_anndata with empty table - should handle gracefully
-        with pytest.raises(ValueError, match="No objects to concatenate"):
-            io.concat_feature_anndata(
+        # Empty table → no slides → returns empty AnnData with warning
+        with pytest.warns(UserWarning, match="No slides produced valid features"):
+            result = io.concat_feature_anndata(
                 slides_table=slides_table,
                 feature_key="test_feature",
                 tile_key="tiles",
                 store_col="store_path",
             )
+
+        assert isinstance(result, AnnData)
+        assert result.n_obs == 0
 
         # _concat_feature_anndata should not be called at all
         mock_concat_feature_anndata.assert_not_called()
@@ -358,7 +361,7 @@ class TestConcatFeatureAnnData:
         mock_track.assert_called_once()
         call_kwargs = mock_track.call_args[1]
         assert not call_kwargs["disable"]
-        assert "Aggregation of 1 slides" in call_kwargs["description"]
+        assert "Concatenation of 1 slides" in call_kwargs["description"]
 
         # Check result
         assert isinstance(result, AnnData)

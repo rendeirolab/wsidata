@@ -125,14 +125,14 @@ class SpatialDataImage2DReader(ReaderBase):
         return data.transpose(1, 2, 0)
 
     def get_thumbnail(self, size, **kwargs):
-        sx, sy = self.properties.shape
-        if size > sx or size > sy:
+        height, width = self.properties.shape
+        if size > height or size > width:
             raise ValueError("Requested thumbnail size is larger than the image")
-        # The size is only the maximum size
-        if sx > sy:
-            size = (size, int(size * sy / sx))
+        # The size is only the maximum size; (height, width) convention
+        if height > width:
+            size = (size, int(size * width / height))
         else:
-            size = (int(size * sx / sy), size)
+            size = (int(size * height / width), size)
 
         # Check which level to return
         level_shape = self.properties.level_shape

@@ -224,8 +224,12 @@ class ReaderBase(ABC):
 
     @abstractmethod
     def get_region(self, x, y, width, height, level=0, **kwargs):
-        """Get a region from image with top-left corner
-        This should return a numpy array in xyc format
+        """Get a region from image with top-left corner.
+
+        x, y are always in level 0 coordinates.
+        width, height are at the specified pyramid level.
+
+        This should return a numpy array in yxc format.
         """
         ...
 

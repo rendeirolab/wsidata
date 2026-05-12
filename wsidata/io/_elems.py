@@ -57,7 +57,7 @@ def add_tissues(
 
 
 def add_tiles(wsidata, key, xys, tile_spec: TileSpec, tissue_ids, **kws):
-    # Tiles should be stored as polygon
+    # Tiles are stored as polygons in level 0 coordinates.
     # This allows easy query of which cells in which tiles
     w, h = tile_spec.base_width, tile_spec.base_height
     gdf = gpd.GeoDataFrame(

@@ -148,15 +148,15 @@ class ISyntaxReader(ReaderBase):
         return img
 
     def get_thumbnail(self, size, **kwargs):
-        sx, sy = self.properties.shape
-        if size > sx or size > sy:
+        height, width = self.properties.shape
+        if size > height or size > width:
             raise ValueError("Requested thumbnail size is larger than the image")
 
-        # The size is the maximum edge length
-        if sx > sy:
-            target_hw = (size, int(size * sy / sx))
+        # The size is the maximum edge length; target_hw is (height, width)
+        if height > width:
+            target_hw = (size, int(size * width / height))
         else:
-            target_hw = (int(size * sx / sy), size)
+            target_hw = (int(size * height / width), size)
 
         # Find a suitable level to minimize work, then resize to target.
         #

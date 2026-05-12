@@ -11,6 +11,14 @@ API Reference
     TileSpec
     SlideProperties
 
+.. currentmodule:: wsidata
+.. autosummary::
+    :toctree: _autogen
+    :nosignatures:
+
+    TileRequest
+    shapes2tiles
+
 
 .. grid:: 1
    :gutter: 2

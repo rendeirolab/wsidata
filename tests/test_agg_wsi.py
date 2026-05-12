@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -144,19 +144,20 @@ class TestAggWSI:
             {"slide_id": ["test_slide"], "store_path": [str(non_existent_path)]}
         )
 
-        # Test 1: When _agg_wsi returns None, agg_wsi should handle it gracefully
+        # Test 1: When _agg_wsi returns None, agg_wsi should return empty AnnData
         # Mock the _agg_wsi function to return None for non-existent files
         mock_agg_wsi.return_value = (None, None)
 
-        # When all slides return None features, np.vstack will raise ValueError
-        # because there are no arrays to concatenate
-        with pytest.raises(ValueError, match="need at least one array to concatenate"):
-            io.agg_wsi(
+        with pytest.warns(UserWarning, match="No slides produced valid features"):
+            result = io.agg_wsi(
                 slides_table=slides_table,
                 feature_key="test_feature",
                 store_col="store_path",
                 error="skip",
             )
+
+        assert isinstance(result, AnnData)
+        assert result.n_obs == 0
 
         # Check that _agg_wsi was called with the expected arguments
         mock_agg_wsi.assert_called_once()
@@ -243,25 +244,24 @@ class TestAggWSI:
             {"slide_id": ["test_slide"], "wsi_path": [str(wsi_path)]}
         )
 
-        # Test 1: When _agg_wsi returns None, agg_wsi should handle it gracefully
+        # Test 1: When _agg_wsi returns None, agg_wsi should return empty AnnData
         # Mock the _agg_wsi function to return None for non-existent files
         mock_agg_wsi.return_value = (None, None)
 
-        # When all slides return None features, np.vstack will raise ValueError
-        # because there are no arrays to concatenate
-        with pytest.raises(ValueError, match="need at least one array to concatenate"):
-            io.agg_wsi(
+        with pytest.warns(UserWarning, match="No slides produced valid features"):
+            result = io.agg_wsi(
                 slides_table=slides_table,
                 feature_key="test_feature",
                 wsi_col="wsi_path",
                 error="skip",
             )
 
+        assert isinstance(result, AnnData)
+        assert result.n_obs == 0
+
         # Check that _agg_wsi was called with the expected arguments
         mock_agg_wsi.assert_called_once()
         args, kwargs = mock_agg_wsi.call_args
-        # We can't directly compare Path objects because they might have different representations
-        # on different systems, so we check that the path ends with .zarr
         assert str(args[0]).endswith(".zarr")
         assert args[1] == "test_feature"
         assert args[2] == "tiles"  # default tile_key
@@ -271,8 +271,7 @@ class TestAggWSI:
         # Reset the mock for the next test
         mock_agg_wsi.reset_mock()
 
-        # For the multi-slide test, we need to be careful about how agg_wsi handles the results
-        # The issue is that the mask created in line 271 of _wsi.py doesn't match the length of slides_table
+        # Test multi-slide case where all slides return valid features
         # when some slides return None features
 
         # Let's test a simpler case where all slides return valid features

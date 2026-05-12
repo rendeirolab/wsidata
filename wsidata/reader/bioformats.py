@@ -107,8 +107,8 @@ class BioFormatsReader(ReaderBase):
 
     # Not working properly
     def get_thumbnail(self, size, **kwargs):
-        sx, sy = self.properties.shape
-        if size > sx or size > sy:
+        height, width = self.properties.shape
+        if size > height or size > width:
             raise ValueError("Requested thumbnail size is larger than the image")
         # Get the level that is closest to the target size, but always smaller
         level_shape = np.asarray(self.properties.level_shape)

@@ -67,14 +67,14 @@ class FastSlideReader(ReaderBase):
         return convert_image(img)
 
     def get_thumbnail(self, size, **kwargs):
-        sx, sy = self.properties.shape
-        if size > sx or size > sy:
+        height, width = self.properties.shape
+        if size > height or size > width:
             raise ValueError("Requested thumbnail size is larger than the image")
         # The size is only the maximum size
-        if sx > sy:
-            size = (size, int(size * sy / sx))
+        if height > width:
+            size = (size, int(size * width / height))
         else:
-            size = (int(size * sx / sy), size)
+            size = (int(size * height / width), size)
 
         img = self.reader.get_thumbnail(size)
         return convert_image(img)

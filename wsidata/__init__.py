@@ -6,7 +6,7 @@ __version__ = version
 
 import wsidata.dataset as dataset
 
-from ._model import TileSpec, WSIData
+from ._model import TileRequest, TileSpec, WSIData, shapes2tiles
 from ._normalizer import ColorNormalizer
 from .accessors import (
     DatasetAccessor,
@@ -25,6 +25,8 @@ __all__ = [
     "READERS",
     "WSIData",
     "TileSpec",
+    "TileRequest",
+    "shapes2tiles",
     "register_wsidata_accessor",
     "FetchAccessor",
     "IterAccessor",

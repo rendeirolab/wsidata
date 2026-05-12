@@ -63,14 +63,14 @@ class CuCIMReader(ReaderBase):
         if "thumbnail" in self.associated_images:
             return np.asarray(self.associated_images["thumbnail"])
 
-        sx, sy = self.properties.shape
-        if size > sx or size > sy:
+        height, width = self.properties.shape
+        if size > height or size > width:
             raise ValueError("Requested thumbnail size is larger than the image")
         # The size is only the maximum size
-        if sx > sy:
-            size = (size, int(size * sy / sx))
+        if height > width:
+            size = (size, int(size * width / height))
         else:
-            size = (int(size * sx / sy), size)
+            size = (int(size * height / width), size)
 
         img = self.get_level(-1)
         img = Image.fromarray(img).thumbnail(size, Image.Resampling.LANCZOS)
