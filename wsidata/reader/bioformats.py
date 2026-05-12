@@ -2,6 +2,7 @@
 # https://github.com/AllenCellModeling/aicsimageio/blob/main/aicsimageio/readers/bioformats_reader.py
 from dataclasses import dataclass
 from pathlib import Path
+from time import sleep
 from typing import List, Union
 
 import numpy as np
@@ -132,8 +133,25 @@ class BioFormatsReader(ReaderBase):
         import jpype
         import scyjava
 
-        scyjava.config.endpoints.append("ome:formats-gpl")
-        scyjava.start_jvm()
+        if "ome:formats-gpl" not in scyjava.config.endpoints:
+            scyjava.config.endpoints.append("ome:formats-gpl")
+        scyjava.config.add_repositories(
+            {
+                "ome.releases": "https://artifacts.openmicroscopy.org/artifactory/ome.releases/"
+            }
+        )
+
+        # Retry on transient Maven artifact resolution failures
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if not jpype.isJVMStarted():
+                    scyjava.start_jvm()
+                break
+            except RuntimeError:
+                if attempt == max_retries - 1:
+                    raise
+                sleep(2**attempt)
 
         # Suppress the output from Java
         System = jpype.JPackage("java").lang.System
