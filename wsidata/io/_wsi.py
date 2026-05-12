@@ -49,7 +49,8 @@ def open_wsi(
         This is useful when you want to store all zarr files in a specific location.
         Pass ``None`` to skip persistence (no zarr store will be set).
     reader : str, optional
-        Reader to use, by default "auto", to check avaiable readers: `print(wsidata.READERS)`
+        Reader to use, by default ``None``. Passing ``None`` enables automatic reader
+        selection. To check avaiable readers: `print(wsidata.READERS)`
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional

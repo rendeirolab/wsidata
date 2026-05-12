@@ -72,9 +72,9 @@ class FastSlideReader(ReaderBase):
             raise ValueError("Requested thumbnail size is larger than the image")
         # The size is only the maximum size
         if height > width:
-            size = (size, int(size * width / height))
+            size = (int(size * width / height), size)
         else:
-            size = (int(size * height / width), size)
+            size = (size, int(size * height / width))
 
         img = self.reader.get_thumbnail(size)
         return convert_image(img)

@@ -1,5 +1,3 @@
-from importlib.util import find_spec
-
 import numpy as np
 import pytest
 import torch
@@ -95,10 +93,13 @@ class TestDatasetAccessor:
         assert isinstance(item, (list, tuple)) or item.ndim >= 1
 
     def test_ds_tile_feature_graph(self, wsidata):
-        sp = find_spec("scipy.sparse")
-        pyg = find_spec("torch_geometric")
-        if sp is not None or pyg is not None:
-            pytest.skip("torch_geometric or scipy not installed")
+        sp = pytest.importorskip(
+            "scipy.sparse", reason="requires scipy and torch_geometric to be installed"
+        )
+        pytest.importorskip(
+            "torch_geometric",
+            reason="requires scipy and torch_geometric to be installed",
+        )
 
         # Get the feature data
         feature_key = "resnet50"

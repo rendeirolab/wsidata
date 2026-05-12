@@ -808,8 +808,8 @@ class IterAccessor(object):
             The channel format of the image.
         image_size : int or tuple of (int, int), optional
             The desired output image size. If tile_spec exists, this overrides
-            the output size. If tile_spec does not exist, this is used to
-            create one on the fly.
+            the output size. If tile_spec does not exist, this is used when
+            deriving tiles from shapes on the fly.
         annot_key : str, default: None
             The key to the annotation table in :bdg-danger:`shapes` slot.
         annot_names : str or array of str, default: None

@@ -9,3 +9,15 @@ IO and Utilities Functions
     open_wsi
     agg_wsi
     concat_feature_anndata
+
+
+Tile-related Functions
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: wsidata
+.. autosummary::
+    :toctree: _autogen
+    :nosignatures:
+
+    TileRequest
+    shapes2tiles

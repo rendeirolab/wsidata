@@ -128,7 +128,7 @@ class TileSpec:
             f"border: 0;"
         )
         html = f"""
-        <div style="display: flex; align-item: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
             <div style='{container_style}'>
                 <div style='{tile_style}; top: 0px; left: 0px; border-color: #C68FE6'>
                     <p style='padding-left: 3pt'>Tile 1</p>
@@ -417,6 +417,28 @@ def _preprocess_tile_params(
 
 
 class TileRequest(NamedTuple):
+    """A specification for reading a single tile from the WSI.
+
+    Produced by :func:`shapes2tiles` to describe how to read each tile
+    from the slide pyramid.
+
+    Parameters
+    ----------
+    x : int
+        The x-coordinate of the tile's top-left corner at level 0.
+    y : int
+        The y-coordinate of the tile's top-left corner at level 0.
+    level : int
+        The pyramid level to read from.
+    width : int
+        The width of the region to read, in pixels at the given *level*.
+    height : int
+        The height of the region to read, in pixels at the given *level*.
+    dsize : tuple of (int, int) or None
+        Target ``(width, height)`` for resizing after read (matches
+        ``cv2.resize`` convention).  ``None`` means no resize needed.
+    """
+
     x: int
     y: int
     level: int
@@ -444,8 +466,10 @@ def shapes2tiles(
         Key into ``wsi.shapes`` for the shape collection.
     image_size : tuple of (int, int), optional
         Desired output ``(width, height)``.  Only used when no TileSpec is
-        available.  When given, the best pyramid level is chosen so the read
-        region is closest to *image_size* and then resized.
+        available. When given, the best pyramid level is chosen so the read
+        region is closest to *image_size*, and the returned
+        :class:`TileRequest` is populated with ``dsize=image_size`` for later
+        resizing by the code that executes the request.
 
     Returns
     -------
@@ -488,8 +512,11 @@ def shapes2tiles(
     )
 
     bounds_arr = shapes.bounds[["minx", "miny", "maxx", "maxy"]].to_numpy()
-    widths = bounds_arr[:, 2] - bounds_arr[:, 0]
-    heights = bounds_arr[:, 3] - bounds_arr[:, 1]
+    # Floor origin, ceil far corner so the integer region fully covers the shape
+    x0 = np.floor(bounds_arr[:, 0]).astype(int)
+    y0 = np.floor(bounds_arr[:, 1]).astype(int)
+    widths = np.ceil(bounds_arr[:, 2]).astype(int) - x0
+    heights = np.ceil(bounds_arr[:, 3]).astype(int) - y0
 
     # Guard against degenerate shapes (zero or negative extent)
     if np.any(widths <= 0) or np.any(heights <= 0):
@@ -501,11 +528,6 @@ def shapes2tiles(
 
     if image_size is not None:
         level_downsample = np.asarray(wsi.properties.level_downsample)
-        # if not np.all(np.diff(level_downsample) >= 0):
-        #     raise ValueError(
-        #         "level_downsample is not sorted in ascending order; "
-        #         "cannot determine optimal read level."
-        #     )
 
         breakpoints_width = level_downsample * image_size[0]
         breakpoints_height = level_downsample * image_size[1]
@@ -520,8 +542,8 @@ def shapes2tiles(
 
         return [
             TileRequest(
-                x=int(bounds_arr[i, 0]),
-                y=int(bounds_arr[i, 1]),
+                x=int(x0[i]),
+                y=int(y0[i]),
                 level=int(levels[i]),
                 width=int(ops_widths[i]),
                 height=int(ops_heights[i]),
@@ -531,15 +553,13 @@ def shapes2tiles(
         ]
     else:
         # No target image_size: read at level 0, full shape extent, no resize
-        int_widths = np.round(widths).astype(int)
-        int_heights = np.round(heights).astype(int)
         return [
             TileRequest(
-                x=int(bounds_arr[i, 0]),
-                y=int(bounds_arr[i, 1]),
+                x=int(x0[i]),
+                y=int(y0[i]),
                 level=0,
-                width=int(int_widths[i]),
-                height=int(int_heights[i]),
+                width=int(widths[i]),
+                height=int(heights[i]),
                 dsize=None,
             )
             for i in range(len(bounds_arr))
