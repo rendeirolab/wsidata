@@ -13,6 +13,7 @@ class DatasetAccessor(object):
         transform=None,
         target_transform=None,
         color_norm=None,
+        image_size: int | tuple[int, int] = None,
     ):
         """
         Create a TileImagesDataset from the current object.
@@ -28,6 +29,9 @@ class DatasetAccessor(object):
         target_transform: callable
             The transformation for the target.
         color_norm: str
+        image_size : int or tuple of (int, int), optional
+            Hint for optimal pyramid level selection via :func:`shapes2tiles`.
+            Does **not** resize the output — use *transform* for that.
 
         Returns
         -------
@@ -43,6 +47,7 @@ class DatasetAccessor(object):
             transform=transform,
             target_transform=target_transform,
             color_norm=color_norm,
+            image_size=image_size,
         )
 
     def tile_feature(

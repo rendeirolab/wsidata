@@ -28,7 +28,6 @@ def open_wsi(
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
     save_thumbnail: bool = True,
-    **kwargs,
 ):
     """Open a whole slide image.
 
@@ -39,20 +38,23 @@ def open_wsi(
 
     Parameters
     ----------
-    wsi : str or Path
-        The URL to whole slide image.
+    wsi : str or Path or SpatialData
+        The path to whole slide image, or an existing SpatialData object.
+        When passing a SpatialData object, ``image_key`` must be provided.
     store : str, optional
         The backed file path, by default will create
         a zarr file with the same name as the slide file.
         You can either supply a file path or a directory.
         If a directory is supplied, the zarr file will be created in that directory.
         This is useful when you want to store all zarr files in a specific location.
+        Pass ``None`` to skip persistence (no zarr store will be set).
     reader : str, optional
-        Reader to use, by default "auto", to check avaiable readers: `print(wsidata.READERS)`
+        Reader to use, by default ``None``. Passing ``None`` enables automatic reader
+        selection. To check avaiable readers: `print(wsidata.READERS)`
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
-        The key to store the whole slide image, by default "wsi_thumbnail".
+        The key to store the whole slide image, by default "wsi".
         If the wsi is a SpatialData object, the image from this key will be used as the whole slide image.
     save_images : bool, optional, default: True
         Whether to save the whole slide image to on the disk.
@@ -82,24 +84,43 @@ def open_wsi(
         >>> wsi = open_wsi("slide.svs")
 
     """
-    # Check if the slide is a file or URL
+    # -- SpatialData input path --
     if isinstance(wsi, SpatialData):
         if image_key is None:
             raise ValueError(
                 "When reading from SpatialData, image_key must be provided."
             )
+        # Warn about ignored parameters
+        _ignored = []
+        if store != "auto":
+            _ignored.append("store")
+        if reader is not None:
+            _ignored.append("reader")
+        if attach_images:
+            _ignored.append("attach_images")
+        if not attach_thumbnail:
+            _ignored.append("attach_thumbnail")
+        if _ignored:
+            warnings.warn(
+                f"When wsi is a SpatialData object, the following parameters "
+                f"are ignored: {', '.join(_ignored)}.",
+                UserWarning,
+                stacklevel=find_stack_level(),
+            )
+
         from ..reader import SpatialDataImage2DReader
 
         reader_instance = SpatialDataImage2DReader(wsi[image_key], key=image_key)
         return WSIData.from_spatialdata(wsi, reader_instance)
-    else:
-        sdata = None
-        wsi = Path(wsi)
-        if not wsi.exists():
-            raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
-        # Early attempt with reader
-        reader_instance = READERS.try_open(wsi, reader=reader)
 
+    # -- File path input --
+    sdata = None
+    wsi = Path(wsi)
+    if not wsi.exists():
+        raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
+
+    reader_instance = READERS.try_open(wsi, reader=reader)
+    try:
         # Check if the image is not pyramidal and too large
         if reader_instance.properties.n_level <= 1:
             height, width = reader_instance.properties.shape
@@ -147,20 +168,31 @@ def open_wsi(
                 if not save_images:
                     exclude_elements.append(image_key)
 
+        # Warn if image_key and thumbnail_key would collide
+        if attach_images and attach_thumbnail:
+            effective_image_key = image_key if image_key is not None else "wsi"
+            if effective_image_key == thumbnail_key:
+                warnings.warn(
+                    f"image_key and thumbnail_key are both '{thumbnail_key}'. "
+                    f"The thumbnail will overwrite the full image in the images slot.",
+                    UserWarning,
+                    stacklevel=find_stack_level(),
+                )
+
         if attach_thumbnail:
             if sdata is None or thumbnail_key not in sdata:
                 max_thumbnail_size = min(reader_instance.properties.shape)
                 if thumbnail_size > max_thumbnail_size:
                     thumbnail_size = max_thumbnail_size
                 thumbnail = reader_instance.get_thumbnail(thumbnail_size)
-                thumbnail_shape = thumbnail.shape
-                origin_shape = reader_instance.properties.shape
-                scale_x, scale_y = (
-                    origin_shape[0] / thumbnail_shape[0],
-                    origin_shape[1] / thumbnail_shape[1],
-                )
 
                 if thumbnail is not None:
+                    thumbnail_shape = thumbnail.shape  # numpy (H, W, C)
+                    origin_h, origin_w = reader_instance.properties.shape
+                    # x-axis = width, y-axis = height
+                    scale_x = origin_w / thumbnail_shape[1]
+                    scale_y = origin_h / thumbnail_shape[0]
+
                     sdata_images[thumbnail_key] = Image2DModel.parse(
                         np.asarray(thumbnail).transpose(2, 0, 1),
                         dims=("c", "y", "x"),
@@ -181,7 +213,20 @@ def open_wsi(
         slide_data.set_exclude_elements(exclude_elements)
         if store is not None:
             slide_data.set_wsi_store(store)
+    except Exception:
+        reader_instance.detach_reader()
+        raise
     return slide_data
+
+
+def _resolve_backed_files(slides_table, wsi_col, store_col):
+    """Resolve backed file paths from slides_table columns."""
+    if store_col is not None:
+        return slides_table[store_col].astype(str)
+    elif wsi_col is not None:
+        return slides_table[wsi_col].apply(lambda x: str(Path(x).with_suffix(".zarr")))
+    else:
+        raise ValueError("Either wsi_col or store_col must be provided.")
 
 
 def agg_wsi(
@@ -236,14 +281,7 @@ def agg_wsi(
             agg_by = [agg_by]
         agg_key = f"agg_{'_'.join(agg_by)}"
 
-    if store_col is not None:
-        backed_files = slides_table[store_col]
-    elif wsi_col is not None:
-        backed_files = slides_table[wsi_col].apply(
-            lambda x: Path(x).with_suffix(".zarr")
-        )
-    else:
-        raise ValueError("Either wsi_col or store_col must be provided.")
+    backed_files = _resolve_backed_files(slides_table, wsi_col, store_col)
 
     slides_table = slides_table.copy()
     slides_table["_job_id"] = np.arange(len(slides_table))
@@ -252,39 +290,52 @@ def agg_wsi(
     with ThreadPoolExecutor() as executor:
         for job_id, backed_f in enumerate(backed_files):
             job = executor.submit(
-                _agg_wsi, backed_f, feature_key, tile_key, agg_key, error
+                _agg_wsi, str(backed_f), feature_key, tile_key, agg_key, error
             )
             job.job_id = job_id
             jobs.append(job)
 
-        # Store results with their job_ids to maintain original order
-        features_with_ids = []
-        features_annos = []
+        # Collect results keyed by job_id
+        # Use a dict indexed by job_id so we can reconstruct input order
+        results = {}
         for job in track(
             as_completed(jobs),
             total=len(jobs),
             disable=not pbar,
             description=f"Aggregation of {len(jobs)} slides",
         ):
-            feature, feature_annos = job.result()
-            if feature is not None:
-                # Store feature with its job_id to preserve original order
-                features_with_ids.append((job.job_id, feature))
-                # we will have feature_annos only if aggregation not at slide level
-                if feature_annos is not None:
-                    feature_annos["_job_id"] = job.job_id
-                    features_annos.append(feature_annos)
+            results[job.job_id] = job.result()
 
-        # Sort features by job_id to restore original order
-        features_with_ids.sort(key=lambda x: x[0])
-        features = [feature for _, feature in features_with_ids]
+    # Rebuild in original input order, filtering out failed slides
+    succeeded_ids = []
+    features = []
+    features_annos = []
+    for job_id in range(len(backed_files)):
+        feature, feature_annos = results[job_id]
+        if feature is None:
+            continue
+        succeeded_ids.append(job_id)
+        features.append(feature)
+        if feature_annos is not None:
+            feature_annos = feature_annos.copy()
+            feature_annos["_job_id"] = job_id
+            features_annos.append(feature_annos)
 
-    mask = np.asarray([r is not None for r in features])
+    if len(features) == 0:
+        warnings.warn(
+            "No slides produced valid features. Returning empty AnnData.",
+            UserWarning,
+            stacklevel=find_stack_level(),
+        )
+        slides_table = slides_table.drop(columns="_job_id")
+        return AnnData(obs=slides_table.iloc[:0])
+
     X = np.vstack(features)
-    slides_table = slides_table.loc[mask]
+    # Filter slides_table to only succeeded slides (positional, not label-based)
+    slides_table = slides_table.iloc[succeeded_ids].copy()
+
     if len(features_annos) > 0:
         annos = pd.concat(features_annos, ignore_index=True)
-        # Add job_id to the slides table
         slides_table = pd.merge(slides_table, annos, on="_job_id", how="left")
 
     slides_table = slides_table.drop(columns="_job_id")
@@ -408,54 +459,62 @@ def concat_feature_anndata(
     """
     from anndata import concat
 
-    if store_col is not None:
-        backed_files = slides_table[store_col]
-    elif wsi_col is not None:
-        backed_files = slides_table[wsi_col].apply(
-            lambda x: Path(x).with_suffix(".zarr")
-        )
-    else:
-        raise ValueError("Either wsi_col or store_col must be provided.")
-
-    slides_table = slides_table.copy()
-    slides_table["_job_id"] = np.arange(len(slides_table))
+    backed_files = _resolve_backed_files(slides_table, wsi_col, store_col)
 
     jobs = []
     with ThreadPoolExecutor() as executor:
         for job_id, backed_f in enumerate(backed_files):
             job = executor.submit(
-                _concat_feature_anndata, backed_f, feature_key, tile_key, error
+                _concat_feature_anndata, str(backed_f), feature_key, tile_key, error
             )
             job.job_id = job_id
             jobs.append(job)
 
-        adatas = {}
+        # Collect results keyed by job_id
+        results = {}
         for job in track(
             as_completed(jobs),
             total=len(jobs),
             disable=not pbar,
-            description=f"Aggregation of {len(jobs)} slides",
+            description=f"Concatenation of {len(jobs)} slides",
         ):
-            adatas[job.job_id] = job.result()
+            results[job.job_id] = job.result()
 
-        if as_anncollection:
-            from anndata.experimental import AnnCollection
+    # Rebuild in original input order, filtering out None results
+    adatas = {}
+    for job_id in range(len(backed_files)):
+        adata = results[job_id]
+        if adata is not None:
+            adatas[job_id] = adata
 
-            return AnnCollection(
-                adatas,
-                join_obs=None,
-                join_vars=None,
-                join_obsm=None,
-                label="slide_name",
-                index_unique="-",
-            )
-        else:
-            return concat(
-                adatas,
-                join="outer",
-                label="slide_name",
-                index_unique="-",
-            )
+    if len(adatas) == 0:
+        warnings.warn(
+            "No slides produced valid features. Returning empty AnnData.",
+            UserWarning,
+            stacklevel=find_stack_level(),
+        )
+        from anndata import AnnData
+
+        return AnnData()
+
+    if as_anncollection:
+        from anndata.experimental import AnnCollection
+
+        return AnnCollection(
+            adatas,
+            join_obs=None,
+            join_vars=None,
+            join_obsm=None,
+            label="slide_name",
+            index_unique="-",
+        )
+    else:
+        return concat(
+            adatas,
+            join="outer",
+            label="slide_name",
+            index_unique="-",
+        )
 
 
 def _concat_feature_anndata(f, feature_key, tile_key, error="raise"):

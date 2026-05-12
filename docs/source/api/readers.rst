@@ -31,6 +31,9 @@ To retrieve a reader class
     ReaderBase
     OpenSlideReader
     TiffSlideReader
+    FastSlideReader
     BioFormatsReader
+    CuCIMReader
+    ISyntaxReader
     PylibCZIReader
     SpatialDataImage2DReader

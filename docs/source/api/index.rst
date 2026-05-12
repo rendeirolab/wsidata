@@ -11,7 +11,6 @@ API Reference
     TileSpec
     SlideProperties
 
-
 .. grid:: 1
    :gutter: 2
 

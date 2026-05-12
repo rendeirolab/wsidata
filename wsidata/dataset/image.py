@@ -2,13 +2,22 @@ from functools import cached_property
 
 from torch.utils.data import Dataset
 
-from .._model import WSIData
+from .._model import WSIData, shapes2tiles
 
 
 class TileImagesDataset(Dataset):
     """
     Dataset for tiles from the whole slide image.
 
+    Uses :func:`shapes2tiles` to resolve tile read specifications,
+    supporting both uniform grids (with :class:`TileSpec`) and
+    arbitrary shape collections.
+
+    .. note::
+        ``image_size`` is used **only** for pyramid level selection — the
+        reader picks the closest level whose native resolution is ≥ the
+        requested size.  No resize is performed after reading; add a
+        ``Resize`` step in *transform* if you need exact output dimensions.
 
     Parameters
     ----------
@@ -18,11 +27,15 @@ class TileImagesDataset(Dataset):
     target_key : str
         The key of the target table.
     transform: callable
-        The transformation for the input tiles.
+        The transformation for the input tiles.  Use this to resize,
+        augment, or convert tiles (e.g. ``torchvision.transforms.v2``).
     target_transform: callable
         The transformation for the target.
     color_norm: str
         The color normalization method.
+    image_size : int or tuple of (int, int), optional
+        Hint for optimal pyramid level selection via :func:`shapes2tiles`.
+        Does **not** resize the output — use *transform* for that.
 
     Returns
     -------
@@ -38,16 +51,32 @@ class TileImagesDataset(Dataset):
         transform=None,
         color_norm=None,
         target_transform=None,
+        image_size: int | tuple[int, int] = None,
     ):
         # Do not assign wsi to self to avoid pickling
-        tiles = wsi[key]
-        self.tiles = tiles.bounds[["minx", "miny"]].to_numpy()
-        self.spec = wsi.tile_spec(key)
+        tiles_gdf = wsi[key]
         self.color_norm = color_norm
+
+        # Resolve tile read specs via shapes2tiles (same as iter.tile_images)
+        # image_size only affects pyramid level selection, no resize applied
+        self._tile_requests = shapes2tiles(wsi, key, image_size=image_size)
+
+        # Tile coordinates at level 0 (from shape bounds)
+        bounds = tiles_gdf.bounds
+        self._minx = bounds["minx"].to_numpy()
+        self._miny = bounds["miny"].to_numpy()
+        self._maxx = bounds["maxx"].to_numpy()
+        self._maxy = bounds["maxy"].to_numpy()
+
+        # tissue_id per tile (if available)
+        if "tissue_id" in tiles_gdf.columns:
+            self.tissue_ids = tiles_gdf["tissue_id"].to_numpy()
+        else:
+            self.tissue_ids = None
 
         self.targets = None
         if target_key is not None:
-            self.targets = tiles[target_key].to_numpy()
+            self.targets = tiles_gdf[target_key].to_numpy()
         self.transform = transform
         self.target_transform = target_transform
 
@@ -69,28 +98,50 @@ class TileImagesDataset(Dataset):
             return lambda x: x
 
     def __len__(self):
-        return len(self.tiles)
+        return len(self._tile_requests)
 
     def __getitem__(self, idx):
-        x, y = self.tiles[idx]
+        tile_req = self._tile_requests[idx]
+
+        # Read region at optimal level determined by shapes2tiles
+        # No resize — user's transform handles final sizing
         tile = self.reader.get_region(
-            x, y, self.spec.ops_width, self.spec.ops_height, level=self.spec.ops_level
+            tile_req.x,
+            tile_req.y,
+            tile_req.width,
+            tile_req.height,
+            level=tile_req.level,
         )
-        tile = self.reader.resize_img(tile, dsize=(self.spec.width, self.spec.height))
+
         tile = self._cn_func(tile)
+
         if self.transform:
             tile = self.transform(tile)
+
+        # Downsample: ratio of level-0 extent to read pixel size
+        # (computed from read dimensions, before transform)
+        tile_w_base = self._maxx[idx] - self._minx[idx]
+        downsample = tile_w_base / tile_req.width if tile_req.width > 0 else 1.0
+
+        x = int(self._minx[idx])
+        y = int(self._miny[idx])
+        tissue_id = int(self.tissue_ids[idx]) if self.tissue_ids is not None else None
+
+        result = {
+            "image": tile,
+            "x": x,
+            "y": y,
+            "tissue_id": tissue_id,
+            "downsample": downsample,
+        }
+
         if self.targets is not None:
             tile_target = self.targets[idx]
             if self.target_transform:
                 tile_target = self.target_transform(tile_target)
-            return {
-                "image": tile,
-                "target": tile_target,
-                "x": int(x),
-                "y": int(y),
-            }
-        return {"image": tile, "x": int(x), "y": int(y)}
+            result["target"] = tile_target
+
+        return result
 
 
 class TileImageDiskDataset(Dataset):

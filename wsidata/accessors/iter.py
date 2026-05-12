@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import io
 import re
-import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Dict, Generator, List, Literal, Sequence, Tuple
 
@@ -15,6 +14,8 @@ from shapely.affinity import scale, translate
 
 if TYPE_CHECKING:
     from .._model import WSIData
+
+from .._model.tile import shapes2tiles
 
 
 def _get_cn_func(color_norm):
@@ -182,7 +183,7 @@ class TissueContour:
                 <div {REPR_BOX_STYLE}>
                     <strong style="font-size: 1.1em; color: #C68FE6;">TissueContour</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
                         {_html_attributes(self, self._attrs, masked_attrs=["shape", "contour", "holes"])}
                         {svg_shape}
                     </div>
@@ -255,6 +256,8 @@ class TissueImage(TissueContour):
     ----------
     image : :class:`np.ndarray <numpy.ndarray>`
         The tissue image.
+    downsample : float
+        The downsample factor of the image relative to level 0.
     mask : :class:`np.ndarray <numpy.ndarray>`
         The tissue mask.
     masked_image : :class:`np.ndarray <numpy.ndarray>`
@@ -267,15 +270,15 @@ class TissueImage(TissueContour):
         tissue_id,
         shape,
         image,
+        downsample: float = 1.0,
         format: Literal["cyx", "yxc"] = "yxc",
         mask_bg: int = None,
-        downsample=1.0,
     ):
         super().__init__(tissue_id, shape)
         self._image = image
+        self.downsample = downsample
         self.format = format
         self.mask_bg = mask_bg
-        self.downsample = downsample
 
     @property
     def image(self):
@@ -330,6 +333,7 @@ class TissueImage(TissueContour):
         "y",
         "width",
         "height",
+        "downsample",
         "image",
         "mask",
         "masked_image",
@@ -353,7 +357,7 @@ class TissueImage(TissueContour):
                 <div {REPR_BOX_STYLE}>
                     <strong style="font-size: 1.1em; color: #C68FE6;">TissueImage</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
                         {
             _html_attributes(
                 self,
@@ -368,8 +372,8 @@ class TissueImage(TissueContour):
                 ],
             )
         }
-                        <img src="data:image/png;base64,{self._html_thumbnail}" 
-                            style="width: 130px; border-radius: 8px;">
+                        <img src="data:image/png;base64,{self._html_thumbnail}"
+                            style="max-width: 130px; height: auto; border-radius: 8px; flex-shrink: 0;">
                     </div>
                 </div>
                 """
@@ -420,6 +424,8 @@ class TileImage:
         The width of the tile image.
     height : int
         The height of the tile image.
+    downsample : float
+        The downsample factor of the image relative to level 0.
     tissue_id : int
         The tissue id.
     image : :class:`np.ndarray <numpy.ndarray>`
@@ -441,6 +447,7 @@ class TileImage:
     x: int
     y: int
     image: np.ndarray
+    downsample: float
     tissue_id: int | None = None
     annot_mask: np.ndarray | None = None
     annot_shapes: List[Tuple[Polygon, str, int]] | None = None
@@ -452,6 +459,7 @@ class TileImage:
         x,
         y,
         image,
+        downsample: float = 1.0,
         tissue_id=None,
         annot_mask=None,
         annot_shapes=None,
@@ -460,6 +468,7 @@ class TileImage:
         self.id = id
         self.x = x
         self.y = y
+        self.downsample = downsample
         self.tissue_id = tissue_id
         self.image = image
         self.annot_mask = annot_mask
@@ -497,6 +506,7 @@ class TileImage:
         "y",
         "width",
         "height",
+        "downsample",
         "tissue_id",
         "image",
         "annot_mask",
@@ -534,7 +544,7 @@ class TileImage:
                 <div {REPR_BOX_STYLE}>
                     <strong style="font-size: 1.1em; color: #C68FE6;">TileImage</strong>
                     <p style="margin-bottom: 0">Attributes:</p>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
                         {
             _html_attributes(
                 self,
@@ -549,7 +559,7 @@ class TileImage:
             )
         }
                         <img src="data:image/png;base64,{self._html_thumbnail}"
-                        style="width: 150px; border-radius: 8px;">
+                        style="max-width: 150px; height: auto; border-radius: 8px; flex-shrink: 0;">
                     </div>
 
                 </div>
@@ -694,6 +704,7 @@ class IterAccessor(object):
         format: str = "yxc",
         shuffle: bool = False,
         seed: int = 0,
+        image_size: Tuple[int, int] | None = None,
     ) -> Generator[TissueImage]:
         """Extract tissue images from the WSI.
 
@@ -745,6 +756,8 @@ class IterAccessor(object):
             w = int((maxx - minx) // level_downsample)
             h = int((maxy - miny) // level_downsample)
             img = self._obj.reader.get_region(x, y, w, h, level=level)
+            if image_size is not None:
+                img = self._obj.reader.resize_img(img, image_size)
             img = cn_func(img)
 
             # scale the shape
@@ -754,13 +767,19 @@ class IterAccessor(object):
                 yfact=1 / level_downsample,
                 origin=(0, 0),
             )
+            # Effective downsample: if image was further resized, account for it
+            if image_size is not None:
+                eff_ds = (maxx - minx) / img.shape[1]
+            else:
+                eff_ds = level_downsample
+
             yield TissueImage(
                 tissue_id=tissue_id,
                 shape=shape,
                 image=img,
+                downsample=eff_ds,
                 format=format,
                 mask_bg=mask_bg,
-                downsample=level_downsample,
             )
 
     def tile_images(
@@ -768,6 +787,7 @@ class IterAccessor(object):
         key,
         color_norm: str = None,
         format: str = "yxc",
+        image_size: int | tuple[int, int] = None,
         annot_key: str = None,
         annot_names: str | Sequence[str] = None,
         annot_labels: str | Dict[str, int] = None,
@@ -786,6 +806,10 @@ class IterAccessor(object):
             Color normalization method.
         format : str, {"yxc", "cyx"}, default: "yxc"
             The channel format of the image.
+        image_size : int or tuple of (int, int), optional
+            The desired output image size. If tile_spec exists, this overrides
+            the output size. If tile_spec does not exist, this is used when
+            deriving tiles from shapes on the fly.
         annot_key : str, default: None
             The key to the annotation table in :bdg-danger:`shapes` slot.
         annot_names : str or array of str, default: None
@@ -807,19 +831,13 @@ class IterAccessor(object):
         :class:`TileImage <wsidata.accessors.iter.TileImage>`
 
         """
-        tile_spec = self._obj.tile_spec(key)
+        # -- Resolve tiles via shapes2tiles ------------------------------------
+        tiles = shapes2tiles(self._obj, key, image_size=image_size)
+
+        # -- Annotation setup --------------------------------------------------
         create_annot_mask = False
         annot_tb = None
         annot_labels_dict = None
-        mask_size = None, None
-
-        if tile_spec is None:
-            warnings.warn(
-                f"Tile spec cannot be found for the {key}. It's not valid tiles. "
-                f"Tile image can still be extracted but may not be optimized."
-            )
-        else:
-            mask_size = tile_spec.height, tile_spec.width
 
         if annot_key is not None:
             create_annot_mask = True
@@ -851,42 +869,57 @@ class IterAccessor(object):
                 else:
                     mask_dtype = np.uint8
 
+        # -- Iterate over tiles ------------------------------------------------
         points = self._obj[key]
+        # Build positional index before shuffle so we can look up
+        # the matching Tile (shapes2tiles returns tiles in original order)
+        indices = np.arange(len(points))
+        rng = np.random.RandomState(seed)
         if sample_n is not None:
-            points = points.sample(n=sample_n, random_state=seed)
+            indices = rng.choice(indices, size=sample_n, replace=False)
         elif shuffle:
-            points = points.sample(frac=1, random_state=seed)
+            rng.shuffle(indices)
 
         cn_func = _get_cn_func(color_norm)
-        downsample = tile_spec.base_downsample
         has_tissue_id = "tissue_id" in points.columns
-        for _, row in points.iterrows():
+
+        for idx in indices:
+            row = points.iloc[idx]
+            tile = tiles[idx]
             ix = row["tile_id"]
             tile_bbox = row["geometry"]
-            x, y = tile_bbox.bounds[:2]
-            if has_tissue_id:
-                tix = row["tissue_id"]
-            else:
-                tix = None
+            tix = row["tissue_id"] if has_tissue_id else None
 
+            # Read region at the optimal level determined by shapes2tiles
             img = self._obj.reader.get_region(
-                x,
-                y,
-                tile_spec.ops_width,
-                tile_spec.ops_height,
-                level=tile_spec.ops_level,
+                tile.x,
+                tile.y,
+                tile.width,
+                tile.height,
+                level=tile.level,
             )
-            img = cv2.resize(img, (tile_spec.width, tile_spec.height))
+            # Resize to target size if needed
+            if tile.dsize is not None:
+                img = cv2.resize(img, tile.dsize)
             img = cn_func(img)
 
             if format == "cyx":
                 img = img.transpose(2, 0, 1)
 
-            annot_shapes = None
+            # Output image dimensions (after potential resize)
+            out_h, out_w = img.shape[0], img.shape[1]
+            # Downsample factor from level-0 coords to output pixel coords
+            tile_w_base = tile_bbox.bounds[2] - tile_bbox.bounds[0]
+            tile_h_base = tile_bbox.bounds[3] - tile_bbox.bounds[1]
+            ds_x = tile_w_base / out_w if out_w > 0 else 1.0
+            ds_y = tile_h_base / out_h if out_h > 0 else 1.0
+
+            annot_shapes_out = None
             annot_mask = None
             if create_annot_mask:
-                annot_shapes = []
-                sel = annot_tb.geometry.intersects(tile_bbox)  # return a boolean mask
+                annot_shapes_out = []
+                mask_size = (out_h, out_w)
+                sel = annot_tb.geometry.intersects(tile_bbox)  # boolean mask
                 annot_mask = np.zeros(mask_size, dtype=mask_dtype)
                 if sel.sum() > 0:
                     sel = sel.values
@@ -895,11 +928,11 @@ class IterAccessor(object):
                     labels = annot_labels[sel]
 
                     for geo, name, label in zip(geos, names, labels):
-                        geo = translate(geo, xoff=-x, yoff=-y)
+                        geo = translate(geo, xoff=-tile.x, yoff=-tile.y)
                         geo = scale(
                             geo,
-                            xfact=1 / downsample,
-                            yfact=1 / downsample,
+                            xfact=1 / ds_x,
+                            yfact=1 / ds_y,
                             origin=(0, 0),
                         )
                         cnt = np.array(geo.exterior.coords, dtype=np.int32)
@@ -908,9 +941,8 @@ class IterAccessor(object):
                         ]
                         cv2.fillPoly(annot_mask, [cnt], int(label))  # noqa
                         cv2.fillPoly(annot_mask, holes, 0)  # noqa
-                        # Clip the annotation by the tile
-                        # May not be valid after clipping
-                        output_geo = clip_by_rect(geo, 0, 0, *mask_size)
+                        # Clip annotation by tile; may become invalid
+                        output_geo = clip_by_rect(geo, 0, 0, out_w, out_h)
                         if (not output_geo.is_valid) or output_geo.is_empty:
                             continue
                         elif isinstance(output_geo, MultiPolygon):
@@ -918,15 +950,16 @@ class IterAccessor(object):
                         else:
                             output_geo = [output_geo]
                         for p in output_geo:
-                            annot_shapes.append((p, name, label))
+                            annot_shapes_out.append((p, name, label))
 
             yield TileImage(
                 id=ix,
-                x=x,
-                y=y,
+                x=tile.x,
+                y=tile.y,
                 image=img,
+                downsample=ds_x,
                 tissue_id=tix,
                 annot_mask=annot_mask,
-                annot_shapes=annot_shapes,
+                annot_shapes=annot_shapes_out,
                 annot_labels=annot_labels_dict,
             )

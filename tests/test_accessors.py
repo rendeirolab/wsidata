@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import torch
 from anndata import AnnData
@@ -68,7 +69,14 @@ class TestIterAccessor:
 class TestDatasetAccessor:
     def test_ds_tile_images(self, wsidata):
         dataset = wsidata.ds.tile_images("tiles")
-        assert dataset.spec is not None
+        assert len(dataset) > 0
+        item = dataset[0]
+        assert "image" in item
+        assert "x" in item
+        assert "y" in item
+        assert "tissue_id" in item
+        assert "downsample" in item
+        assert item["downsample"] > 0
 
     def test_ds_tile_feature(self, wsidata):
         dataset = wsidata.ds.tile_feature("resnet50")
@@ -85,12 +93,13 @@ class TestDatasetAccessor:
         assert isinstance(item, (list, tuple)) or item.ndim >= 1
 
     def test_ds_tile_feature_graph(self, wsidata):
-        try:
-            import numpy as np
-            import scipy.sparse as sp
-            import torch_geometric
-        except ImportError:
-            pytest.skip("torch_geometric or scipy not installed")
+        sp = pytest.importorskip(
+            "scipy.sparse", reason="requires scipy and torch_geometric to be installed"
+        )
+        pytest.importorskip(
+            "torch_geometric",
+            reason="requires scipy and torch_geometric to be installed",
+        )
 
         # Get the feature data
         feature_key = "resnet50"
