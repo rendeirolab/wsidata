@@ -181,7 +181,7 @@ wheels = [
 
 [[package]]
 name = "anndata"
-version = "0.12.11"
+version = "0.12.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "array-api-compat" },
@@ -196,9 +196,9 @@ dependencies = [
     { name = "scverse-misc", version = "0.0.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/c9/9a595379ca1fb55886bf213f0c5bdf42f2b33657ef982d1167c97669d7df/anndata-0.12.11.tar.gz", hash = "sha256:80cad77bbd34c5478c6cd9b69a44590668807ac13bf80e10c19f04b8bf645e02", size = 2253517, upload-time = "2026-04-21T11:23:22.342Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/57/98b52c39e0f1e641328f56e64fb64ea63df6d36660b948549c6bdb9fa409/anndata-0.12.14.tar.gz", hash = "sha256:52c852246eae20b469753f51f1481e034fb15f5218878f8695fd0e111c4c6da1", size = 2255427, upload-time = "2026-05-12T13:47:02.826Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/c0/0aec277eb2902945033aa21b24436658e840ff57a49c577e0772c1793039/anndata-0.12.11-py3-none-any.whl", hash = "sha256:0745e67102abfa58d9443eeffeb692a4e6e9f6744f2827a24b47678c023b0eb5", size = 174251, upload-time = "2026-04-21T11:23:20.463Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/5d/3cf0e5d56dcdbf5fece4ba37a0880b580d5a980c8e7c737d9dd45fbe4306/anndata-0.12.14-py3-none-any.whl", hash = "sha256:16a13adef352b6e2501de240b00a37e14c1b63700fb9d4c85f69d608e50817c9", size = 175269, upload-time = "2026-05-12T13:47:00.877Z" },
 ]
 
 [[package]]
@@ -1770,6 +1770,23 @@ wheels = [
 ]
 
 [[package]]
+name = "ipywidgets"
+version = "8.1.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "comm" },
+    { name = "ipython", version = "9.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "ipython", version = "9.12.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "jupyterlab-widgets" },
+    { name = "traitlets" },
+    { name = "widgetsnbextension" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/ae/c5ce1edc1afe042eadb445e95b0671b03cee61895264357956e61c0d2ac0/ipywidgets-8.1.8.tar.gz", hash = "sha256:61f969306b95f85fba6b6986b7fe45d73124d1d9e3023a8068710d47a22ea668", size = 116739, upload-time = "2025-11-01T21:18:12.393Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/6d/0d9848617b9f753b87f214f1c682592f7ca42de085f564352f10f0843026/ipywidgets-8.1.8-py3-none-any.whl", hash = "sha256:ecaca67aed704a338f88f67b1181b58f821ab5dc89c1f0f5ef99db43c1c2921e", size = 139808, upload-time = "2025-11-01T21:18:10.956Z" },
+]
+
+[[package]]
 name = "isoduration"
 version = "20.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2097,6 +2114,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d6/2c/90153f189e421e93c4bb4f9e3f59802a1f01abd2ac5cf40b152d7f735232/jupyterlab_server-2.28.0.tar.gz", hash = "sha256:35baa81898b15f93573e2deca50d11ac0ae407ebb688299d3a5213265033712c", size = 76996, upload-time = "2025-10-22T13:59:18.37Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/07/a000fe835f76b7e1143242ab1122e6362ef1c03f23f83a045c38859c2ae0/jupyterlab_server-2.28.0-py3-none-any.whl", hash = "sha256:e4355b148fdcf34d312bbbc80f22467d6d20460e8b8736bf235577dd18506968", size = 59830, upload-time = "2025-10-22T13:59:16.767Z" },
+]
+
+[[package]]
+name = "jupyterlab-widgets"
+version = "3.0.16"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/26/2d/ef58fed122b268c69c0aa099da20bc67657cdfb2e222688d5731bd5b971d/jupyterlab_widgets-3.0.16.tar.gz", hash = "sha256:423da05071d55cf27a9e602216d35a3a65a3e41cdf9c5d3b643b814ce38c19e0", size = 897423, upload-time = "2025-11-01T21:11:29.724Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/b5/36c712098e6191d1b4e349304ef73a8d06aed77e56ceaac8c0a306c7bda1/jupyterlab_widgets-3.0.16-py3-none-any.whl", hash = "sha256:45fa36d9c6422cf2559198e4db481aa243c7a32d9926b500781c830c80f7ecf8", size = 914926, upload-time = "2025-11-01T21:11:28.008Z" },
 ]
 
 [[package]]
@@ -3181,7 +3207,7 @@ wheels = [
 
 [[package]]
 name = "ome-zarr"
-version = "0.15.0"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -3195,9 +3221,9 @@ dependencies = [
     { name = "toolz" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/ee/0e99c62dd3d453c9fb84d8c8cc9f64e255c2d7638546836516282fae2be5/ome_zarr-0.15.0.tar.gz", hash = "sha256:e9479d3a9849c194a616355290f6ae574a7d4402559c5f7005be20cf81945435", size = 81497, upload-time = "2026-04-08T11:57:25.475Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/29/c69ebfc1082eb947c260ed47b6aa74780e82099558f4395668ae04562e4e/ome_zarr-0.14.0.tar.gz", hash = "sha256:96728fc03388110da436b2dbe35176887ad6dd8a1e27ee9d3ea75049451ca8e1", size = 76421, upload-time = "2026-03-10T22:18:44.3Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/71/159de9929fe98326ada41393d2133fda3f9869ea10bf94996c48846ff68f/ome_zarr-0.15.0-py3-none-any.whl", hash = "sha256:99789b0c4c27fbd197ab1a8bb3ae58b1c7b4e72d0d6b95e9dda6e6416623d3eb", size = 45200, upload-time = "2026-04-08T11:57:24.399Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/ff/160e3098a6dadf1cca21a22d6ca69761bc900a60a7b8ac0adde7c58eccb4/ome_zarr-0.14.0-py3-none-any.whl", hash = "sha256:835e8348f7d6bbced6f0e7fc35b17ac5cca4d56ac26cccd310f45a0d6672eafb", size = 45058, upload-time = "2026-03-10T22:18:42.899Z" },
 ]
 
 [[package]]
@@ -5533,6 +5559,15 @@ wheels = [
 ]
 
 [[package]]
+name = "widgetsnbextension"
+version = "4.0.15"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/f4/c67440c7fb409a71b7404b7aefcd7569a9c0d6bd071299bf4198ae7a5d95/widgetsnbextension-4.0.15.tar.gz", hash = "sha256:de8610639996f1567952d763a5a41af8af37f2575a41f9852a38f947eb82a3b9", size = 1097402, upload-time = "2025-11-01T21:15:55.178Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/0e/fa3b193432cfc60c93b42f3be03365f5f909d2b3ea410295cf36df739e31/widgetsnbextension-4.0.15-py3-none-any.whl", hash = "sha256:8156704e4346a571d9ce73b84bee86a29906c9abfd7223b7228a28899ccf3366", size = 2196503, upload-time = "2025-11-01T21:15:53.565Z" },
+]
+
+[[package]]
 name = "wrapt"
 version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -5674,6 +5709,7 @@ dev = [
     { name = "torchvision" },
 ]
 docs = [
+    { name = "ipywidgets" },
     { name = "myst-nb" },
     { name = "numpydoc" },
     { name = "pydata-sphinx-theme" },
@@ -5728,6 +5764,7 @@ dev = [
     { name = "torchvision", specifier = ">=0.21.0" },
 ]
 docs = [
+    { name = "ipywidgets", specifier = ">=8.1.8" },
     { name = "myst-nb", specifier = ">=1.1.2" },
     { name = "numpydoc", specifier = ">=1.8.0" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },

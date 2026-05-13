@@ -81,7 +81,6 @@ lint.extend-select = ["I"]
 line-length = 88
 
 [tool.taskipy.tasks]
-hello = "echo Hello, World!"
 test = "python -X faulthandler -m pytest tests -v --tb=short --disable-warnings"
 doc-build = "sphinx-build -b html -j auto docs/source docs/build"
 doc-clean-build = "python docs/clean_up.py && sphinx-build -b html -j auto docs/source docs/build"
@@ -123,6 +122,7 @@ docs = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinxext-opengraph[social-cards]>=0.10.0",
+    "ipywidgets>=8.1.8",
 ]
 cucim = [
     "cucim-cu12>=25.6.0; sys_platform == 'linux'",
