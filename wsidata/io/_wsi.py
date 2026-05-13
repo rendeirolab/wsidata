@@ -28,7 +28,7 @@ def open_wsi(
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
     save_thumbnail: bool = False,
-    **kwargs,  # noqa: For backward compatability only
+    **kwargs,  # noqa: For backward compatibility only
 ):
     """Open a whole slide image.
 
@@ -57,16 +57,16 @@ def open_wsi(
     image_key : str, optional
         The key to store the whole slide image, by default "wsi".
         If the wsi is a SpatialData object, the image from this key will be used as the whole slide image.
-    save_images : bool, optional, default: True
+    save_images : bool, optional, default: False
         Whether to save the whole slide image to on the disk.
         Only works for wsi.save() method.
-    attach_thumbnail : bool, optional, default: True
+    attach_thumbnail : bool, optional, default: False
         Whether to attach thumbnail to image slot in the spatial data object.
     thumbnail_key : str, optional
         The key to store the thumbnail, by default "wsi_thumbnail".
     thumbnail_size : int, optional, default: 2000
         The size of the thumbnail.
-    save_thumbnail : bool, optional, default: True
+    save_thumbnail : bool, optional, default: False
         Whether to save the thumbnail to on the disk.
         Only works for wsi.write() method.
 
@@ -98,7 +98,7 @@ def open_wsi(
             _ignored.append("reader")
         if attach_images:
             _ignored.append("attach_images")
-        if not attach_thumbnail:
+        if attach_thumbnail:
             _ignored.append("attach_thumbnail")
         if _ignored:
             warnings.warn(
