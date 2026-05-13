@@ -23,11 +23,12 @@ def open_wsi(
     reader: str = None,
     attach_images: bool = False,
     image_key: str = None,
-    save_images: bool = True,
-    attach_thumbnail: bool = True,
+    save_images: bool = False,
+    attach_thumbnail: bool = False,
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
-    save_thumbnail: bool = True,
+    save_thumbnail: bool = False,
+    **kwargs,  # noqa: For backward compatability only
 ):
     """Open a whole slide image.
 
@@ -67,7 +68,6 @@ def open_wsi(
         The size of the thumbnail.
     save_thumbnail : bool, optional, default: True
         Whether to save the thumbnail to on the disk.
-
         Only works for wsi.write() method.
 
     Returns
