@@ -125,7 +125,7 @@ class TileImagesDataset(Dataset):
 
         x = int(self._minx[idx])
         y = int(self._miny[idx])
-        tissue_id = int(self.tissue_ids[idx]) if self.tissue_ids is not None else None
+        tissue_id = int(self.tissue_ids[idx]) if self.tissue_ids is not None else -1
 
         result = {
             "image": tile,
