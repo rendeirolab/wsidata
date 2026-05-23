@@ -1,5 +1,6 @@
 from functools import cached_property
 
+import cv2
 from torch.utils.data import Dataset
 
 from .._model import WSIData, shapes2tiles
@@ -35,7 +36,6 @@ class TileImagesDataset(Dataset):
         The color normalization method.
     image_size : int or tuple of (int, int), optional
         Hint for optimal pyramid level selection via :func:`shapes2tiles`.
-        Does **not** resize the output — use *transform* for that.
 
     Returns
     -------
@@ -104,7 +104,6 @@ class TileImagesDataset(Dataset):
         tile_req = self._tile_requests[idx]
 
         # Read region at optimal level determined by shapes2tiles
-        # No resize — user's transform handles final sizing
         tile = self.reader.get_region(
             tile_req.x,
             tile_req.y,
@@ -112,6 +111,9 @@ class TileImagesDataset(Dataset):
             tile_req.height,
             level=tile_req.level,
         )
+        # Resize to target size if needed
+        if tile_req.dsize is not None:
+            tile = cv2.resize(tile, tile_req.dsize)
 
         tile = self._cn_func(tile)
 
