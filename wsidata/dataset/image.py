@@ -117,13 +117,14 @@ class TileImagesDataset(Dataset):
 
         tile = self._cn_func(tile)
 
+        # Downsample: ratio of level-0 extent to output pixel size
+        # (computed post-resize, before transform — matches IterAccessor.tile_images)
+        out_w = tile.shape[1]
+        tile_w_base = self._maxx[idx] - self._minx[idx]
+        downsample = tile_w_base / out_w if out_w > 0 else 1.0
+
         if self.transform:
             tile = self.transform(tile)
-
-        # Downsample: ratio of level-0 extent to read pixel size
-        # (computed from read dimensions, before transform)
-        tile_w_base = self._maxx[idx] - self._minx[idx]
-        downsample = tile_w_base / tile_req.width if tile_req.width > 0 else 1.0
 
         x = int(self._minx[idx])
         y = int(self._miny[idx])
