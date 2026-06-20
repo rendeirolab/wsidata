@@ -43,6 +43,11 @@ def test_tiffslide(test_slide):
     run_reader_test("tiffslide", test_slide)
 
 
+@pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
+def test_fastslide(test_slide):
+    run_reader_test("fastslide", test_slide)
+
+
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
 @pytest.mark.skipif(sys.version_info >= (3, 13), reason="Not supported on Python 3.13+")
 def test_bioformats(test_slide):
