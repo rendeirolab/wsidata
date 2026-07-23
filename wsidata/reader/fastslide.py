@@ -65,7 +65,7 @@ class FastSlideReader(ReaderBase):
         views = [
             view
             for view in self._reader.images
-            if view.name.casefold() not in associated_names
+            if (view.name or "").casefold() not in associated_names
         ]
         if not views:
             views = list(self._reader.images)
