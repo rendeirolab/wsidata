@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 from huggingface_hub import hf_hub_download
 
@@ -30,6 +31,24 @@ def test_czi():
     if not dest.exists():
         urlretrieve(CZI_URL, dest)
     return str(dest)
+
+
+@pytest.fixture(scope="session")
+def test_multiscene_czi(tmp_path_factory):
+    """Create a tiny, deterministic two-scene BGR CZI."""
+    czi = pytest.importorskip("pylibCZIrw.czi")
+
+    path = tmp_path_factory.mktemp("czi") / "multi_scene.czi"
+    scene_0 = np.zeros((48, 64, 3), dtype=np.uint8)
+    scene_0[...] = (10, 20, 30)
+    scene_1 = np.zeros((56, 80, 3), dtype=np.uint8)
+    scene_1[...] = (100, 110, 120)
+
+    with czi.create_czi(str(path)) as doc:
+        doc.write(scene_0, location=(-100, 20), scene=0)
+        doc.write(scene_1, location=(50, -10), scene=1)
+        doc.write_metadata(scale_x=0.5e-6, scale_y=0.5e-6)
+    return str(path)
 
 
 @pytest.fixture(scope="session")

@@ -1,11 +1,9 @@
 import json
-import warnings
 from pathlib import Path
 from typing import Union
 
 import cv2
 
-from .._utils import find_stack_level
 from ._reader_registry import register
 from .base import ReaderBase, SlideProperties
 
@@ -52,17 +50,18 @@ class PylibCZIReader(ReaderBase):
     pkg_namespaces = "pylibCZIrw"
     pkgs = ["pylibCZIrw"]
     extensions = (".czi",)
+    supports_scenes = True
 
     # Number of synthetic pyramid levels to expose (1x, 2x, 4x, 8x, 16x, 32x).
     _N_LEVELS = 6
 
-    def __init__(self, file: Union[Path, str], **kwargs):
+    def __init__(self, file: Union[Path, str], scene: int | None = None, **kwargs):
         self.file = str(file)
         self._origin_x = 0
         self._origin_y = 0
         self._ctx = None
         self.create_reader()
-        self._process_pylibczi_properties()
+        self._process_pylibczi_properties(scene)
 
     def create_reader(self):
         from pylibCZIrw import czi as pyczi
@@ -84,7 +83,25 @@ class PylibCZIReader(ReaderBase):
             self._ctx = None
             self.set_reader(None)
 
-    def _process_pylibczi_properties(self):
+    @staticmethod
+    def _scene_name_map(metadata):
+        try:
+            scenes = metadata["ImageDocument"]["Metadata"]["Information"]["Image"][
+                "Dimensions"
+            ]["S"]["Scenes"]["Scene"]
+        except (KeyError, TypeError):
+            return {}
+        if isinstance(scenes, dict):
+            scenes = [scenes]
+        names = {}
+        for item in scenes:
+            try:
+                names[int(item["@Index"])] = item.get("@Name")
+            except (KeyError, TypeError, ValueError):
+                continue
+        return names
+
+    def _process_pylibczi_properties(self, scene):
         doc = self.reader
 
         # Only Bgr24 is currently supported. Fail early and loudly for
@@ -98,26 +115,28 @@ class PylibCZIReader(ReaderBase):
                 f"file if you need support for other pixel types."
             )
 
-        # Use scene 0 if the file has scenes, otherwise fall back to the
-        # total bounding rectangle (synthetic and single-scene files).
-        rect = doc.scenes_bounding_rectangle.get(0, doc.total_bounding_rectangle)
-        width, height = int(rect.w), int(rect.h)
+        scene_rects = doc.scenes_bounding_rectangle
+        if scene_rects:
+            native_scenes = sorted(scene_rects)
+            name_map = self._scene_name_map(doc.metadata)
+            scene_names = [
+                name_map.get(native_scene) or f"Scene {native_scene}"
+                for native_scene in native_scenes
+            ]
+        else:
+            native_scenes = [None]
+            scene_names = ["Image 0"]
 
-        # Multi-scene CZIs (e.g. multiple tissue sections on a single
-        # slide) are read as scene 0 only. Warn loudly so callers notice
-        # truncated data and point them at the issue tracker for a
-        # principled multi-scene API, which should be designed once
-        # across all wsidata readers rather than ad-hoc here.
-        n_scenes = len(doc.scenes_bounding_rectangle)
-        if n_scenes > 1:
-            warnings.warn(
-                f"CZI file contains {n_scenes} scenes; only scene 0 is "
-                f"read. Multi-scene selection is not yet exposed - please "
-                f"open an issue on https://github.com/rendeirolab/wsidata "
-                f"with a sample file if you need it.",
-                UserWarning,
-                stacklevel=find_stack_level(),
-            )
+        if scene is None:
+            scene = 0
+        scene = self.validate_scene(scene, len(native_scenes))
+        self._native_scene = native_scenes[scene]
+        rect = (
+            doc.total_bounding_rectangle
+            if self._native_scene is None
+            else scene_rects[self._native_scene]
+        )
+        width, height = int(rect.w), int(rect.h)
 
         # Record the CZI absolute origin so that get_region can translate
         # back from the zero-origin frame exposed to callers.
@@ -165,7 +184,10 @@ class PylibCZIReader(ReaderBase):
             "height": height,
             "mpp_x": mpp_x,
             "mpp_y": mpp_y,
-            "n_scenes": len(doc.scenes_bounding_rectangle),
+            "scene": scene,
+            "native_scene": self._native_scene,
+            "scene_name": scene_names[scene],
+            "n_scenes": len(native_scenes),
         }
 
         self.set_properties(
@@ -177,6 +199,9 @@ class PylibCZIReader(ReaderBase):
                 mpp=mpp,
                 magnification=None,
                 bounds=[0, 0, width, height],
+                scene=scene,
+                n_scenes=len(native_scenes),
+                scene_names=scene_names,
                 raw=json.dumps(raw),
             )
         )
@@ -206,6 +231,7 @@ class PylibCZIReader(ReaderBase):
         img = self.reader.read(
             roi=(czi_x, czi_y, src_width, src_height),
             plane={"C": 0},
+            scene=self._native_scene,
             zoom=zoom,
         )
 
@@ -225,6 +251,7 @@ class PylibCZIReader(ReaderBase):
         img = self.reader.read(
             roi=(self._origin_x, self._origin_y, width, height),
             plane={"C": 0},
+            scene=self._native_scene,
             zoom=zoom,
         )
 

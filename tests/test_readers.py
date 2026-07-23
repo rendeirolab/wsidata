@@ -1,6 +1,9 @@
 import sys
 from importlib import import_module
+from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from wsidata import open_wsi
@@ -38,6 +41,12 @@ def test_openslide(test_slide):
     run_reader_test("openslide", test_slide)
 
 
+@pytest.mark.skipif(skip_reader("openslide"), reason="openslide not installed")
+def test_single_scene_reader_rejects_nonzero_scene(test_slide):
+    with pytest.raises(ValueError, match="does not support scene selection"):
+        open_wsi(test_slide, reader="openslide", scene=1, store=None)
+
+
 @pytest.mark.skipif(skip_reader("tiffslide"), reason="tiffslide not installed")
 def test_tiffslide(test_slide):
     run_reader_test("tiffslide", test_slide)
@@ -71,8 +80,88 @@ def test_pylibczi(test_czi):
     run_reader_test("pylibczi", test_czi)
 
 
+@pytest.mark.skipif(skip_reader("pylibczi"), reason="pylibCZIrw not installed")
+def test_pylibczi_scenes(test_multiscene_czi):
+    scene_0 = open_wsi(test_multiscene_czi, reader="pylibczi", scene=0, store=None)
+    scene_1 = open_wsi(test_multiscene_czi, reader="pylibczi", scene=1, store=None)
+
+    assert scene_0.scene == 0
+    assert scene_1.scene == 1
+    assert scene_0.n_scenes == scene_1.n_scenes == 2
+    assert scene_0.scene_names == ("Scene 0", "Scene 1")
+    assert scene_0.properties.shape == [48, 64]
+    assert scene_1.properties.shape == [56, 80]
+    np.testing.assert_array_equal(scene_0.read_region(0, 0, 1, 1)[0, 0], [30, 20, 10])
+    np.testing.assert_array_equal(
+        scene_1.read_region(0, 0, 1, 1)[0, 0], [120, 110, 100]
+    )
+
+    scene_0.close()
+    scene_1.close()
+
+
+@pytest.mark.skipif(skip_reader("pylibczi"), reason="pylibCZIrw not installed")
+def test_invalid_scene(test_multiscene_czi):
+    with pytest.raises(ValueError, match="available scenes are 0 through 1"):
+        open_wsi(test_multiscene_czi, reader="pylibczi", scene=2, store=None)
+
+
+@pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
+def test_fastslide_scenes(test_multiscene_czi):
+    wsi = open_wsi(test_multiscene_czi, reader="fastslide", scene=1, store=None)
+
+    assert wsi.scene == 1
+    assert wsi.n_scenes == 2
+    assert wsi.scene_names == ("Scene 0", "Scene 1")
+    assert wsi.properties.shape == [56, 80]
+    assert wsi.read_region(0, 0, 8, 8).shape == (8, 8, 3)
+    wsi.close()
+
+
+@pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
+def test_auto_reader_with_scene(test_multiscene_czi):
+    wsi = open_wsi(test_multiscene_czi, scene=1, store=None)
+    assert wsi.scene == 1
+    assert wsi.n_scenes == 2
+    assert wsi.reader.supports_scenes
+    wsi.close()
+
+
+@pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
+@pytest.mark.skipif(sys.version_info >= (3, 13), reason="Not supported on Python 3.13+")
+def test_bioformats_scenes(test_multiscene_czi):
+    wsi = open_wsi(test_multiscene_czi, reader="bioformats", scene=1, store=None)
+
+    assert wsi.scene == 1
+    assert wsi.n_scenes == 2
+    assert len(wsi.scene_names) == 2
+    assert wsi.properties.shape == [56, 80]
+    assert wsi.read_region(0, 0, 8, 8).shape == (8, 8, 3)
+    wsi.close()
+
+
+@pytest.mark.skipif(skip_reader("pylibczi"), reason="pylibCZIrw not installed")
+def test_scene_store_name(test_multiscene_czi):
+    wsi = open_wsi(test_multiscene_czi, reader="pylibczi", scene=1)
+    assert Path(wsi.wsi_store).name == "multi_scene.scene-1.zarr"
+    wsi.close()
+
+
+def test_store_scene_validation():
+    from wsidata.io._wsi import _validate_store_scene
+
+    reader = SimpleNamespace(n_scenes=2, scene=1)
+    with pytest.raises(ValueError, match="has no scene metadata"):
+        _validate_store_scene(SimpleNamespace(attrs={}), reader, "legacy.zarr")
+    with pytest.raises(ValueError, match="belongs to scene 0"):
+        _validate_store_scene(
+            SimpleNamespace(attrs={"slide_properties": {"scene": 0}}),
+            reader,
+            "scene.zarr",
+        )
+
+
 def test_spatialdata(test_slide):
-    import numpy as np
     from spatialdata import SpatialData
     from spatialdata.models import Image2DModel
 
@@ -93,6 +182,10 @@ def test_spatialdata(test_slide):
     wsi.get_thumbnail(as_array=True)
 
     assert wsi.reader.translate_level(-1) == wsi.properties.n_level - 1
+    assert wsi.scene == 0
+    assert wsi.n_scenes == 1
+    with pytest.raises(ValueError, match="does not exist"):
+        open_wsi(sdata, image_key="img", scene=1)
 
 
 # ---- Extension-based reader detection tests ----

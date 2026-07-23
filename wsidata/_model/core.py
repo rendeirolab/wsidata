@@ -244,6 +244,21 @@ class WSIData(SpatialData):
         return self.reader.associated_images
 
     @property
+    def scene(self) -> int:
+        """The selected zero-based scene index."""
+        return self.reader.scene
+
+    @property
+    def n_scenes(self) -> int:
+        """The number of selectable scenes in the source image."""
+        return self.reader.n_scenes
+
+    @property
+    def scene_names(self) -> tuple[str, ...]:
+        """The names of all selectable scenes in the source image."""
+        return self.reader.scene_names
+
+    @property
     def wsi_store(self) -> str | Path:
         """The zarr store path for the associated data of the whole slide image."""
         return self._wsi_store

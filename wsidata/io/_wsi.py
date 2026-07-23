@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from numbers import Integral
 from pathlib import Path
 from typing import Literal, Sequence
 
@@ -21,6 +22,7 @@ def open_wsi(
     wsi: str | Path | SpatialData,
     store: str = "auto",
     reader: str = None,
+    scene: int | None = None,
     attach_images: bool = False,
     image_key: str = None,
     save_images: bool = False,
@@ -28,7 +30,7 @@ def open_wsi(
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
     save_thumbnail: bool = False,
-    **kwargs,  # noqa: For backward compatibility only
+    **kwargs,  # Kept for backward compatibility.
 ):
     """Open a whole slide image.
 
@@ -52,6 +54,8 @@ def open_wsi(
     reader : str, optional
         Reader to use, by default ``None``. Passing ``None`` enables automatic reader
         selection. To check avaiable readers: `print(wsidata.READERS)`
+    scene : int, optional
+        Zero-based scene to open. By default, each reader selects its primary image.
     attach_images : bool, optional, default: False
         Whether to attach whole slide image to image slot in the spatial data object.
     image_key : str, optional
@@ -84,6 +88,13 @@ def open_wsi(
         >>> wsi = open_wsi("slide.svs")
 
     """
+    if scene is not None:
+        if isinstance(scene, bool) or not isinstance(scene, Integral):
+            raise TypeError("scene must be a non-negative integer or None.")
+        scene = int(scene)
+        if scene < 0:
+            raise ValueError("scene must be a non-negative integer or None.")
+
     # -- SpatialData input path --
     if isinstance(wsi, SpatialData):
         if image_key is None:
@@ -111,6 +122,7 @@ def open_wsi(
         from ..reader import SpatialDataImage2DReader
 
         reader_instance = SpatialDataImage2DReader(wsi[image_key], key=image_key)
+        reader_instance.validate_scene(scene, 1)
         return WSIData.from_spatialdata(wsi, reader_instance)
 
     # -- File path input --
@@ -119,7 +131,7 @@ def open_wsi(
     if not wsi.exists():
         raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
 
-    reader_instance = READERS.try_open(wsi, reader=reader)
+    reader_instance = READERS.try_open(wsi, reader=reader, scene=scene)
     try:
         # Check if the image is not pyramidal and too large
         if reader_instance.properties.n_level <= 1:
@@ -135,7 +147,7 @@ def open_wsi(
                 )
 
         if store == "auto":
-            store = wsi.with_suffix(".zarr")
+            store = wsi.parent / _default_store_name(wsi, reader_instance)
         else:
             if store is not None:
                 store_path = Path(store)
@@ -146,7 +158,7 @@ def open_wsi(
                         store = store_path
                     # Otherwise, we create a zarr file in that directory
                     else:
-                        zarr_name = wsi.with_suffix(".zarr").name
+                        zarr_name = _default_store_name(wsi, reader_instance)
                         store = store_path / zarr_name
                 # If store is a not a directory, we assume it is a valid zarr file
                 # WARNING: No guarantee
@@ -155,6 +167,7 @@ def open_wsi(
         if store is not None:
             if store.exists():
                 sdata = read_zarr(store)
+                _validate_store_scene(sdata, reader_instance, store)
 
         exclude_elements = []
         sdata_images = {}
@@ -217,6 +230,31 @@ def open_wsi(
         reader_instance.detach_reader()
         raise
     return slide_data
+
+
+def _default_store_name(wsi: Path, reader) -> str:
+    """Return a scene-safe default Zarr store name."""
+    if reader.n_scenes > 1:
+        return f"{wsi.stem}.scene-{reader.scene}.zarr"
+    return wsi.with_suffix(".zarr").name
+
+
+def _validate_store_scene(sdata, reader, store):
+    """Ensure an existing store belongs to the selected scene."""
+    if reader.n_scenes <= 1:
+        return
+    stored_properties = sdata.attrs.get(WSIData.SLIDE_PROPERTIES_KEY, {})
+    if "scene" not in stored_properties:
+        raise ValueError(
+            f"Store '{store}' has no scene metadata and cannot be safely used "
+            "with a multi-scene image. Choose a new store path or migrate the store."
+        )
+    stored_scene = int(stored_properties["scene"])
+    if stored_scene != reader.scene:
+        raise ValueError(
+            f"Store '{store}' belongs to scene {stored_scene}, but scene "
+            f"{reader.scene} was requested."
+        )
 
 
 def _resolve_backed_files(slides_table, wsi_col, store_col):

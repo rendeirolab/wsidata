@@ -25,6 +25,7 @@ class FastSlideReader(ReaderBase):
 
     name = "fastslide"
     pkg_namespaces = "fastslide"
+    supports_scenes = True
     extensions = (
         ".svs",
         ".ndpi",
@@ -49,24 +50,61 @@ class FastSlideReader(ReaderBase):
     def __init__(
         self,
         file: Union[Path, str],
+        scene: int | None = None,
         **kwargs,
     ):
         self.file = str(file)
         self.create_reader()
+        self._select_scene(scene)
         self._set_properties()
 
+    def _select_scene(self, scene):
+        associated_names = {
+            name.casefold() for name in self._reader.associated_images.keys()
+        }
+        views = [
+            view
+            for view in self._reader.images
+            if (view.name or "").casefold() not in associated_names
+        ]
+        if not views:
+            views = list(self._reader.images)
+
+        scene_names = [view.name or f"Image {i}" for i, view in enumerate(views)]
+        if scene is None:
+            primary_index = self._reader.images.primary_index
+            scene = next(
+                (i for i, view in enumerate(views) if view.index == primary_index),
+                max(
+                    range(len(views)),
+                    key=lambda i: views[i].dimensions[0] * views[i].dimensions[1],
+                ),
+            )
+        scene = self.validate_scene(scene, len(views))
+        self._scene_view = views[scene]
+        self._scene = scene
+        self._scene_names = scene_names
+
     def _set_properties(self):
-        reader = self._reader
+        reader = self._scene_view
         level_shape = [
             [int(height), int(width)] for width, height in reader.level_dimensions
         ]
         level_downsample = [float(value) for value in reader.level_downsamples]
-        (bounds_x, bounds_y), (bounds_width, bounds_height) = reader.bounds
         mpp_x, mpp_y = reader.mpp
         valid_mpp = [
             value for value in (mpp_x, mpp_y) if value is not None and value > 0
         ]
-        magnification = reader.properties.get("objective_magnification")
+        magnification = self._reader.properties.get("objective_magnification")
+        raw = dict(self._reader.properties)
+        raw.update(
+            {
+                "scene": self._scene,
+                "native_scene": reader.index,
+                "scene_name": reader.name,
+                "n_scenes": len(self._scene_names),
+            }
+        )
 
         self.properties = SlideProperties(
             shape=level_shape[0],
@@ -80,12 +118,15 @@ class FastSlideReader(ReaderBase):
                 else None
             ),
             bounds=[
-                int(bounds_x),
-                int(bounds_y),
-                int(bounds_width),
-                int(bounds_height),
+                0,
+                0,
+                int(reader.dimensions[0]),
+                int(reader.dimensions[1]),
             ],
-            raw=json.dumps(dict(reader.properties)),
+            scene=self._scene,
+            n_scenes=len(self._scene_names),
+            scene_names=self._scene_names,
+            raw=json.dumps(raw),
         )
 
     def get_region(
@@ -99,8 +140,9 @@ class FastSlideReader(ReaderBase):
     ):
         level = self.translate_level(level)
         # All types are coerced to native Python types
-        x, y = self.reader.convert_level0_to_level_native(int(x), int(y), level)
-        img = self.reader.read_region(
+        downsample = self.properties.level_downsample[level]
+        x, y = int(x / downsample), int(y / downsample)
+        img = self._scene_view.read_region(
             (int(x), int(y)), int(level), (int(width), int(height))
         )
         return convert_image(img.numpy())
@@ -117,9 +159,9 @@ class FastSlideReader(ReaderBase):
 
         target_size = size
         downsample = max(width / target_size[0], height / target_size[1])
-        level = self.reader.get_best_level_for_downsample(downsample)
-        level_width, level_height = self.reader.level_dimensions[level]
-        img = self.reader.read_region((0, 0), level, (level_width, level_height))
+        level = self._scene_view.get_best_level_for_downsample(downsample)
+        level_width, level_height = self._scene_view.level_dimensions[level]
+        img = self._scene_view.read_region((0, 0), level, (level_width, level_height))
         thumbnail = Image.fromarray(convert_image(img.numpy()))
         thumbnail.thumbnail(target_size, Image.Resampling.LANCZOS)
         return np.asarray(thumbnail)

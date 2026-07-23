@@ -1157,29 +1157,37 @@ wheels = [
 
 [[package]]
 name = "fastslide"
-version = "0.5.2"
+version = "0.7.4"
 source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/ad/320f6254f69de2ba489a9beaf05c1fe2308b5f57a9fc42c0844f7f595b0c/fastslide-0.7.4.tar.gz", hash = "sha256:e8372e2c2f6c590e530a6889e39509658b63d20c7486a28031bbac9359929177", size = 2822460, upload-time = "2026-06-11T11:46:38.279Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/4d/9fae1fe5f4d28cac912c5b3ddab2a34a94c422a79d28f77e5a92e8d0cb58/fastslide-0.5.2-cp311-none-macosx_10_9_x86_64.whl", hash = "sha256:4f87d49494c575521ff0ff183f3aa661e3c741e32b445fe092c56200215755b1", size = 1761940, upload-time = "2026-04-21T12:27:15.152Z" },
-    { url = "https://files.pythonhosted.org/packages/e2/42/a60fb38d37a1e71d3b7ae220590441420cae126253b4c8166d713feb548b/fastslide-0.5.2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:a18189653e06472b66df54841130266b4f52aad25f3ed16c9a7dc3c40d201764", size = 1560509, upload-time = "2026-04-21T12:27:18.585Z" },
-    { url = "https://files.pythonhosted.org/packages/18/fd/9686bc5bbfa885c84c87ce4cbc1599ab149e61ef6577d0d49839675dd439/fastslide-0.5.2-cp311-none-manylinux2014_aarch64.whl", hash = "sha256:582f60318fc15f3b34dd6217c7f8d58e846302e015807f2008cd14087ae795a3", size = 1901755, upload-time = "2026-04-21T12:27:21.265Z" },
-    { url = "https://files.pythonhosted.org/packages/60/5e/c78b960366c821b44a13a83c2ba859e60127774504ab998d534288b73de1/fastslide-0.5.2-cp311-none-manylinux2014_x86_64.whl", hash = "sha256:71aacc13a51b76686a6e8644421ea180d4b2f9de97d7a7fe424ed9a2714667b8", size = 2112511, upload-time = "2026-04-21T12:27:23.324Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/d5/0603835809a848a5cc901c70641b0d121b4cd6edc064c7de9b4c0d3708be/fastslide-0.5.2-cp311-none-win_amd64.whl", hash = "sha256:9774ef34ec6e348f24b657e82ff43426d2b547939bb9cc7cbabf82a0cd25d7f7", size = 1791801, upload-time = "2026-04-21T12:27:25.229Z" },
-    { url = "https://files.pythonhosted.org/packages/75/79/1d17de5f4e8ebcaef6f270d84fcd92197e3a6479787a26da211b768d26d4/fastslide-0.5.2-cp312-none-macosx_10_9_x86_64.whl", hash = "sha256:7210cc15296ba05c946b5e0d0715c2f06d6c4cc8171f06dfbda131ffa4bbdaea", size = 1761036, upload-time = "2026-04-21T12:27:27.438Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/61/49cc03f8d68c3156c3baac961cd222d5d395dc72c45204ecc8e2e206e677/fastslide-0.5.2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:0d79429ccab61c6b3600b12aee90ad510953fcbb8545c8bcc75a708b21fed2a9", size = 1559989, upload-time = "2026-04-21T12:27:29.571Z" },
-    { url = "https://files.pythonhosted.org/packages/43/3a/a3fe0cb21a3d4a8eaec19c8f0f476c036f7fa1344a92c3c812fccee0f422/fastslide-0.5.2-cp312-none-manylinux2014_aarch64.whl", hash = "sha256:d1337c8ca935f451b85a54e4d5094b33ba4a9b2da136e23906113f8f2a89c901", size = 1901186, upload-time = "2026-04-21T12:27:31.59Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/b5/4689af9ae7372443bad41c0127dfd9f5e52f10feda6f931889f41b739db9/fastslide-0.5.2-cp312-none-manylinux2014_x86_64.whl", hash = "sha256:aa5903e5dd11fa6867601cd602299540c2f5b4fdd863479399b19da15ba580f2", size = 2111733, upload-time = "2026-04-21T12:27:33.747Z" },
-    { url = "https://files.pythonhosted.org/packages/67/f7/5ea508da8be62918a33e45bc9b8026569f909cc11a237ddf6dae426f0140/fastslide-0.5.2-cp312-none-win_amd64.whl", hash = "sha256:a277e9f3c139ab7bd246e3c49598a6fb421598d4be0a9fa328a29e91bb2b4dce", size = 1791562, upload-time = "2026-04-21T12:27:35.73Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/83/c51eeff7a7fa915b1b9cbe29f4c68ce9d3bd4cbb0c56c92ff3c19792a504/fastslide-0.5.2-cp313-none-macosx_10_9_x86_64.whl", hash = "sha256:1374a7b7490ca0b712b989c1d2b8e56ce9485b786d47cfbaa06ce092d8362b3b", size = 1760912, upload-time = "2026-04-21T12:27:37.861Z" },
-    { url = "https://files.pythonhosted.org/packages/58/5d/e2a284554a7d0086b7fdd85ebc0ed7af5b86b78ba0e1ecdde35ea87bd973/fastslide-0.5.2-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:d54124aeb301e9b015d951895f8bbc93c137367e0368b24d01293de12afec3d4", size = 1559925, upload-time = "2026-04-21T12:27:39.583Z" },
-    { url = "https://files.pythonhosted.org/packages/d1/a8/b2812821e3d890e87667f7db52c04265ef54f5bb06487ebc7f171dc8ff66/fastslide-0.5.2-cp313-none-manylinux2014_aarch64.whl", hash = "sha256:e3b96578b1b6514cd83bb6ea79b869805276665faeeb14e719fe45e138cfe88b", size = 1901057, upload-time = "2026-04-21T12:27:41.457Z" },
-    { url = "https://files.pythonhosted.org/packages/9e/2f/c5471ca001b18b6a57a4c7721f0ba5d2f640a6a19d5dc945a7352edfde11/fastslide-0.5.2-cp313-none-manylinux2014_x86_64.whl", hash = "sha256:f3cf168498dbb1b8c0eeb7186bb23e4814a3d19485decea394334c32e9f95070", size = 2111611, upload-time = "2026-04-21T12:27:43.71Z" },
-    { url = "https://files.pythonhosted.org/packages/87/44/ed9f065b1cd0cefacb9461c3ca3beda7c152efa65074f36b61dbc5532fe6/fastslide-0.5.2-cp313-none-win_amd64.whl", hash = "sha256:912dfc01116ccc30627e29e5c0a72f1eba070959d6f09c9abf90dc6d7c434e4b", size = 1791539, upload-time = "2026-04-21T12:27:45.889Z" },
-    { url = "https://files.pythonhosted.org/packages/05/57/2e766834ae737ded470467e2b3f2f489cace28c74b8f7d94849d5e7c89fd/fastslide-0.5.2-cp314-none-macosx_10_9_x86_64.whl", hash = "sha256:748faff46572cdc8a2a20757725b2126a0742fe5abe7260a10b6bd2275159203", size = 1760985, upload-time = "2026-04-21T12:27:49.373Z" },
-    { url = "https://files.pythonhosted.org/packages/22/7b/6febe319e38010c76076cda16e9aa5ca7d0034fd9b0179144006b6a22412/fastslide-0.5.2-cp314-none-macosx_11_0_arm64.whl", hash = "sha256:f705bde8c39eb773a82d1eb0ade84914d1c1939fd79f78537591337e6877e907", size = 1560050, upload-time = "2026-04-21T12:27:51.718Z" },
-    { url = "https://files.pythonhosted.org/packages/ce/36/b9648b284616137ffd85727574a77fccf11deb1db5bacce473e502c37bab/fastslide-0.5.2-cp314-none-manylinux2014_aarch64.whl", hash = "sha256:9fb0ae8a9a39aa6561351cea2a819c01bb51e6c8b9e2c1aaca043f2f323b1d74", size = 1901129, upload-time = "2026-04-21T12:27:54.572Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/3e/9585fb29db8a07564780b2cec5c70d76ab762b0af270b1a3180942130274/fastslide-0.5.2-cp314-none-manylinux2014_x86_64.whl", hash = "sha256:2ae9b62365a46b7c1087a42f5d32762ce136ab5ad8acb3b7f04bd7641f77e994", size = 2111862, upload-time = "2026-04-21T12:27:57.079Z" },
-    { url = "https://files.pythonhosted.org/packages/83/25/0924519ece2764e9c163f0f38bf7c68ac578ed4dd191c7bdbed50d248fa2/fastslide-0.5.2-cp314-none-win_amd64.whl", hash = "sha256:ddf76f77640bd21b8461ccf5fc5dd4cac63c179ab74e9b9d825a4e0c3c76183b", size = 1791780, upload-time = "2026-04-21T12:27:59.424Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/5e/95c38b95afe89283cc06ae1cc21ee276744cbd79f80d526c999bf30b1526/fastslide-0.7.4-cp311-cp311-win_amd64.whl", hash = "sha256:20e434d846353e3a1fd78aeecfab9339fd93256a10661436a7e5144d4fc34154", size = 1507410, upload-time = "2026-06-11T11:45:58.215Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/d4/f76d9fb30af798c5394066ab8df73f7880d9edb83c808f1002615067679a/fastslide-0.7.4-cp311-cp311-win_arm64.whl", hash = "sha256:178f14ad6e7ee638e730a5b0b942f3a74076fd0ea98ce48e4c0748ff3ef6bbee", size = 1398648, upload-time = "2026-06-11T11:45:59.857Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/78/56ef0f7e21d6296d5259aa2db33285f8a9557257b9ba27248508b662e544/fastslide-0.7.4-cp311-none-macosx_10_9_x86_64.whl", hash = "sha256:f04e71fcde493182ae7ca5089ef1cec6c6459aba573a14a120dc80dcd8b3473a", size = 1926126, upload-time = "2026-06-11T11:46:01.826Z" },
+    { url = "https://files.pythonhosted.org/packages/db/8e/9c213f5339978334dc666ba95a5ca97e672b9585b59cc215f34364cf3dfb/fastslide-0.7.4-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:a183bd87d30f1dbca1cdb5fb6a13499d3891073249bf578eac5006134dbf0b19", size = 1673061, upload-time = "2026-06-11T11:46:03.486Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/00/f84965c1b79e1113dbc5721b57431999acc8a7945fd86e55e137725ca1d0/fastslide-0.7.4-cp311-none-manylinux2014_aarch64.whl", hash = "sha256:6834834a76a9dd8685a419f1b6388c4278b5f223a75b29a7873bcb825c3a7193", size = 2085126, upload-time = "2026-06-11T11:46:04.966Z" },
+    { url = "https://files.pythonhosted.org/packages/84/6c/7d183e2b775a2fd2412827c51e1c25eb511fc8a6209b5d36d63647d583b4/fastslide-0.7.4-cp311-none-manylinux2014_x86_64.whl", hash = "sha256:f6ae451ca65f404e9e0caa5908b6cc1cc5692e8d532d179b79994b57fcf48d9f", size = 2312110, upload-time = "2026-06-11T11:46:06.669Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/59/e405305253cdc0be4fc67cc1002027d272beff4d509ea326f83430baac88/fastslide-0.7.4-cp312-cp312-win_amd64.whl", hash = "sha256:53bd2af03e72fad7b4eeb3e740d4cd1bcfab8444c69075d8b3e1fded61a4d3b2", size = 1507803, upload-time = "2026-06-11T11:46:08.359Z" },
+    { url = "https://files.pythonhosted.org/packages/be/e4/32fab42cd75274a032dd1cf5099c5289d2b4e943dd56f12f3f6a7679cccc/fastslide-0.7.4-cp312-cp312-win_arm64.whl", hash = "sha256:cc7364855446152df4e10c82e08d16ab66df5074bfdf8ab658689b1ebe6a77e4", size = 1398363, upload-time = "2026-06-11T11:46:09.834Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/47/7db6090ca65c5b678fc93b5a7a761b50d9a088c0a35dda9e30101e4e2458/fastslide-0.7.4-cp312-none-macosx_10_9_x86_64.whl", hash = "sha256:9fd14e296dca3e36c4665b4b603d5d374a6e6f15cdecce526bf7d6f892ee4577", size = 1924950, upload-time = "2026-06-11T11:46:11.434Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/aa/bc88d889212cb40fabe1c4c1b197e976d72650223200c5c65f82b9df18a4/fastslide-0.7.4-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:8cb3f3deadc9ad012bd38e2015400ed29ae57b52cd5fe8ca09876edafe25ffbc", size = 1672183, upload-time = "2026-06-11T11:46:12.851Z" },
+    { url = "https://files.pythonhosted.org/packages/61/d7/1b0e3c42635faec734e62246ace1adc62a1e57dc4209b0e970e5723ba052/fastslide-0.7.4-cp312-none-manylinux2014_aarch64.whl", hash = "sha256:2598c08c0b02158569cbfed9c7c33c38079813a3da65551ca2b1f8bfccb1c8f6", size = 2084180, upload-time = "2026-06-11T11:46:14.507Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/52/c479bd0653ebdcf285f8a1643ca0d96389ae18e69eb89d48ff23e2990d99/fastslide-0.7.4-cp312-none-manylinux2014_x86_64.whl", hash = "sha256:0d97e601d32cc5608d997e67aef4ea2f39e91c58cae5362e64c71b5a640de189", size = 2312129, upload-time = "2026-06-11T11:46:16.285Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/86/6fc9950d6494cf26bc426c5c980e67d1db9c5848b63edf74fa244fb01e35/fastslide-0.7.4-cp313-cp313-win_amd64.whl", hash = "sha256:9f2a24596452bfe7d203567abb6c27c58900e5269fa9dc10b8e62523710e24a2", size = 1507614, upload-time = "2026-06-11T11:46:17.894Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/51/6723a942a10cc777c24cb4d68901a868d84aa5286b16199a41201013b5da/fastslide-0.7.4-cp313-cp313-win_arm64.whl", hash = "sha256:61d52a01d0f09ca6646dfa6d48a4052a85c00d467cb4eaa44cd9303a27f31eb1", size = 1398000, upload-time = "2026-06-11T11:46:19.873Z" },
+    { url = "https://files.pythonhosted.org/packages/40/d6/0acfa44de46833b7be175d22007687e1f06c8b7ad18ba237b732b42b4d1d/fastslide-0.7.4-cp313-none-macosx_10_9_x86_64.whl", hash = "sha256:b3c69eb8c61052d1ec40d6dc19d7bfac0fdb984b4a13a58a268e0a492b978e4a", size = 1924816, upload-time = "2026-06-11T11:46:21.809Z" },
+    { url = "https://files.pythonhosted.org/packages/93/df/30d338dc44d7fcb49d9cca6057d2f811fbbfc83aa20e99c973e37feb73d9/fastslide-0.7.4-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:3b67a4c1fed9e5b37e25ebd2fbae0e8acb2d18de99fa33c8e36cd3bba5037c8d", size = 1672125, upload-time = "2026-06-11T11:46:23.487Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/31/9c38997b10d931af6c019f709a8844f1f074453b33e710e42ad519519f3a/fastslide-0.7.4-cp313-none-manylinux2014_aarch64.whl", hash = "sha256:bb27b763919a7c9ef0052a75e9ba37dffc4a2b9916e6c67fabace2372fbe5d95", size = 2084452, upload-time = "2026-06-11T11:46:25.457Z" },
+    { url = "https://files.pythonhosted.org/packages/90/aa/a2e651258f555987294bf97dcbf58f6bbc9238791feef749687170fcdc9c/fastslide-0.7.4-cp313-none-manylinux2014_x86_64.whl", hash = "sha256:e28c709ddaae5128e0229aa63c013ac1c4942e78f377d26f2d2652dd26d7d1a4", size = 2312043, upload-time = "2026-06-11T11:46:27.155Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/eb/80cc695d626393ecdb3af01d117033ca5629124bab55d36d26d84a3ea3d3/fastslide-0.7.4-cp314-cp314-win_amd64.whl", hash = "sha256:5d930bb7ea1a06040c1770d0281768523ac9a2d80c0aa287093a41f0b6a1ddf4", size = 1552848, upload-time = "2026-06-11T11:46:28.876Z" },
+    { url = "https://files.pythonhosted.org/packages/95/20/f43c846dd1b28b2fb1d48321b016ac2d0f7317c5e3b24d659d9ea14252b8/fastslide-0.7.4-cp314-cp314-win_arm64.whl", hash = "sha256:5e98e97baf88c1fba1756f21c6b20bc67a3c464aea48759b75c15d59eb32f059", size = 1444564, upload-time = "2026-06-11T11:46:30.361Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/a6/250abd24c555f77956ba99c537a60167b958636392e95099476db13d95c0/fastslide-0.7.4-cp314-none-macosx_10_9_x86_64.whl", hash = "sha256:8a63882576783674258e2dd87c5cb3e299a8eff22f06f02ce8c7422903a7186e", size = 1925705, upload-time = "2026-06-11T11:46:31.868Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/b0/cc7db354c63f968f969cdd6f5bf2d2159c9ccbc9ad88556fc0a935d2b9ca/fastslide-0.7.4-cp314-none-macosx_11_0_arm64.whl", hash = "sha256:23148ceb5b6889cb38dfc38ef7c9fbe1a8b20386bd08dfdfa40af5c5717cab89", size = 1672559, upload-time = "2026-06-11T11:46:33.598Z" },
+    { url = "https://files.pythonhosted.org/packages/35/58/586a2914a080f065018cbafc4c9927fa70fc363ea5f2423585dcf181239f/fastslide-0.7.4-cp314-none-manylinux2014_aarch64.whl", hash = "sha256:94103b460e29fe3053bf4ee4d821a6687f0d9f1e3e599bb561ea384a6a9df449", size = 2084326, upload-time = "2026-06-11T11:46:35.072Z" },
+    { url = "https://files.pythonhosted.org/packages/42/8f/92096f76bbb3da7adf5d3a94b671d695237d32babbdce9ee0879c17bc55b/fastslide-0.7.4-cp314-none-manylinux2014_x86_64.whl", hash = "sha256:bc57e028816cad6d173271a11acdb4ab610082bf5c028531e261386df5ac06ae", size = 2311972, upload-time = "2026-06-11T11:46:36.609Z" },
 ]
 
 [[package]]
@@ -1630,13 +1638,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/a7/e3a89b2c516eaca7446e8f1335daeec90764b50888af5e073a2b6a987fcf/imagecodecs-2026.3.6-cp311-abi3-win32.whl", hash = "sha256:c972a45dfee1befbac048ba3492607003e9a185811e8febdc1ed531d48c07e75", size = 15597722, upload-time = "2026-03-07T01:26:08.106Z" },
     { url = "https://files.pythonhosted.org/packages/22/c7/2b37a7fe9a2eb21011e50f046d62e68ac4e0f8d6ad94d7a10e9f8e8d685f/imagecodecs-2026.3.6-cp311-abi3-win_amd64.whl", hash = "sha256:e8fba5b9ac7be109ed35070208bc1683fa17cc381ed9535a4eae200c6d883bd8", size = 19177403, upload-time = "2026-03-07T01:26:11.718Z" },
     { url = "https://files.pythonhosted.org/packages/c0/c7/94e930cef9e0a29a2df5e3ba3bacd2c2f1e34ca373fe48624b64af8ae91c/imagecodecs-2026.3.6-cp311-abi3-win_arm64.whl", hash = "sha256:fc4856913be6c8b3861223158920d934a0ae203149a435f585622dbbff8ed696", size = 15193605, upload-time = "2026-03-07T01:26:15.016Z" },
-    { url = "https://files.pythonhosted.org/packages/a3/0b/ba7ca5a14cf2ff744c47898ab9e98b6b96b364bce1459afcab5f4e5ea2bb/imagecodecs-2026.3.6-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:ea2cd774854a3bfe1dc9508f98907edc877c02a78642ab371adbdec65a8865cc", size = 14335958, upload-time = "2026-03-07T06:13:39.726Z" },
-    { url = "https://files.pythonhosted.org/packages/18/d9/4750fb9739d474e399fa566b3a5c7033f2c9c0078bc869473b23d3e0d4b7/imagecodecs-2026.3.6-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:6efa104ce600f61fef03a43daab34fe2953c8adb4e4ee6eb9544825f5361e5ab", size = 12021474, upload-time = "2026-03-07T01:26:18.008Z" },
-    { url = "https://files.pythonhosted.org/packages/29/d3/f0a71c797f836021241500d4a459b0f93317f2b5c9bcc39fb1eaa50e01ea/imagecodecs-2026.3.6-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:16fd83dd25d9c888317bc8cbbc5d7490b78c84c58275d80fb71ea7b28645276a", size = 29606531, upload-time = "2026-03-07T01:26:22.058Z" },
-    { url = "https://files.pythonhosted.org/packages/0c/8c/a1b433418306636fc22a94b669d7ebbbde8e3b26aef7d693c08f9f8a65af/imagecodecs-2026.3.6-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:39fcf671537cc92dd24ba4dcba257d8aa47e6f58018e839a5216c626f03d4126", size = 30039276, upload-time = "2026-03-07T01:26:26.718Z" },
-    { url = "https://files.pythonhosted.org/packages/ac/96/1474c0e242fb11d68304f858298971370fdfcecc404dbd9993a3ea449b4f/imagecodecs-2026.3.6-cp314-cp314t-win32.whl", hash = "sha256:65110ff30723a6e0b79c6c74ff52909a34b131366c4f76b1b68084cca5fcd982", size = 16345843, upload-time = "2026-03-07T01:26:30.498Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/13/d0e09d8aaafe6fac1aa1bd8c0dcc0f024998ea4a23477128db14a085b4cf/imagecodecs-2026.3.6-cp314-cp314t-win_amd64.whl", hash = "sha256:1b810efeeb06bdcca07ae410a81bdb5eb9fb38f91689baf0f0b75783f5119a40", size = 20230890, upload-time = "2026-03-07T01:26:33.78Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/06/3a5fe853e4df9a3655f8be81c1eb48013aab282c1557341b8634dd718e32/imagecodecs-2026.3.6-cp314-cp314t-win_arm64.whl", hash = "sha256:a2363c64e346cee4136f02a207b1b645729142f5260d122ddc3d5ff9e32ac6b1", size = 15911854, upload-time = "2026-03-07T01:26:38.072Z" },
 ]
 
 [[package]]
@@ -5689,6 +5690,7 @@ datasets = [
     { name = "torch-geometric" },
 ]
 dev = [
+    { name = "fastslide" },
     { name = "huggingface-hub" },
     { name = "jupyter-cache" },
     { name = "legendkit" },
@@ -5723,7 +5725,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "cucim", marker = "extra == 'cucim'" },
-    { name = "fastslide", marker = "extra == 'fastslide'" },
+    { name = "fastslide", marker = "extra == 'fastslide'", specifier = ">=0.7.4" },
     { name = "legendkit", marker = "extra == 'plot'" },
     { name = "matplotlib", marker = "extra == 'plot'" },
     { name = "opencv-python-headless" },
@@ -5744,6 +5746,7 @@ provides-extras = ["bioformats", "cucim", "fastslide", "isyntax", "plot", "pylib
 cucim = [{ name = "cucim-cu12", marker = "sys_platform == 'linux'", specifier = ">=25.6.0" }]
 datasets = [{ name = "torch-geometric", specifier = ">=2.6.1" }]
 dev = [
+    { name = "fastslide", specifier = ">=0.7.4" },
     { name = "huggingface-hub", specifier = ">=1.7.2" },
     { name = "jupyter-cache", specifier = ">=1.0.1" },
     { name = "legendkit", specifier = ">=0.3.4" },

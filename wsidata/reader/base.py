@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from functools import cached_property, singledispatch
 from importlib import import_module
+from numbers import Integral
 from typing import Dict, List, Mapping, Optional
 
 import cv2
@@ -15,6 +16,10 @@ from PIL import Image
 
 # AnnData cannot serialize Tuple
 SHAPE = List[int]
+
+
+class SceneSelectionError(ValueError):
+    """Raised when a requested scene cannot be selected."""
 
 
 @dataclass
@@ -41,6 +46,12 @@ class SlideProperties:
         This is the region of the slide that contains tissue
     raw : dict
         The raw metadata in serialized json format
+    scene : int
+        The selected zero-based scene index
+    n_scenes : int
+        The number of selectable scenes
+    scene_names : list of str
+        Names of the selectable scenes
 
     """
 
@@ -51,6 +62,9 @@ class SlideProperties:
     mpp: Optional[float] = None
     magnification: Optional[float] = None
     bounds: Optional[SHAPE] = None
+    scene: int = 0
+    n_scenes: int = 1
+    scene_names: List[str] = field(default_factory=lambda: ["Image 0"])
     raw: Optional[str] = field(default=None, repr=False, compare=False)
 
     @classmethod
@@ -176,6 +190,7 @@ class ReaderBase(ABC):
     pkg_namespaces: str | List[str]
     pkgs: str | List[str] | None = None
     extensions: tuple[str, ...] | None = None
+    supports_scenes: bool = False
     _reader = None
     _associated_images: AssociatedImages = None
 
@@ -205,6 +220,36 @@ class ReaderBase(ABC):
         if self._associated_images is None:
             return {}
         return self._associated_images
+
+    @property
+    def scene(self) -> int:
+        """The selected zero-based scene index."""
+        return self.properties.scene
+
+    @property
+    def n_scenes(self) -> int:
+        """The number of selectable scenes."""
+        return self.properties.n_scenes
+
+    @property
+    def scene_names(self) -> tuple[str, ...]:
+        """The names of all selectable scenes."""
+        return tuple(self.properties.scene_names)
+
+    @staticmethod
+    def validate_scene(scene: int | None, n_scenes: int) -> int | None:
+        """Validate and normalize a public scene index."""
+        if scene is None:
+            return None
+        if isinstance(scene, bool) or not isinstance(scene, Integral):
+            raise TypeError("scene must be a non-negative integer or None.")
+        scene = int(scene)
+        if scene < 0 or scene >= n_scenes:
+            raise SceneSelectionError(
+                f"Scene {scene} does not exist; available scenes are "
+                f"0 through {n_scenes - 1}."
+            )
+        return scene
 
     def translate_level(self, level):
         """Translate the level to the actual level
