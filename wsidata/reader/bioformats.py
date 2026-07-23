@@ -1,5 +1,6 @@
 # The implementation is highly inspired by
 # https://github.com/AllenCellModeling/aicsimageio/blob/main/aicsimageio/readers/bioformats_reader.py
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from time import sleep
@@ -27,11 +28,13 @@ class BioFormatsReader(ReaderBase):
 
     name = "bioformats"
     pkg_namespaces = "scyjava"
+    supports_scenes = True
 
     def __init__(
         self,
         file: Union[Path, str],
         memorize: bool = False,
+        scene: int | None = None,
         **kwargs,
     ):
         self.file = str(file)
@@ -44,7 +47,9 @@ class BioFormatsReader(ReaderBase):
         # Create a reader object
         self.create_reader()
         # This should only run once
-        self._process_bioformats_properties(self.reader, self.reader.getMetadataStore())
+        self._process_bioformats_properties(
+            self.reader, self.reader.getMetadataStore(), scene
+        )
 
     # TODO: Test if this is the same with openslide
     def get_region(
@@ -67,7 +72,8 @@ class BioFormatsReader(ReaderBase):
         if open_x >= img_width or open_y >= img_height:
             return np.zeros((height, width, 3), dtype=np.uint8)
 
-        # Move the reader to the correct series
+        # Move the reader to the selected scene and resolution.
+        self.reader.setSeries(self._series)
         self.reader.setResolution(level)
 
         idx = self.reader.getIndex(0, 0, 0)
@@ -191,13 +197,25 @@ class BioFormatsReader(ReaderBase):
         loci = jpype.JPackage("loci")
         return loci
 
-    def _process_bioformats_properties(self, reader, meta):
+    @staticmethod
+    def _is_associated_series(name):
+        if name is None:
+            return False
+        name = str(name).strip().casefold()
+        return any(
+            name == associated or name.startswith(f"{associated} ")
+            for associated in ("label", "macro", "thumbnail", "slidepreview")
+        )
+
+    def _process_bioformats_properties(self, reader, meta, scene):
         n_series = reader.getSeriesCount()
 
         multi_pyramids = []
         for series in range(n_series):
             reader.setSeries(series)
             n_res = reader.getResolutionCount()
+            name = meta.getImageName(series)
+            name = None if name is None else str(name)
 
             mpp = meta.getPixelsPhysicalSizeX(series)
             if mpp is not None:
@@ -221,6 +239,7 @@ class BioFormatsReader(ReaderBase):
             multi_pyramids.append(
                 Pyramids(
                     series=series,
+                    name=name or f"Image {series}",
                     width=level_shape[0][1],
                     height=level_shape[0][0],
                     level_shape=level_shape,
@@ -228,8 +247,21 @@ class BioFormatsReader(ReaderBase):
                     mag=mag,
                 )
             )
-        # Identify the pyramid with the highest resolution
-        used_pyramids = sorted(multi_pyramids, key=lambda x: x.height * x.width)[-1]
+
+        scenes = [
+            pyramid
+            for pyramid in multi_pyramids
+            if not self._is_associated_series(pyramid.name)
+        ]
+        if not scenes:
+            scenes = multi_pyramids
+        if scene is None:
+            scene = max(
+                range(len(scenes)),
+                key=lambda i: scenes[i].height * scenes[i].width,
+            )
+        scene = self.validate_scene(scene, len(scenes))
+        used_pyramids = scenes[scene]
         # Calculate the downsample for each level
         level_downsample = []
         for i, shape in enumerate(used_pyramids.level_shape):
@@ -269,13 +301,24 @@ class BioFormatsReader(ReaderBase):
             mpp=used_pyramids.mpp,
             magnification=used_pyramids.mag,
             bounds=[0, 0, used_pyramids.width, used_pyramids.height],
-            # TODO: Attach raw metadata
+            scene=scene,
+            n_scenes=len(scenes),
+            scene_names=[pyramid.name for pyramid in scenes],
+            raw=json.dumps(
+                {
+                    "scene": scene,
+                    "native_scene": self._series,
+                    "scene_name": used_pyramids.name,
+                    "n_scenes": len(scenes),
+                }
+            ),
         )
 
 
 @dataclass
 class Pyramids:
     series: int
+    name: str
     width: int
     height: int
     level_shape: List[List[int]]

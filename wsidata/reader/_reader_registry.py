@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Type
 
 from .._utils import find_stack_level
-from .base import ReaderBase
+from .base import ReaderBase, SceneSelectionError
 
 
 class ReaderRegistry(MutableMapping):
@@ -115,39 +115,57 @@ class ReaderRegistry(MutableMapping):
                 return f".ome{suffixes[-1]}".lower()
         return suffixes[-1].lower()
 
-    def try_open(self, img_path: str, reader: str = None) -> ReaderBase:
+    @staticmethod
+    def _open_reader(reader_cls, img_path, scene):
+        if scene is not None and not reader_cls.supports_scenes:
+            if scene != 0:
+                raise SceneSelectionError(
+                    f"Reader '{reader_cls.name}' does not support scene selection."
+                )
+            return reader_cls(img_path)
+        kwargs = {"scene": scene} if reader_cls.supports_scenes else {}
+        return reader_cls(img_path, **kwargs)
+
+    def try_open(
+        self, img_path: str, reader: str = None, scene: int | None = None
+    ) -> ReaderBase:
         if reader is not None:
             reader_cls = self[reader]
             reader_cls.is_available(raise_error=True)
-            return reader_cls(img_path)
+            return self._open_reader(reader_cls, img_path, scene)
 
-        # Phase 1: extension-based lookup
-        attempted = []
+        # Prefer extension matches, then fall back to the global priority.
+        candidates = []
         ext = self._get_extension(img_path)
         if ext:
             if self._ext_index is None:
                 self._build_ext_index()
-            candidates = self._ext_index.get(ext, [])
-            for name in candidates:
-                reader_cls = self[name]
-                if reader_cls.is_available():
-                    try:
-                        return reader_cls(img_path)
-                    except Exception:  # noqa
-                        attempted.append(name)
-                        continue
-
-        # Phase 2: priority-based fallback
+            candidates.extend(self._ext_index.get(ext, []))
         for name in self.priority:
-            # Skip readers we've already attempted via extension lookup
-            if name not in self._readers or name in attempted:
-                continue
+            if name in self._readers and name not in candidates:
+                candidates.append(name)
+
+        # An explicit scene asks for scene semantics, so capable readers get
+        # the first opportunity even if a single-image reader has higher priority.
+        if scene is not None:
+            candidates.sort(key=lambda name: not self[name].supports_scenes)
+
+        scene_error = None
+        for name in candidates:
             reader_cls = self[name]
-            if reader_cls.is_available():
-                try:
-                    return reader_cls(img_path)
-                except Exception:  # noqa
-                    continue
+            if not reader_cls.is_available():
+                continue
+            if scene not in (None, 0) and not reader_cls.supports_scenes:
+                continue
+            try:
+                return self._open_reader(reader_cls, img_path, scene)
+            except SceneSelectionError as error:
+                scene_error = error
+            except Exception:  # noqa: BLE001
+                continue
+
+        if scene_error is not None:
+            raise scene_error
 
         raise ValueError(f"Cannot open image '{img_path}' using any of the readers.")
 
