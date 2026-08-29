@@ -78,9 +78,10 @@ jobs:
           path: |
             ${{ github.workspace }}/.ci-cache
             ~/.jgo
-          key: ci-cache-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          # No matrix.python-version in the key: the cached content is the JDK, the
+          # Maven artifacts and the test slides, none of which vary by Python version.
+          key: ci-cache-${{ runner.os }}-${{ hashFiles('uv.lock') }}
           restore-keys: |
-            ci-cache-${{ runner.os }}-${{ matrix.python-version }}-
             ci-cache-${{ runner.os }}-
       - name: Install project
         run: uv sync --locked --no-default-groups --group dev
@@ -91,7 +92,7 @@ jobs:
         run: uv run task test
 
   Upload_to_pypi:
-    needs: Test
+    needs: [Lint, Test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
