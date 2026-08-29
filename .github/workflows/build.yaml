@@ -10,54 +10,97 @@ on:
       - '.github/**'
       - 'wsidata/**'
       - 'tests/**'
+      - 'docs/**'
       - 'pyproject.toml'
+      - 'uv.lock'
+      - '.pre-commit-config.yaml'
   pull_request:
     paths:
       - '.github/**'
       - 'wsidata/**'
       - 'tests/**'
+      - 'docs/**'
       - 'pyproject.toml'
+      - 'uv.lock'
+      - '.pre-commit-config.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUFF_VERSION: '0.16.5'
 
 jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.0.1
+      - name: Ruff check
+        run: uvx ruff@${{ env.RUFF_VERSION }} check docs/source wsidata tests
+      - name: Ruff format
+        run: uvx ruff@${{ env.RUFF_VERSION }} format --check docs/source wsidata tests
+
   Test:
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
 
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -el {0}
+    env:
+      # Keep the Java toolchain, the Maven artifacts and the test slides inside the
+      # workspace so a single cache entry works the same on all three runners.
+      # scyjava hardcodes its jgo environment cache to ~/.jgo (no env var), so that
+      # one is cached by path below rather than relocated here.
+      CJDK_CACHE_DIR: ${{ github.workspace }}/.ci-cache/cjdk
+      M2_REPO: ${{ github.workspace }}/.ci-cache/m2
+      HF_HOME: ${{ github.workspace }}/.ci-cache/hf
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.0.1
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+      - name: Cache JDK, Maven artifacts and test slides
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ github.workspace }}/.ci-cache
+            ~/.jgo
+          # No matrix.python-version in the key: the cached content is the JDK, the
+          # Maven artifacts and the test slides, none of which vary by Python version.
+          key: ci-cache-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ci-cache-${{ runner.os }}-
       - name: Install project
-        run: |
-          uv sync --dev
-          uv pip install scyjava
+        run: uv sync --locked --no-default-groups --group dev
       - name: Install cucim reader on Linux
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          uv pip install cucim-cu12
+        run: uv sync --locked --no-default-groups --group dev --group cucim
       - name: Tests
         run: uv run task test
 
   Upload_to_pypi:
+    needs: [Lint, Test]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.0.1
         with:
           python-version: 3.12
           enable-cache: true
@@ -69,7 +112,7 @@ jobs:
           uv publish --publish-url https://test.pypi.org/legacy/ || exit 0
 
       - name: Publish to pypi
-        if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+        if: startsWith(github.event.ref, 'refs/tags/v')
         run: |
           uv build
           uv publish
