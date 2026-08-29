@@ -96,6 +96,19 @@ lint = "ruff check docs/source wsidata tests"
 [tool.uv]
 default-groups = ["dev", "docs"]
 
+# Linux torch wheels default to the CUDA build, which drags in ~2.5 GB of
+# nvidia-* per environment. Nothing here needs a GPU, so develop and test
+# against the CPU build on Linux. This is a uv workspace setting: it affects
+# `uv sync`/`uv lock` in this repo only, never an install from PyPI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
