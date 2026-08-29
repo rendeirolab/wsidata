@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 stain = ["torchstain"]
-bioformats = ["scyjava"]
+bioformats = ["scyjava>=1.12.2"]
 cucim = ["cucim"]
 tiffslide = ["tiffslide"]
 fastslide = ["fastslide>=0.7.4"]
@@ -77,8 +77,13 @@ include = [
 packages = ["wsidata", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.ruff]
-lint.extend-select = ["I"]
 line-length = 88
+
+[tool.ruff.lint]
+# Pinned explicitly: ruff >=0.16 widened its implicit default rule set, and an
+# implicit default means a ruff bump can turn CI red without a code change.
+# E4/E7/E9 + F is ruff's classic default; I adds import sorting.
+select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.taskipy.tasks]
 test = "python -X faulthandler -m pytest tests -v --tb=short --disable-warnings"
@@ -86,6 +91,7 @@ doc-build = "sphinx-build -b html -j auto docs/source docs/build"
 doc-clean-build = "python docs/clean_up.py && sphinx-build -b html -j auto docs/source docs/build"
 doc-serve = "python -m http.server 12900 -d docs/build"
 fmt = "ruff format docs/source wsidata tests"
+lint = "ruff check docs/source wsidata tests"
 
 [tool.uv]
 default-groups = ["dev", "docs"]
@@ -93,7 +99,7 @@ default-groups = ["dev", "docs"]
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
-    "ruff>=0.9.4",
+    "ruff>=0.16.5",
     "taskipy>=1.14.1",
     "pytest-cov>=6.0.0",
     "torchvision>=0.21.0",
@@ -106,9 +112,9 @@ dev = [
     "pandas-stubs>=2.3.0.250703",
     "tiffslide>=2.4.0",
     "fastslide>=0.7.4",
-    "scyjava>=1.10.1",
+    "scyjava>=1.12.5",
     "pyisyntax>=0.1.5",
-    "pylibCZIrw>=6.0.0",
+    "pylibCZIrw>=6.0.0; python_version < '3.14'",
     "huggingface-hub>=1.7.2",
     "prek>=0.3.13",
 ]
