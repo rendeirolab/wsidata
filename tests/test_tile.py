@@ -207,3 +207,23 @@ def test_shrunk_tiles_are_area_averaged(wsidata, monkeypatch, accessor):
     assert tile.shape == (100, 100, 3)
     # Each output pixel averages a ~3x3 block, about 4/9 or 5/9 of 255.
     assert np.abs(tile.astype(float) - 127.5).max() < 20
+
+
+def test_resize_handles_each_axis_on_its_own():
+    """A shape can shrink along one axis and grow along the other, e.g. a
+    300 x 50 region read into a 100 x 100 image. One INTER_AREA pass grew the
+    short axis by repeating rows; shrink first, then grow with INTER_LINEAR."""
+    h, w = 50, 300
+    img = np.zeros((h, w, 3), dtype=np.uint8)
+    img[..., 0] = np.arange(w) % 2 * 255  # 1 px stripes along x
+    img[..., 1] = (np.arange(h) * 5)[:, None]  # a ramp along y
+
+    out = TileRequest(x=0, y=0, level=0, width=w, height=h, dsize=(100, 100)).resize(
+        img
+    )
+
+    assert out.shape == (100, 100, 3)
+    # x shrinks 3x: every output pixel averages 3 stripes, 85 or 170.
+    assert np.abs(out[..., 0].astype(float) - 127.5).max() < 50
+    # y grows 2x: the ramp stays strictly increasing, no repeated rows.
+    assert (np.diff(out[:, 50, 1].astype(int)) > 0).all()

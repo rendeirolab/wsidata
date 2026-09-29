@@ -453,13 +453,18 @@ class TileRequest(NamedTuple):
         Shrinking uses ``INTER_AREA``, which averages the pixels each output
         pixel covers; ``INTER_LINEAR`` samples at the output pixel centres and
         aliases. Enlarging keeps ``INTER_LINEAR``, as ``INTER_AREA`` degrades
-        to nearest neighbour there.
+        to nearest neighbour there. A region can shrink along one axis and
+        grow along the other, so it is shrunk first, then grown.
         """
         if self.dsize is None:
             return img
-        shrink = self.dsize[0] < img.shape[1] or self.dsize[1] < img.shape[0]
-        interpolation = cv2.INTER_AREA if shrink else cv2.INTER_LINEAR
-        return cv2.resize(img, self.dsize, interpolation=interpolation)
+        width, height = self.dsize
+        shrunk = (min(width, img.shape[1]), min(height, img.shape[0]))
+        if shrunk != (img.shape[1], img.shape[0]):
+            img = cv2.resize(img, shrunk, interpolation=cv2.INTER_AREA)
+        if shrunk != (width, height):
+            img = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
+        return img
 
 
 def shapes2tiles(
