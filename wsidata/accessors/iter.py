@@ -898,9 +898,7 @@ class IterAccessor(object):
                 tile.height,
                 level=tile.level,
             )
-            # Resize to target size if needed
-            if tile.dsize is not None:
-                img = cv2.resize(img, tile.dsize)
+            img = tile.resize(img)
             img = cn_func(img)
 
             if format == "cyx":

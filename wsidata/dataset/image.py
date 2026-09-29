@@ -1,6 +1,5 @@
 from functools import cached_property
 
-import cv2
 from torch.utils.data import Dataset
 
 from .._model import WSIData, shapes2tiles
@@ -111,9 +110,7 @@ class TileImagesDataset(Dataset):
             tile_req.height,
             level=tile_req.level,
         )
-        # Resize to target size if needed
-        if tile_req.dsize is not None:
-            tile = cv2.resize(tile, tile_req.dsize)
+        tile = tile_req.resize(tile)
 
         tile = self._cn_func(tile)
 

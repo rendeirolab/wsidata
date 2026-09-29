@@ -174,3 +174,56 @@ class TestDimensionConventions:
             )
 
         del wsidata.shapes["_test_box_geom"]
+
+
+@pytest.mark.parametrize("accessor", ["ds", "iter"])
+def test_shrunk_tiles_are_area_averaged(wsidata, monkeypatch, accessor):
+    """A region read larger than the tile is shrunk with INTER_AREA.
+
+    INTER_LINEAR samples the source at the output pixel centres, so a 3x
+    shrink keeps one pixel in three and a fine pattern aliases instead of
+    averaging out.
+    """
+    spec = TileSpec.from_wsidata(wsidata, tile_px=100, mpp=wsidata.properties.mpp * 3)
+    assert spec.ops_width > 2 * spec.width  # read ~3x larger, then shrunk
+    key = "_test_shrink"
+    io.add_tiles(
+        wsidata, key, np.array([[0, 0]]), tile_spec=spec, tissue_ids=np.array([0])
+    )
+
+    def checkerboard(x, y, width, height, level=0, **kwargs):
+        board = np.indices((height, width)).sum(axis=0) % 2 * 255
+        return np.repeat(board[..., None], 3, axis=-1).astype(np.uint8)
+
+    monkeypatch.setattr(wsidata.reader, "get_region", checkerboard)
+    try:
+        if accessor == "ds":
+            tile = wsidata.ds.tile_images(key)[0]["image"]
+        else:
+            tile = next(wsidata.iter.tile_images(key)).image
+    finally:
+        del wsidata.shapes[key]
+
+    assert tile.shape == (100, 100, 3)
+    # Each output pixel averages a ~3x3 block, about 4/9 or 5/9 of 255.
+    assert np.abs(tile.astype(float) - 127.5).max() < 20
+
+
+def test_resize_handles_each_axis_on_its_own():
+    """A shape can shrink along one axis and grow along the other, e.g. a
+    300 x 50 region read into a 100 x 100 image. One INTER_AREA pass grew the
+    short axis by repeating rows; shrink first, then grow with INTER_LINEAR."""
+    h, w = 50, 300
+    img = np.zeros((h, w, 3), dtype=np.uint8)
+    img[..., 0] = np.arange(w) % 2 * 255  # 1 px stripes along x
+    img[..., 1] = (np.arange(h) * 5)[:, None]  # a ramp along y
+
+    out = TileRequest(x=0, y=0, level=0, width=w, height=h, dsize=(100, 100)).resize(
+        img
+    )
+
+    assert out.shape == (100, 100, 3)
+    # x shrinks 3x: every output pixel averages 3 stripes, 85 or 170.
+    assert np.abs(out[..., 0].astype(float) - 127.5).max() < 50
+    # y grows 2x: the ramp stays strictly increasing, no repeated rows.
+    assert (np.diff(out[:, 50, 1].astype(int)) > 0).all()
