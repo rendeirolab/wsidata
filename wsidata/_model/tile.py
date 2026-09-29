@@ -7,6 +7,7 @@ from functools import cached_property
 from numbers import Integral, Number
 from typing import TYPE_CHECKING, List, NamedTuple, Optional, Sequence, Tuple
 
+import cv2
 import numpy as np
 
 from .._utils import find_stack_level
@@ -445,6 +446,20 @@ class TileRequest(NamedTuple):
     width: int
     height: int
     dsize: Tuple[int, int] | None
+
+    def resize(self, img: np.ndarray) -> np.ndarray:
+        """Resize a region read for this request to ``dsize``, if set.
+
+        Shrinking uses ``INTER_AREA``, which averages the pixels each output
+        pixel covers; ``INTER_LINEAR`` samples at the output pixel centres and
+        aliases. Enlarging keeps ``INTER_LINEAR``, as ``INTER_AREA`` degrades
+        to nearest neighbour there.
+        """
+        if self.dsize is None:
+            return img
+        shrink = self.dsize[0] < img.shape[1] or self.dsize[1] < img.shape[0]
+        interpolation = cv2.INTER_AREA if shrink else cv2.INTER_LINEAR
+        return cv2.resize(img, self.dsize, interpolation=interpolation)
 
 
 def shapes2tiles(

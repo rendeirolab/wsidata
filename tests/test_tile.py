@@ -174,3 +174,36 @@ class TestDimensionConventions:
             )
 
         del wsidata.shapes["_test_box_geom"]
+
+
+@pytest.mark.parametrize("accessor", ["ds", "iter"])
+def test_shrunk_tiles_are_area_averaged(wsidata, monkeypatch, accessor):
+    """A region read larger than the tile is shrunk with INTER_AREA.
+
+    INTER_LINEAR samples the source at the output pixel centres, so a 3x
+    shrink keeps one pixel in three and a fine pattern aliases instead of
+    averaging out.
+    """
+    spec = TileSpec.from_wsidata(wsidata, tile_px=100, mpp=wsidata.properties.mpp * 3)
+    assert spec.ops_width > 2 * spec.width  # read ~3x larger, then shrunk
+    key = "_test_shrink"
+    io.add_tiles(
+        wsidata, key, np.array([[0, 0]]), tile_spec=spec, tissue_ids=np.array([0])
+    )
+
+    def checkerboard(x, y, width, height, level=0, **kwargs):
+        board = np.indices((height, width)).sum(axis=0) % 2 * 255
+        return np.repeat(board[..., None], 3, axis=-1).astype(np.uint8)
+
+    monkeypatch.setattr(wsidata.reader, "get_region", checkerboard)
+    try:
+        if accessor == "ds":
+            tile = wsidata.ds.tile_images(key)[0]["image"]
+        else:
+            tile = next(wsidata.iter.tile_images(key)).image
+    finally:
+        del wsidata.shapes[key]
+
+    assert tile.shape == (100, 100, 3)
+    # Each output pixel averages a ~3x3 block, about 4/9 or 5/9 of 255.
+    assert np.abs(tile.astype(float) - 127.5).max() < 20
