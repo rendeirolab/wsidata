@@ -19,9 +19,10 @@ from .._model.tile import shapes2tiles
 
 
 def _get_cn_func(color_norm):
-    from .._normalizer import ColorNormalizer
+    from .._normalizer import ColorNormalizer, warn_color_norm_deprecated
 
     if color_norm is not None:
+        warn_color_norm_deprecated()
         cn = ColorNormalizer(method=color_norm)
         cn_func = lambda x: cn(x).numpy().astype(np.uint8)  # noqa
     else:
@@ -723,7 +724,9 @@ class IterAccessor(object):
 
             If an integer, the background is masked with the given value.
         color_norm : str, {"macenko", "reinhard"}, default: None
-            Color normalization method.
+            Color normalization method. Deprecated, will be removed in 0.13.0:
+            if you need stain normalization, use torchstain directly on the
+            images.
         format : str, {"yxc", "cyx"}, default: "yxc"
             The channel format of the image.
 
@@ -803,7 +806,9 @@ class IterAccessor(object):
         key : str
             The tile key.
         color_norm : str, {"macenko", "reinhard"}, default: None
-            Color normalization method.
+            Color normalization method. Deprecated, will be removed in 0.13.0:
+            if you need stain normalization, use torchstain directly on the
+            images.
         format : str, {"yxc", "cyx"}, default: "yxc"
             The channel format of the image.
         image_size : int or tuple of (int, int), optional

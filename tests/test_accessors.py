@@ -1,4 +1,5 @@
 import pickle
+import warnings
 
 import numpy as np
 import pytest
@@ -52,8 +53,9 @@ class TestIterAccessor:
 
     @pytest.mark.parametrize("color_norm", ["macenko", "reinhard"])
     def test_iter_tiles(self, wsidata, color_norm):
-        for it in wsidata.iter.tile_images("tiles", color_norm=color_norm):
-            pass
+        with pytest.warns(FutureWarning, match="color_norm"):
+            for it in wsidata.iter.tile_images("tiles", color_norm=color_norm):
+                pass
 
     def test_iter_tiles_plot(self, wsidata):
         it = next(wsidata.iter.tile_images("tiles"))
@@ -170,3 +172,31 @@ class TestDatasetAccessor:
 
         # Check that we have the expected number of edges
         assert data.edge_index.size(1) == n_tiles - 1
+
+
+@pytest.mark.parametrize(
+    "read",
+    [
+        lambda wsi, **kw: wsi.ds.tile_images("tiles", **kw),
+        lambda wsi, **kw: next(wsi.iter.tile_images("tiles", **kw)),
+        lambda wsi, **kw: next(wsi.iter.tissue_images("tissues", **kw)),
+    ],
+    ids=["ds.tile_images", "iter.tile_images", "iter.tissue_images"],
+)
+def test_color_norm_is_deprecated(wsidata, read):
+    """color_norm warns, at the line of the caller; without it, nothing warns"""
+    with pytest.warns(FutureWarning, match="color_norm") as record:
+        read(wsidata, color_norm="macenko")
+    assert record.pop(FutureWarning).filename == __file__
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        read(wsidata)
+    assert not [w for w in caught if "color_norm" in str(w.message)]
+
+
+def test_color_normalizer_is_deprecated():
+    """wsidata.ColorNormalizer warns, at the line of the caller"""
+    with pytest.warns(FutureWarning, match="ColorNormalizer") as record:
+        from wsidata import ColorNormalizer  # noqa: F401
+    assert record.pop(FutureWarning).filename == __file__

@@ -32,7 +32,8 @@ class TileImagesDataset(Dataset):
     target_transform: callable
         The transformation for the target.
     color_norm: str
-        The color normalization method.
+        The color normalization method. Deprecated, will be removed in 0.13.0:
+        if you need stain normalization, use torchstain directly in *transform*.
     image_size : int or tuple of (int, int), optional
         Hint for optimal pyramid level selection via :func:`shapes2tiles`.
 
@@ -55,6 +56,10 @@ class TileImagesDataset(Dataset):
         # Do not assign wsi to self to avoid pickling
         tiles_gdf = wsi[key]
         self.color_norm = color_norm
+        if color_norm is not None:
+            from .._normalizer import warn_color_norm_deprecated
+
+            warn_color_norm_deprecated()
 
         # Resolve tile read specs via shapes2tiles (same as iter.tile_images)
         # image_size only affects pyramid level selection, no resize applied
