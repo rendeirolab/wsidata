@@ -1,3 +1,4 @@
+import pickle
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 
 from wsidata import open_wsi
 from wsidata.reader import (
+    FastSlideReader,
     OpenSlideReader,
     ReaderBase,
     SlideProperties,
@@ -106,6 +108,57 @@ def test_tiffslide(test_slide):
 @pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
 def test_fastslide(test_slide):
     run_reader_test("fastslide", test_slide)
+
+
+@pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
+def test_fastslide_reopens_after_detach(test_slide):
+    """Regression: detach_reader() closed the slide, but get_region and
+    get_thumbnail kept using the scene view of the closed slide, so any read
+    after it raised "slide reader is closed". TileImagesDataset detaches the
+    reader before it reads tiles, so every tile dataset failed. The view also
+    cannot be pickled, so the reader could not go to spawned workers.
+    """
+    reader = FastSlideReader(test_slide)
+    region = reader.get_region(100, 200, 64, 64, level=0)
+    thumbnail = reader.get_thumbnail(256)
+    reader.detach_reader()
+
+    np.testing.assert_array_equal(reader.get_region(100, 200, 64, 64, level=0), region)
+    np.testing.assert_array_equal(reader.get_thumbnail(256), thumbnail)
+    reader.detach_reader()
+    in_worker = pickle.loads(pickle.dumps(reader))
+    assert "macro" in in_worker.associated_images
+    np.testing.assert_array_equal(in_worker.get_region(100, 200, 64, 64), region)
+
+
+@pytest.mark.skipif(skip_reader("fastslide"), reason="fastslide not installed")
+@pytest.mark.parametrize(
+    "slide, level, x, y, inside, read",
+    [  # 128 x 128 px regions; sample.svs is 2220 x 2967 px
+        ("test_slide", 0, 2156, 100, np.s_[:, :64], (2156, 100, 64, 128)),
+        ("test_slide", 0, 100, 2903, np.s_[:64, :], (100, 2903, 128, 64)),
+        ("test_slide", 0, -50, -30, np.s_[30:, 50:], (0, 0, 78, 98)),
+        ("test_slide", 0, 3000, 0, None, None),
+        # level 1 is 4979 px wide at downsample 4.0005: x = 19800 is in px 4949,
+        # x = -10 in px -3
+        ("test_pyramid_slide", 1, 19800, 400, np.s_[:, :30], (19800, 400, 30, 128)),
+        ("test_pyramid_slide", 1, -10, 400, np.s_[:, 3:], (0, 400, 125, 128)),
+    ],
+)
+def test_fastslide_pads_regions_outside_the_slide(
+    request, slide, level, x, y, inside, read
+):
+    """Regression: fastslide cropped a region reaching past the slide edge,
+    and raised for one entirely outside it or at negative coordinates. Like
+    the other readers, get_region returns the requested size, black outside.
+    """
+    reader = FastSlideReader(request.getfixturevalue(slide))
+    region = reader.get_region(x, y, 128, 128, level=level)
+
+    expected = np.zeros((128, 128, 3), dtype=np.uint8)
+    if inside is not None:
+        expected[inside] = reader.get_region(*read, level=level)
+    np.testing.assert_array_equal(region, expected)
 
 
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
