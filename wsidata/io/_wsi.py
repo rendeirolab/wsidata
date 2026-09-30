@@ -30,7 +30,7 @@ def open_wsi(
     thumbnail_key: str = "wsi_thumbnail",
     thumbnail_size: int = 2000,
     save_thumbnail: bool = False,
-    **kwargs,  # Kept for backward compatibility.
+    **kwargs,  # Passed to the reader.
 ):
     """Open a whole slide image.
 
@@ -73,6 +73,9 @@ def open_wsi(
     save_thumbnail : bool, optional, default: False
         Whether to save the thumbnail to on the disk.
         Only works for wsi.write() method.
+    **kwargs
+        Passed to the reader, for example ``cache_size`` for isyntax or
+        ``memorize`` for bioformats. Ignored when ``wsi`` is a SpatialData object.
 
     Returns
     -------
@@ -131,7 +134,7 @@ def open_wsi(
     if not wsi.exists():
         raise ValueError(f"Slide {wsi} does not exist, or is not accessible.")
 
-    reader_instance = READERS.try_open(wsi, reader=reader, scene=scene)
+    reader_instance = READERS.try_open(wsi, reader=reader, scene=scene, **kwargs)
     try:
         # Check if the image is not pyramidal and too large
         if reader_instance.properties.n_level <= 1:

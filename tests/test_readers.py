@@ -179,6 +179,21 @@ def test_isyntax(test_isyntax):
     run_reader_test("isyntax", test_isyntax)
 
 
+@pytest.mark.skipif(skip_reader("isyntax"), reason="pyisyntax not installed")
+@pytest.mark.parametrize("scene", [None, 0])
+def test_isyntax_reader_options(test_isyntax, scene):
+    """Regression: open_wsi took extra keyword arguments but did not pass them
+    to the reader, so reader options, cache_size for isyntax or memorize for
+    bioformats, were silently ignored. scene=0 opens a reader without scenes
+    down another path, which dropped them too.
+    """
+    wsi = open_wsi(
+        test_isyntax, reader="isyntax", scene=scene, cache_size=123, store=None
+    )
+    assert wsi.reader._cache_size == 123
+    wsi.close()
+
+
 @pytest.mark.skipif(skip_reader("pylibczi"), reason="pylibCZIrw not installed")
 def test_pylibczi(test_czi):
     run_reader_test("pylibczi", test_czi)
@@ -229,6 +244,46 @@ def test_auto_reader_with_scene(test_multiscene_czi):
     assert wsi.n_scenes == 2
     assert wsi.reader.supports_scenes
     wsi.close()
+
+
+class _OptionsReader(ReaderBase):
+    """Keeps the keyword arguments it is opened with."""
+
+    name = "options"
+    pkg_namespaces = "os"
+    extensions = (".options",)
+    supports_scenes = True
+
+    def __init__(self, file, **kwargs):
+        self.file = str(file)
+        self.kwargs = kwargs
+        self.properties = SlideProperties(
+            shape=[1, 1], n_level=1, level_shape=[[1, 1]], level_downsample=[1.0]
+        )
+
+    def get_region(self, x, y, width, height, level=0, **kwargs):
+        pass
+
+    def get_thumbnail(self, size, **kwargs):
+        pass
+
+    def create_reader(self):
+        pass
+
+    def detach_reader(self):
+        pass
+
+
+def test_auto_reader_gets_reader_options(tmp_path, monkeypatch):
+    """Regression: the reader open_wsi picked on its own did not get the
+    reader options either. A reader with scenes gets the scene and the options.
+    """
+    monkeypatch.setitem(READERS, "options", _OptionsReader)
+    slide = tmp_path / "slide.options"
+    slide.touch()
+
+    wsi = open_wsi(slide, scene=1, store=None, option="value")
+    assert wsi.reader.kwargs == {"scene": 1, "option": "value"}
 
 
 @pytest.mark.skipif(skip_reader("bioformats"), reason="scyjava not installed")
