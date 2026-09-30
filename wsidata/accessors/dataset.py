@@ -29,6 +29,8 @@ class DatasetAccessor(object):
         target_transform: callable
             The transformation for the target.
         color_norm: str
+            Deprecated, will be removed in 0.13.0: if you need stain
+            normalization, use torchstain directly in *transform*.
         image_size : int or tuple of (int, int), optional
             Hint for optimal pyramid level selection via :func:`shapes2tiles`.
             Does **not** resize the output — use *transform* for that.

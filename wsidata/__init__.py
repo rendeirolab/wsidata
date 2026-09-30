@@ -26,9 +26,10 @@ def __getattr__(name):
         globals()[name] = mod
         return mod
     if name == "ColorNormalizer":
-        from ._normalizer import ColorNormalizer
+        from ._normalizer import ColorNormalizer, warn_color_norm_deprecated
 
-        globals()[name] = ColorNormalizer
+        # Not cached in globals(), so every use of it warns
+        warn_color_norm_deprecated()
         return ColorNormalizer
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

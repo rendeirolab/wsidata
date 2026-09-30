@@ -1,4 +1,19 @@
+import warnings
+
 import torch
+
+from ._utils import find_stack_level
+
+
+def warn_color_norm_deprecated():
+    # Remove with color_norm and ColorNormalizer in 0.13.0
+    warnings.warn(
+        "color_norm and ColorNormalizer are deprecated and will be removed in "
+        "wsidata 0.13.0. If you need stain normalization, use torchstain "
+        "directly, for example in the transform of ds.tile_images.",
+        FutureWarning,
+        stacklevel=find_stack_level(),
+    )
 
 
 def transform(tensor):
@@ -15,6 +30,8 @@ def transform(tensor):
 
 
 class ColorNormalizer(torch.nn.Module):
+    """Deprecated, will be removed in wsidata 0.13.0: use torchstain directly."""
+
     def __init__(self, method="macenko"):
         super().__init__()
 
