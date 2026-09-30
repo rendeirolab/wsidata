@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Literal
@@ -13,6 +14,7 @@ from PIL.Image import Image, fromarray
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
+from .._utils import find_stack_level
 from ..accessors import DatasetAccessor, FetchAccessor, IterAccessor
 from ..reader import ReaderBase, SlideProperties
 from .tile import TileSpec
@@ -365,8 +367,20 @@ class WSIData(SpatialData):
         file_path=None,
         overwrite: bool = True,
         consolidate_metadata: bool = True,
+        sdata_formats=None,
+        *,
         format=None,
     ):
+        if format is not None:
+            # Remove format in 0.13.0
+            warnings.warn(
+                "WSIData.write(format=...) is deprecated and will be removed in "
+                "wsidata 0.13.0. Use sdata_formats, the name SpatialData.write "
+                "uses since spatialdata 0.7.0.",
+                FutureWarning,
+                stacklevel=find_stack_level(),
+            )
+            sdata_formats = format
         if file_path is not None:
             file_path = Path(file_path)
             if self.path is None:
@@ -382,7 +396,7 @@ class WSIData(SpatialData):
             file_path=file_path,
             overwrite=overwrite,
             consolidate_metadata=consolidate_metadata,
-            format=format,
+            sdata_formats=sdata_formats,
         )
 
     def to_spatialdata(self) -> SpatialData:
