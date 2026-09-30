@@ -5539,6 +5539,8 @@ dev = [
     { name = "scyjava" },
     { name = "taskipy" },
     { name = "tiffslide" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
     { name = "torchstain" },
     { name = "torchvision", version = "0.28.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torchvision", version = "0.28.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
@@ -5570,8 +5572,7 @@ requires-dist = [
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.12.2" },
     { name = "spatialdata", specifier = ">=0.7.0" },
     { name = "tiffslide", marker = "extra == 'tiffslide'" },
-    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.0.0" },
-    { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.0.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torch", specifier = ">=2.0.0" },
     { name = "torchstain", marker = "extra == 'stain'" },
 ]
 provides-extras = ["bioformats", "cucim", "fastslide", "isyntax", "plot", "pylibczi", "stain", "tiffslide"]
@@ -5597,9 +5598,11 @@ dev = [
     { name = "scyjava", specifier = ">=1.12.5" },
     { name = "taskipy", specifier = ">=1.14.1" },
     { name = "tiffslide", specifier = ">=2.4.0" },
+    { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.0.0" },
+    { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.0.0", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "wsidata", group = "dev" } },
     { name = "torchstain", specifier = ">=1.4.1" },
     { name = "torchvision", marker = "sys_platform != 'linux'", specifier = ">=0.21.0" },
-    { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu", conflict = { package = "wsidata", group = "dev" } },
 ]
 docs = [
     { name = "ipywidgets", specifier = ">=8.1.8" },
