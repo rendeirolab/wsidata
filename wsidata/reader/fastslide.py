@@ -1,4 +1,5 @@
 import json
+from math import floor
 from pathlib import Path
 from typing import Union
 
@@ -81,9 +82,15 @@ class FastSlideReader(ReaderBase):
                 ),
             )
         scene = self.validate_scene(scene, len(views))
-        self._scene_view = views[scene]
+        self._native_scene = views[scene].index
         self._scene = scene
         self._scene_names = scene_names
+
+    @property
+    def _scene_view(self):
+        # A view dies with the slide that made it, so take it from the open
+        # slide: self.reader re-opens a slide closed by detach_reader()
+        return self.reader.images[self._native_scene]
 
     def _set_properties(self):
         reader = self._scene_view
@@ -138,14 +145,24 @@ class FastSlideReader(ReaderBase):
         level: int = 0,
         **kwargs,
     ):
-        level = self.translate_level(level)
-        # All types are coerced to native Python types
+        level = int(self.translate_level(level))
+        # fastslide reads in level coordinates, and only inside the level
         downsample = self.properties.level_downsample[level]
-        x, y = int(x / downsample), int(y / downsample)
-        img = self._scene_view.read_region(
-            (int(x), int(y)), int(level), (int(width), int(height))
-        )
-        return convert_image(img.numpy())
+        x, y = floor(x / downsample), floor(y / downsample)
+        width, height = int(width), int(height)
+        level_height, level_width = self.properties.level_shape[level]
+        x0, y0 = max(x, 0), max(y, 0)
+        x1, y1 = min(x + width, level_width), min(y + height, level_height)
+        if (x0, y0, x1, y1) == (x, y, x + width, y + height):
+            img = self._scene_view.read_region((x, y), level, (width, height))
+            return convert_image(img.numpy())
+        # Read the part inside the level and leave the rest black, as the
+        # other readers do
+        region = np.zeros((height, width, 3), dtype=np.uint8)
+        if x0 < x1 and y0 < y1:
+            img = self._scene_view.read_region((x0, y0), level, (x1 - x0, y1 - y0))
+            region[y0 - y : y1 - y, x0 - x : x1 - x] = convert_image(img.numpy())
+        return region
 
     def get_thumbnail(self, size, **kwargs):
         height, width = self.properties.shape
@@ -180,7 +197,7 @@ class FastSlideReader(ReaderBase):
     def associated_images(self):
         """The associated images in a key-value pair"""
         if self._associated_images is None:
-            images = self._reader.associated_images
+            images = self.reader.associated_images
             self._associated_images = AssociatedImages(
                 {
                     key: Image.fromarray(convert_image(images[key].numpy()))
