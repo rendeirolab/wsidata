@@ -83,6 +83,10 @@ class PylibCZIReader(ReaderBase):
             self._ctx = None
             self.set_reader(None)
 
+    def __getstate__(self):
+        # The context manager holding the slide open cannot be pickled either
+        return {**super().__getstate__(), "_ctx": None}
+
     @staticmethod
     def _scene_name_map(metadata):
         try:

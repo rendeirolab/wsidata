@@ -120,7 +120,9 @@ class AssociatedImages:
 
     def __getattr__(self, key: str) -> np.ndarray:
         """Get the image by attr"""
-        if key in self._images:
+        # Not self._images: it is missing while unpickling, and looking it up
+        # would call __getattr__ again
+        if key in self.__dict__.get("_images", {}):
             return self[key]
         raise AttributeError(f"Image '{key}' not found in associated images.")
 
@@ -200,6 +202,11 @@ class ReaderBase(ABC):
 
     def __del__(self):
         self.detach_reader()
+
+    def __getstate__(self):
+        # An open slide cannot be pickled: send the reader without it, and the
+        # reader property opens the slide again where it is unpickled
+        return {**self.__dict__, "_reader": None}
 
     @cached_property
     def _level_mapper(self):

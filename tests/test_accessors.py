@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pytest
 import torch
@@ -77,6 +79,16 @@ class TestDatasetAccessor:
         assert "tissue_id" in item
         assert "downsample" in item
         assert item["downsample"] > 0
+
+    def test_ds_tile_images_pickles_after_read(self, wsidata):
+        """Regression: reading a tile cached a lambda as the color normalizer,
+        so a dataset that had read a tile could not go to spawned DataLoader
+        workers."""
+        dataset = wsidata.ds.tile_images("tiles")
+        tile = dataset[0]["image"]
+
+        in_worker = pickle.loads(pickle.dumps(dataset))
+        np.testing.assert_array_equal(in_worker[0]["image"], tile)
 
     def test_ds_tile_feature(self, wsidata):
         dataset = wsidata.ds.tile_feature("resnet50")
