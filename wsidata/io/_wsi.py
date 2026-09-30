@@ -261,11 +261,39 @@ def _validate_store_scene(sdata, reader, store):
 
 
 def _resolve_backed_files(slides_table, wsi_col, store_col):
-    """Resolve backed file paths from slides_table columns."""
+    """Resolve backed file paths from slides_table columns.
+
+    With ``wsi_col``, the store of a slide is the default store of
+    :func:`open_wsi` next to it: ``<stem>.zarr`` if that exists, or else the
+    store of a scene of a multi-scene slide, ``<stem>.scene-<scene>.zarr``,
+    if there is one. The stores of several scenes raise a ValueError. With no
+    store, ``<stem>.zarr`` is returned, for the caller to report missing.
+    """
     if store_col is not None:
         return slides_table[store_col].astype(str)
     elif wsi_col is not None:
-        return slides_table[wsi_col].apply(lambda x: str(Path(x).with_suffix(".zarr")))
+
+        def resolve(wsi):
+            wsi = Path(wsi)
+            store = wsi.with_suffix(".zarr")
+            if store.exists():
+                return str(store)
+            # Stores named <stem>.scene-*.zarr, as _default_store_name names them
+            prefix = f"{wsi.stem}.scene-"
+            scene_stores = sorted(
+                p for p in wsi.parent.glob("*.zarr") if p.name.startswith(prefix)
+            )
+            if len(scene_stores) > 1:
+                raise ValueError(
+                    f"Slide {wsi} has several scene stores: "
+                    f"{', '.join(str(p) for p in scene_stores)}. "
+                    "Pass store_col with explicit store paths."
+                )
+            if len(scene_stores) == 1:
+                return str(scene_stores[0])
+            return str(store)
+
+        return slides_table[wsi_col].apply(resolve)
     else:
         raise ValueError("Either wsi_col or store_col must be provided.")
 
@@ -479,7 +507,10 @@ def concat_feature_anndata(
         be specific to the data structure.
     wsi_col : str, optional
         Optional name of the column in the table that contains whole slide image (WSI)
-        paths. Either `wsi_col` or `store_col` must be provided.
+        paths. Either `wsi_col` or `store_col` must be provided. The store of each
+        slide is the default store of :func:`open_wsi` next to it, ``<stem>.zarr``,
+        or ``<stem>.scene-<scene>.zarr`` for a scene of a multi-scene slide.
+        For a slide with the stores of several scenes, use `store_col`.
     store_col : str, optional
         Optional name of the column specifying storage information for slides.
         Either `store_col` or `wsi_col` is required.
@@ -496,11 +527,26 @@ def concat_feature_anndata(
     -------
     AnnData or AnnCollection
         Aggregated data from slides either as an AnnData or AnnCollection object,
-        depending on the value of `as_anncollection`.
+        depending on the value of `as_anncollection`. ``obs["slide_name"]`` holds
+        the name of each slide, the file name of its store without ``.zarr``:
+        ``"sample"`` for ``sample.zarr``, ``"sample.scene-1"`` for
+        ``sample.scene-1.zarr``. The obs names end in ``-<slide_name>``.
+        Slides whose existing stores share a name raise a ValueError.
     """
     from anndata import concat
 
     backed_files = _resolve_backed_files(slides_table, wsi_col, store_col)
+    slide_names = pd.Index([Path(f).stem for f in backed_files])
+    # Only the stores that exist are read, so only they can share a name;
+    # _concat_feature_anndata raises or skips the missing ones
+    exists = np.array([Path(f).exists() for f in backed_files], dtype=bool)
+    existing_names = slide_names[exists]
+    if existing_names.has_duplicates:
+        duplicates = existing_names[existing_names.duplicated()].unique()
+        raise ValueError(
+            "Slides are named by their stores in slide_name, but the stores of "
+            f"several slides are named {', '.join(duplicates)}."
+        )
 
     jobs = []
     with ThreadPoolExecutor() as executor:
@@ -523,10 +569,10 @@ def concat_feature_anndata(
 
     # Rebuild in original input order, filtering out None results
     adatas = {}
-    for job_id in range(len(backed_files)):
+    for job_id, slide_name in enumerate(slide_names):
         adata = results[job_id]
         if adata is not None:
-            adatas[job_id] = adata
+            adatas[slide_name] = adata
 
     if len(adatas) == 0:
         warnings.warn(
