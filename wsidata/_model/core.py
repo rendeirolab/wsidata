@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import io
-import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Literal
@@ -14,7 +13,6 @@ from PIL.Image import Image, fromarray
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
-from .._utils import find_stack_level
 from ..accessors import DatasetAccessor, FetchAccessor, IterAccessor
 from ..reader import ReaderBase, SlideProperties
 from .tile import TileSpec
@@ -90,10 +88,13 @@ class WSIData(SpatialData):
     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
         A reader object that can interface with the whole slide image file.
     slide_properties_source : {'slide', 'sdata'}, default: 'sdata'
-        The source of the slide properties.
+        Where the mpp and bounds come from when the SpatialData object already
+        holds slide properties, as a reopened store does. The other slide
+        properties always come from the reader.
 
-        - "slide": load from the reader object.
-        - "sdata": load from the SpatialData object.
+        - "slide": from the reader.
+        - "sdata": from the SpatialData object, as :meth:`set_mpp` and
+          :meth:`set_bounds` set them, or from the reader if none is stored.
 
     Attributes
     ----------
@@ -148,20 +149,14 @@ class WSIData(SpatialData):
             attrs=attrs,
         )
 
-        if self.SLIDE_PROPERTIES_KEY not in self:
-            self.attrs[self.SLIDE_PROPERTIES_KEY] = reader.properties.to_dict()
-        else:
-            # Try to load the slide properties from the spatial data
-            if slide_properties_source == "slide":
-                reader_properties = self.attrs[self.SLIDE_PROPERTIES_KEY]
-                if reader_properties != reader.properties.to_dict():
-                    # Update the reader properties
-                    reader.properties.from_mapping(reader_properties)
-                    warnings.warn(
-                        "Slide properties in the spatial data is different from the reader properties.",
-                        UserWarning,
-                        stacklevel=find_stack_level(),
-                    )
+        if slide_properties_source == "sdata":
+            # Keep the mpp and bounds users set (set_mpp, set_bounds); the rest
+            # is the reader's, as another reader may have written the store
+            stored = self.attrs.get(self.SLIDE_PROPERTIES_KEY, {})
+            for key in ("mpp", "bounds"):
+                if stored.get(key) is not None:
+                    setattr(reader.properties, key, stored[key])
+        self.attrs[self.SLIDE_PROPERTIES_KEY] = reader.properties.to_dict()
 
     def __repr_texts(self):
         H, W = self.properties.shape
