@@ -16,6 +16,13 @@ def test_slide():
 
 
 @pytest.fixture(scope="session")
+def test_pyramid_slide():
+    # Level 1 is 4979 x 4989 px at a downsample of 4.0005: bigger than one
+    # OpenSlide read chunk, at a non-integer downsample
+    return hf_hub_download(REPO_ID, "GTEX-1117F-0526.svs", repo_type="dataset")
+
+
+@pytest.fixture(scope="session")
 def test_isyntax():
     return hf_hub_download(REPO_ID, "testslide.isyntax", repo_type="dataset")
 
