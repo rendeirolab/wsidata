@@ -3,7 +3,35 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from anndata import AnnData
 
+import numpy as np
 import pandas as pd
+
+
+def _tile_rows(sdata, feature_key, tile_key):
+    """The row in the feature table of each tile, in the order of the tiles.
+
+    Features link to their tiles by tile_id. Without a tile_id in both
+    tables, they can only be matched to the tiles by position.
+    """
+    features = sdata.tables[feature_key]
+    tiles = sdata.shapes[tile_key]
+    if "tile_id" not in tiles.columns or "tile_id" not in features.obs.columns:
+        if len(tiles) != features.n_obs:
+            raise ValueError(
+                f"'{tile_key}' has {len(tiles)} rows and '{feature_key}' has "
+                f"{features.n_obs}. Without a tile_id in both, features can "
+                "only be matched to the tiles by position."
+            )
+        return np.arange(features.n_obs)
+    rows = pd.Index(features.obs["tile_id"]).get_indexer(tiles["tile_id"])
+    missing = tiles["tile_id"].to_numpy()[rows == -1]
+    if missing.size > 0:
+        raise ValueError(
+            f"No features in '{feature_key}' for {missing.size} of the "
+            f"{len(tiles)} tiles in '{tile_key}', e.g. tile_id "
+            f"{missing[:5].tolist()}. Extract the features of the tiles again."
+        )
+    return rows
 
 
 class FetchAccessor(object):
@@ -92,7 +120,7 @@ class FetchAccessor(object):
         AnnData
             An AnnData object with the following components (if present):
 
-            - X : The feature table.
+            - X : The features of each tile, in the order of the tile table.
             - obs : The data stored in the tile table.
             - obsm : The x,y coordinates for each tile.
             - obsp : The spatial graph information.
@@ -104,11 +132,13 @@ class FetchAccessor(object):
         sdata = self._obj
         feature_key = self._obj._check_feature_key(feature_key, tile_key)
         feature_adata = sdata.tables[feature_key]
-        X = feature_adata.X  # Must be a numpy array
+        # Rows follow the tiles, like obs, obsm and the tile graph
+        rows = _tile_rows(sdata, feature_key, tile_key)
+        X = feature_adata.X[rows]  # Must be a numpy array
         var = feature_adata.var
 
         # layers slot
-        layers = feature_adata.layers
+        layers = {key: layer[rows] for key, layer in feature_adata.layers.items()}
 
         # obs slot
         tile_table = sdata.shapes[tile_key]
@@ -127,10 +157,11 @@ class FetchAccessor(object):
         varm = feature_adata.varm
 
         # uns slot
-        uns = {
-            "tile_spec": self._obj.tile_spec(tile_key).to_dict(),
-            "slide_properties": self._obj.properties.to_dict(),
-        }
+        uns = {"slide_properties": self._obj.properties.to_dict()}
+        # Shapes other than tiles, such as cells, have no TileSpec
+        tile_spec = self._obj.tile_spec(tile_key)
+        if tile_spec is not None:
+            uns["tile_spec"] = tile_spec.to_dict()
 
         if tile_graph:
             conns_key = "spatial_connectivities"
