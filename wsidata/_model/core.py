@@ -11,7 +11,7 @@ import numpy as np
 from anndata import AnnData
 from ome_zarr.io import parse_url
 from PIL.Image import Image, fromarray
-from spatialdata import SpatialData
+from spatialdata import SpatialData, get_dask_backing_files
 from spatialdata.models import SpatialElement
 
 from .._utils import find_stack_level
@@ -454,7 +454,21 @@ class WSIData(SpatialData):
                     "Please note that only Zarr stores not currently in used by the current SpatialData object can be "
                     "overwritten."
                 )
-        # Skip the workaround for now
+            # Unlike SpatialData, allow writing back into the store the object was
+            # read from, the usual wsidata workflow. Overwriting deletes the target
+            # first, so refuse only when lazily loaded elements read from it.
+            target = file_path.resolve()
+            if any(
+                Path(f).resolve().is_relative_to(target)
+                for f in get_dask_backing_files(self)
+            ):
+                raise ValueError(
+                    f"Cannot overwrite {file_path}: lazily loaded elements (images, "
+                    "labels or points read from this store) still read their data from "
+                    "files in it, and overwriting deletes those files first. Write to "
+                    "a different location, or save the elements you added or changed "
+                    "with `write_element()`."
+                )
 
     def _check_feature_key(self, feature_key, tile_key=None):
         msg = f"{feature_key} doesn't exist"
