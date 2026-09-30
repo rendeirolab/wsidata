@@ -96,6 +96,11 @@ class TileImagesDataset(Dataset):
         else:
             return lambda x: x
 
+    def __getstate__(self):
+        # The cached color normalizer is a lambda, which cannot be pickled:
+        # each worker makes its own
+        return {k: v for k, v in self.__dict__.items() if k != "_cn_func"}
+
     def __len__(self):
         return len(self._tile_requests)
 

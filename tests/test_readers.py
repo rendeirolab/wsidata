@@ -251,6 +251,71 @@ def test_scene_store_name(test_multiscene_czi):
     wsi.close()
 
 
+def reader_case(reader, *args):
+    """pytest.param(reader, *args), skipped where the reader cannot run"""
+    skip = skip_reader(reader) or (
+        reader == "bioformats" and sys.version_info >= (3, 13)
+    )
+    return pytest.param(
+        reader, *args, marks=pytest.mark.skipif(skip, reason=f"{reader} not available")
+    )
+
+
+@pytest.mark.parametrize(
+    "reader, slide, scene",
+    [
+        reader_case("openslide", "test_slide", None),
+        reader_case("tiffslide", "test_slide", None),
+        reader_case("fastslide", "test_slide", None),
+        reader_case("isyntax", "test_isyntax", None),
+        # The scenes of this CZI have different pixels: a copy that lost its
+        # scene reads other pixels
+        reader_case("fastslide", "test_multiscene_czi", 1),
+        reader_case("pylibczi", "test_multiscene_czi", 1),
+        reader_case("bioformats", "test_multiscene_czi", 1),
+    ],
+)
+def test_reader_pickles_after_read(request, reader, slide, scene):
+    """Regression: a read opens the slide, and pickling the reader then failed
+    on the open slide handle ("ctypes objects containing pointers cannot be
+    pickled" for openslide), so a TileImagesDataset that had read a tile could
+    not go to spawned DataLoader workers, the default on macOS and Windows.
+    A copy must open the slide again on its first read, whichever it is:
+    openslide read associated images from the slide it had not opened.
+    """
+    original = READERS[reader](request.getfixturevalue(slide), scene=scene)
+    region = original.get_region(0, 0, 32, 32)
+    to_worker = pickle.dumps(original)
+
+    np.testing.assert_array_equal(
+        pickle.loads(to_worker).get_region(0, 0, 32, 32), region
+    )
+    assert list(pickle.loads(to_worker).associated_images) == list(
+        original.associated_images
+    )
+
+
+@pytest.mark.parametrize(
+    "reader, slide",
+    [
+        reader_case("openslide", "test_slide"),
+        reader_case("tiffslide", "test_slide"),
+        reader_case("fastslide", "test_slide"),
+        reader_case("isyntax", "test_isyntax"),
+    ],
+)
+def test_reader_pickles_after_associated_images(request, reader, slide):
+    """Regression: AssociatedImages.__getattr__ read self._images, which does
+    not exist yet while unpickling, so pickle's lookup of __setstate__
+    recursed until RecursionError.
+    """
+    original = READERS[reader](request.getfixturevalue(slide))
+    images = original.associated_images
+
+    in_worker = pickle.loads(pickle.dumps(original))
+    assert list(in_worker.associated_images) == list(images)
+
+
 def test_store_scene_validation():
     from wsidata.io._wsi import _validate_store_scene
 

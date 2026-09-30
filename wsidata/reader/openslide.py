@@ -118,6 +118,6 @@ class OpenSlideReader(ReaderBase):
         """The associated images in a key-value pair"""
         if self._associated_images is None:
             self._associated_images = AssociatedImages(
-                {k: v.convert("RGB") for k, v in self._reader.associated_images.items()}
+                {k: v.convert("RGB") for k, v in self.reader.associated_images.items()}
             )
         return self._associated_images
