@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from wsidata import open_wsi
+from wsidata.reader import ReaderBase, SlideProperties
 from wsidata.reader._reader_registry import READERS, ReaderRegistry
 
 
@@ -159,6 +160,53 @@ def test_store_scene_validation():
             reader,
             "scene.zarr",
         )
+
+
+class _EchoRegionReader(ReaderBase):
+    """get_region returns its arguments instead of pixels."""
+
+    name = "echo"
+    pkg_namespaces = "os"
+
+    def __init__(self, properties):
+        self.file = "echo"
+        self.properties = properties
+
+    def get_region(self, x, y, width, height, level=0, **kwargs):
+        return x, y, width, height, level
+
+    def get_thumbnail(self, size, **kwargs):
+        pass
+
+    def create_reader(self):
+        pass
+
+    def detach_reader(self):
+        pass
+
+
+@pytest.mark.parametrize(
+    "level, in_bounds, expected",
+    [
+        (0, False, (0, 0, 1503, 1000, 0)),
+        (1, False, (0, 0, 375, 250, 1)),
+        (0, True, (9, 200, 1494, 601, 0)),
+        # ceil(601 / 4) = 151; ceil(1494 / 4) = 374, clipped to 375 - int(9 / 4)
+        (1, True, (9, 200, 373, 151, 1)),
+    ],
+)
+def test_get_level_region(level, in_bounds, expected):
+    # get_region takes x, y at level 0 but width, height at the requested level
+    reader = _EchoRegionReader(
+        SlideProperties(
+            shape=[1000, 1503],
+            n_level=2,
+            level_shape=[[1000, 1503], [250, 375]],
+            level_downsample=[1.0, 4.0],
+            bounds=[9, 200, 1494, 601],  # level-0 x, y, width, height
+        )
+    )
+    assert reader.get_level(level, in_bounds=in_bounds) == expected
 
 
 def test_spatialdata(test_slide):

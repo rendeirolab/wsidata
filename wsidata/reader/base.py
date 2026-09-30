@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from functools import cached_property, singledispatch
 from importlib import import_module
+from math import ceil
 from numbers import Integral
 from typing import Dict, List, Mapping, Optional
 
@@ -305,7 +306,12 @@ class ReaderBase(ABC):
         """
         height, width = self.properties.level_shape[level]
         if in_bounds:
-            x, y, h, w = self.properties.bounds
+            # bounds are level-0 [x, y, width, height], get_region wants the
+            # size at `level`; clip so the read never passes the level edge
+            x, y, w, h = self.properties.bounds
+            ds = self.properties.level_downsample[level]
+            w = min(ceil(w / ds), width - int(x / ds))
+            h = min(ceil(h / ds), height - int(y / ds))
         else:
             x, y, h, w = 0, 0, height, width
         return self.get_region(x, y, w, h, level=level)
