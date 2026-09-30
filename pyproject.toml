@@ -98,16 +98,19 @@ default-groups = ["dev", "docs"]
 
 # Linux torch wheels default to the CUDA build, which drags in ~2.5 GB of
 # nvidia-* per environment. Nothing here needs a GPU, so develop and test
-# against the CPU build on Linux. This is a uv workspace setting: it affects
-# `uv sync`/`uv lock` in this repo only, never an install from PyPI.
+# against the CPU build on Linux. uv applies a git or path dependency's
+# tool.uv.sources to the project installing it, so both sources are scoped to
+# the dev group, which dependents never resolve; that is why torch is repeated
+# there. uv locks one torch per platform, so the base dependency on torch gets
+# the CPU build here too.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
-torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'", group = "dev" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'", group = "dev" }]
 
 [dependency-groups]
 dev = [
@@ -115,6 +118,7 @@ dev = [
     "ruff>=0.16.5",
     "taskipy>=1.14.1",
     "pytest-cov>=6.0.0",
+    "torch>=2.0.0",
     "torchvision>=0.21.0",
     "torchstain>=1.4.1",
     "matplotlib>=3.10.0",
