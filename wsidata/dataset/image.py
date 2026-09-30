@@ -14,10 +14,10 @@ class TileImagesDataset(Dataset):
     arbitrary shape collections.
 
     .. note::
-        ``image_size`` is used **only** for pyramid level selection — the
-        reader picks the closest level whose native resolution is ≥ the
-        requested size.  No resize is performed after reading; add a
-        ``Resize`` step in *transform* if you need exact output dimensions.
+        Tiles come out resized. With a :class:`TileSpec`, each tile is read at
+        the spec's level and resized to the spec's size, and ``image_size`` is
+        ignored. Without one, each tile is read at the coarsest level where it
+        is still at least ``image_size``, then resized to ``image_size``.
 
     Parameters
     ----------
@@ -35,7 +35,8 @@ class TileImagesDataset(Dataset):
         The color normalization method. Deprecated, will be removed in 0.13.0:
         if you need stain normalization, use torchstain directly in *transform*.
     image_size : int or tuple of (int, int), optional
-        Hint for optimal pyramid level selection via :func:`shapes2tiles`.
+        Output (width, height) of tiles from shapes without a :class:`TileSpec`;
+        ignored when the shapes have one. See the note above.
 
     Returns
     -------
