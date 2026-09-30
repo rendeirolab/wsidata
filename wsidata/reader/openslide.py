@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Union
 
+import numpy as np
+
 from ._reader_registry import register
 from .base import AssociatedImages, ReaderBase, convert_image
 
@@ -38,6 +40,9 @@ class OpenSlideReader(ReaderBase):
         ".dcm",
         ".dicom",
     )
+    # OpenSlide paints a read in pieces of at most 4096 x 4096 px
+    # (openslide_read_region); None reads every region in one call
+    _chunk_px = 4096
 
     def __init__(
         self,
@@ -57,12 +62,28 @@ class OpenSlideReader(ReaderBase):
         level: int = 0,
         **kwargs,
     ):
-        level = self.translate_level(level)
+        level = int(self.translate_level(level))
         # All types are coerced to native Python types
-        img = self.reader.read_region(
-            (int(x), int(y)), int(level), (int(width), int(height))
-        )
-        return convert_image(img)
+        x, y, width, height = int(x), int(y), int(width), int(height)
+        chunk = self._chunk_px
+        if chunk is None or (width <= chunk and height <= chunk):
+            img = self.reader.read_region((x, y), level, (width, height))
+            return convert_image(img)
+        # Converting a read to RGB holds several copies of it, ~16 bytes per px,
+        # so read OpenSlide's pieces one at a time. Each piece is painted at its
+        # own fractional offset in the level: offsets computed as OpenSlide
+        # computes them give the same pixels as one read.
+        ds = self.reader.level_downsamples[level]
+        out = np.empty((height, width, 3), dtype=np.uint8)
+        for row in range(0, height, chunk):
+            for col in range(0, width, chunk):
+                piece = self.reader.read_region(
+                    (int(x + col * ds), int(y + row * ds)),
+                    level,
+                    (min(chunk, width - col), min(chunk, height - row)),
+                )
+                out[row : row + chunk, col : col + chunk] = convert_image(piece)
+        return out
 
     def get_thumbnail(self, size, **kwargs):
         height, width = self.properties.shape

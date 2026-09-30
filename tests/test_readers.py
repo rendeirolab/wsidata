@@ -7,8 +7,14 @@ import numpy as np
 import pytest
 
 from wsidata import open_wsi
-from wsidata.reader import ReaderBase, SlideProperties
+from wsidata.reader import (
+    OpenSlideReader,
+    ReaderBase,
+    SlideProperties,
+    TiffSlideReader,
+)
 from wsidata.reader._reader_registry import READERS, ReaderRegistry
+from wsidata.reader.base import convert_image
 
 
 def try_import(mod):
@@ -46,6 +52,50 @@ def test_openslide(test_slide):
 def test_single_scene_reader_rejects_nonzero_scene(test_slide):
     with pytest.raises(ValueError, match="does not support scene selection"):
         open_wsi(test_slide, reader="openslide", scene=1, store=None)
+
+
+@pytest.mark.skipif(skip_reader("openslide"), reason="openslide not installed")
+@pytest.mark.parametrize(
+    "x, y, width, height",
+    [(0, 0, 4979, 4989), (1001, 2003, 4500, 4300)],  # all of level 1; an offset
+)
+def test_openslide_reads_big_regions_in_chunks(
+    test_pyramid_slide, monkeypatch, x, y, width, height
+):
+    """Memory regression: a big region went to OpenSlide in one read, and
+    converting it to RGB held several copies of it, ~16 bytes per px.
+
+    OpenSlide splits a read into 4096 px chunks, each painted at its own
+    fractional offset in the level, so reading those chunks one at a time must
+    give the pixels of one read.
+    """
+    reader = OpenSlideReader(test_pyramid_slide)
+    slide = reader.reader
+    one_read = convert_image(slide.read_region((x, y), 1, (width, height)))
+    sizes = []
+    read_region = slide.read_region
+
+    def record_size(location, level, size):
+        sizes.append(size)
+        return read_region(location, level, size)
+
+    monkeypatch.setattr(slide, "read_region", record_size)
+    region = reader.get_region(x, y, width, height, level=1)
+
+    assert len(sizes) == 4
+    assert all(w <= 4096 and h <= 4096 for w, h in sizes)
+    np.testing.assert_array_equal(region, one_read)
+
+
+@pytest.mark.skipif(skip_reader("tiffslide"), reason="tiffslide not installed")
+def test_tiffslide_big_region_matches_one_read(test_pyramid_slide):
+    """TiffSlide maps offsets to the level with int(x / ds), so OpenSlide's
+    chunk offsets would shift its rows by one: its big regions must match one
+    read."""
+    reader = TiffSlideReader(test_pyramid_slide)
+    one_read = convert_image(reader.reader.read_region((0, 0), 1, (4979, 4989)))
+    region = reader.get_region(0, 0, 4979, 4989, level=1)
+    np.testing.assert_array_equal(region, one_read)
 
 
 @pytest.mark.skipif(skip_reader("tiffslide"), reason="tiffslide not installed")

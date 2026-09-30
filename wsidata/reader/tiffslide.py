@@ -19,6 +19,9 @@ class TiffSlideReader(OpenSlideReader):
     name = "tiffslide"
     pkg_namespaces = "tiffslide"
     extensions = (".svs", ".ndpi", ".tiff", ".tif", ".scn", ".bif", ".qptiff")
+    # TiffSlide maps offsets to the level with int(x / ds), which OpenSlide's
+    # piece offsets do not line up with
+    _chunk_px = None
 
     def create_reader(self):
         from tiffslide import TiffSlide
