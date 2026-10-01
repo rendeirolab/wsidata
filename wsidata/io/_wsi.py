@@ -34,10 +34,10 @@ def open_wsi(
 ):
     """Open a whole slide image.
 
-    You can attach images and thumbnails to the SpatialData object. By default, only the thumbnail is attached,
-    the thumbnail is a downsampled version of the whole slide image,
-    the original image is not attached as it will make unnecessary copies of the data on disk
-    when saving the SpatialData object.
+    You can attach the whole slide image, and a thumbnail, a downsampled version
+    of it, to the SpatialData object. Neither is attached by default. Attached
+    images are written to the store only with ``save_images`` or
+    ``save_thumbnail``, so that writing does not copy the slide.
 
     Parameters
     ----------
@@ -67,7 +67,7 @@ def open_wsi(
         If the wsi is a SpatialData object, the image from this key will be used as the whole slide image.
     save_images : bool, optional, default: False
         Whether to save the whole slide image to on the disk.
-        Only works for wsi.save() method.
+        Only used by :meth:`WSIData.write`.
     attach_thumbnail : bool, optional, default: False
         Whether to attach thumbnail to image slot in the spatial data object.
     thumbnail_key : str, optional
@@ -76,7 +76,7 @@ def open_wsi(
         The size of the thumbnail.
     save_thumbnail : bool, optional, default: False
         Whether to save the thumbnail to on the disk.
-        Only works for wsi.write() method.
+        Only used by :meth:`WSIData.write`.
     **kwargs
         Passed to the reader, for example ``cache_size`` for isyntax or
         ``memorize`` for bioformats. Ignored when ``wsi`` is a SpatialData object.
@@ -176,7 +176,14 @@ def open_wsi(
                     store = store_path / _default_store_name(wsi, reader_instance)
         if store is not None:
             if store.exists():
-                sdata = read_zarr(store)
+                try:
+                    sdata = read_zarr(store)
+                except Exception as e:
+                    raise ValueError(
+                        f"Cannot read the store {store}. A write that failed or "
+                        "was interrupted leaves an incomplete store: delete it to "
+                        "start over, or pass another store."
+                    ) from e
                 _validate_store_scene(sdata, reader_instance, store)
                 _validate_store_slide(sdata, reader_instance, store)
 
@@ -295,7 +302,9 @@ def _resolve_backed_files(slides_table, wsi_col, store_col):
     store, ``<stem>.zarr`` is returned, for the caller to report missing.
     """
     if store_col is not None:
-        return slides_table[store_col].astype(str)
+        # Not astype(str), which keeps NaN in pandas 3: an empty cell is the
+        # store "nan", which does not exist
+        return slides_table[store_col].map(str)
     elif wsi_col is not None:
 
         def resolve(wsi):

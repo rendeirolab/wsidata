@@ -1,13 +1,15 @@
 import warnings
 
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import pytest
 import zarr
+from anndata import AnnData
 from shapely import Polygon, box
 from spatialdata import SpatialData, read_zarr
 from spatialdata._io.format import SpatialDataContainerFormatV01
-from spatialdata.models import Image2DModel, PointsModel
+from spatialdata.models import Image2DModel, PointsModel, TableModel
 from xarray import DataArray
 
 from wsidata import TileSpec, WSIData, io, open_wsi
@@ -317,3 +319,91 @@ def test_write_keeps_store_that_lazy_elements_read_from(
         wsi.write(overwrite=True)
 
     assert read_zarr(store).points["cells"].compute()["x"].tolist() == [1.0, 2.0]
+
+
+def test_write_keeps_the_store_when_attrs_cannot_be_written(test_slide, tmp_path):
+    """Regression: write() deletes the store before it writes the attrs, so
+    attrs that cannot be written, such as numpy integers, left it empty.
+    """
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    io.add_tissues(wsi, "tissues", [box(0, 0, 10, 10)])
+    wsi.write()
+
+    wsi.attrs["n_tiles"] = np.int64(3)  # not JSON
+    with pytest.raises(TypeError):
+        wsi.write()
+
+    assert read_zarr(store).shapes["tissues"].area.tolist() == [100.0]
+
+
+def test_open_wsi_names_a_store_that_a_failed_write_left_incomplete(
+    test_slide, tmp_path
+):
+    """A write that fails half way, here on a table uns it cannot write,
+    leaves an incomplete store. open_wsi names the store instead of failing
+    in spatialdata with an AssertionError.
+    """
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    wsi.tables["features"] = TableModel.parse(AnnData(np.zeros((2, 2))))
+    wsi.tables["features"].uns["model"] = object()
+    with pytest.raises(Exception):
+        wsi.write()
+
+    with pytest.raises(ValueError, match="slide.zarr"):
+        open_wsi(test_slide, store=store)
+
+
+def _points(n, npartitions):
+    xy = pd.DataFrame({"x": np.arange(n, dtype=float), "y": np.arange(n, dtype=float)})
+    return PointsModel.parse(dd.from_pandas(xy, npartitions=npartitions))
+
+
+def test_write_element_replaces_points_in_the_store(test_slide, tmp_path):
+    """Regression: write_element(overwrite=True) wrote new points into the
+    folder of the old ones, and the parquet files of the old partitions it
+    did not overwrite were read back with them.
+    """
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    wsi.points["cells"] = _points(10, npartitions=3)
+    wsi.write()
+
+    wsi.points["cells"] = _points(4, npartitions=1)
+    wsi.write_element("cells", overwrite=True)
+
+    assert len(read_zarr(store).points["cells"].compute()) == 4
+
+
+def test_write_element_replaces_an_image_in_the_store(test_slide, tmp_path):
+    """Regression: write_element(overwrite=True) on an image in the store
+    failed with ContainsArrayError.
+    """
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    zeros = np.zeros((3, 64, 64), np.uint8)
+    wsi.images["mask"] = Image2DModel.parse(zeros, dims=("c", "y", "x"))
+    wsi.write()
+
+    ones = np.ones((3, 32, 32), np.uint8)
+    wsi.images["mask"] = Image2DModel.parse(ones, dims=("c", "y", "x"))
+    wsi.write_element("mask", overwrite=True)
+
+    assert read_zarr(store).images["mask"].shape == (3, 32, 32)
+
+
+def test_write_element_keeps_points_read_lazily_from_the_store(test_slide, tmp_path):
+    """Overwriting an element deletes it from the store first, but not while
+    the element still reads from those files.
+    """
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    wsi.points["cells"] = _points(10, npartitions=3)
+    wsi.write()
+
+    wsi = open_wsi(test_slide, store=store)  # reads the points lazily
+    with pytest.raises(ValueError):
+        wsi.write_element("cells", overwrite=True)
+
+    assert len(read_zarr(store).points["cells"].compute()) == 10
