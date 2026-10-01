@@ -313,8 +313,10 @@ class WSIData(SpatialData):
             The bounds of the whole slide image in the format [x, y, width, height].
 
         """
+        # Plain int lists: attrs are written to the store as JSON
+        bounds = [int(v) for v in bounds]
         self.properties.bounds = bounds
-        self.tables[self.SLIDE_PROPERTIES_KEY].uns["bounds"] = bounds
+        self.attrs[self.SLIDE_PROPERTIES_KEY]["bounds"] = list(bounds)
 
     def read_region(
         self,

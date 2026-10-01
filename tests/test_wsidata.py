@@ -8,6 +8,24 @@ from wsidata import TileSpec, WSIData, io, open_wsi
 from wsidata.reader import OpenSlideReader
 
 
+@pytest.mark.parametrize(
+    "bounds",
+    [(10, 20, 300, 400), np.array([10, 20, 300, 400])],
+    ids=["tuple", "numpy"],
+)
+def test_set_bounds(bounds, test_slide, tmp_path):
+    store = tmp_path / "sample.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    wsi.set_bounds(bounds)
+
+    # Lists of plain ints: attrs are written to the store as JSON
+    assert wsi.properties.bounds == [10, 20, 300, 400]
+    assert wsi.attrs["slide_properties"]["bounds"] == [10, 20, 300, 400]
+
+    wsi.write()
+    assert read_zarr(store).attrs["slide_properties"]["bounds"] == [10, 20, 300, 400]
+
+
 class TestWSIData:
     n_tiles = 100
 
@@ -82,8 +100,7 @@ def _write_store(slide, store):
     """Write a store of the slide whose slide properties are not the slide's."""
     wsi = open_wsi(slide, store=store)
     wsi.set_mpp(0.123)
-    # set_bounds raises KeyError: it writes to a table that does not exist
-    wsi.attrs["slide_properties"]["bounds"] = [1, 2, 30, 40]
+    wsi.set_bounds([1, 2, 30, 40])
     # As written by a reader that saw another pyramid
     wsi.attrs["slide_properties"].update(
         n_level=2, level_shape=[[2967, 2220], [741, 555]], level_downsample=[1.0, 4.0]
