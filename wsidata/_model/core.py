@@ -22,6 +22,10 @@ from .tile import TileSpec
 if TYPE_CHECKING:
     from wsidata.reader.base import AssociatedImages
 
+# Default of the deprecated format of WSIData.write, so that format=None warns
+# too. Remove with format in 0.13.0
+_UNSET = object()
+
 
 class WSIData(SpatialData):
     """
@@ -369,10 +373,15 @@ class WSIData(SpatialData):
         consolidate_metadata: bool = True,
         sdata_formats=None,
         *,
-        format=None,
+        format=_UNSET,
     ):
-        if format is not None:
+        if format is not _UNSET:
             # Remove format in 0.13.0
+            if sdata_formats is not None:
+                raise TypeError(
+                    "WSIData.write() got both format and sdata_formats, "
+                    "pass sdata_formats only."
+                )
             warnings.warn(
                 "WSIData.write(format=...) is deprecated and will be removed in "
                 "wsidata 0.13.0. Use sdata_formats, the name SpatialData.write "

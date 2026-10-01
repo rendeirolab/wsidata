@@ -173,9 +173,22 @@ def test_write_passes_sdata_formats(test_slide, tmp_path, name):
     assert attrs["version"] == "0.1"
 
 
-def test_write_format_is_deprecated(test_slide, tmp_path):
-    """format warns, at the line of the caller"""
+@pytest.mark.parametrize(
+    "fmt", [None, SpatialDataContainerFormatV01()], ids=["None", "V01"]
+)
+def test_write_format_is_deprecated(test_slide, tmp_path, fmt):
+    """format warns, even as None, at the line of the caller"""
     wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
     with pytest.warns(FutureWarning, match="sdata_formats") as record:
-        wsi.write(format=SpatialDataContainerFormatV01())
+        wsi.write(format=fmt)
     assert record.pop(FutureWarning).filename == __file__
+
+
+@pytest.mark.parametrize(
+    "fmt", [None, SpatialDataContainerFormatV01()], ids=["None", "V01"]
+)
+def test_write_rejects_format_with_sdata_formats(test_slide, tmp_path, fmt):
+    """format and its new name sdata_formats cannot both be passed"""
+    wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
+    with pytest.raises(TypeError, match="sdata_formats"):
+        wsi.write(sdata_formats=SpatialDataContainerFormatV01(), format=fmt)
