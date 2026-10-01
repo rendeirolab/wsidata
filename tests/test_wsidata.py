@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 import pytest
 import zarr
-from shapely import Polygon
+from shapely import Polygon, box
 from spatialdata import read_zarr
 from spatialdata._io.format import SpatialDataContainerFormatV01
+from spatialdata.models import PointsModel
 from xarray import DataArray
 
 from wsidata import TileSpec, WSIData, io, open_wsi
@@ -233,3 +234,42 @@ def test_write_saved_thumbnail(test_slide, tmp_path):
     # Single scale, as attached
     assert isinstance(written, DataArray)
     np.testing.assert_array_equal(written.values, thumbnail.values)
+
+
+def test_write_back_into_own_store(test_slide, tmp_path):
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    io.add_tissues(wsi, "tissues", [box(0, 0, 10, 10)])
+    wsi.write()
+
+    # The usual workflow: reopen the slide's store and save new results into it
+    wsi = open_wsi(test_slide, store=store)
+    io.add_tissues(wsi, "more_tissues", [box(0, 0, 20, 20)])
+    wsi.write()
+    io.add_tissues(wsi, "tissues", [box(0, 0, 30, 30)])
+    wsi.write_element("tissues", overwrite=True)
+
+    shapes = read_zarr(store).shapes
+    assert shapes["tissues"].area.tolist() == [900.0]
+    assert shapes["more_tissues"].area.tolist() == [400.0]
+
+
+def test_write_keeps_store_that_lazy_elements_read_from(
+    test_slide, tmp_path, monkeypatch
+):
+    # A relative store, as open_wsi("slide.svs") gives, while backing files are
+    # absolute
+    monkeypatch.chdir(tmp_path)
+    store = "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    cells = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})
+    wsi.points["cells"] = PointsModel.parse(cells)
+    wsi.write()
+
+    # Reopened, the points are read lazily from parquet files inside the store,
+    # which overwriting the store would delete before reading them
+    wsi = open_wsi(test_slide, store=store)
+    with pytest.raises(ValueError):
+        wsi.write(overwrite=True)
+
+    assert read_zarr(store).points["cells"].compute()["x"].tolist() == [1.0, 2.0]
