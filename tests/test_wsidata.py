@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 import pytest
 import zarr
-from shapely import Polygon
+from shapely import Polygon, box
 from spatialdata import read_zarr
 from spatialdata._io.format import SpatialDataContainerFormatV01
+from spatialdata.models import PointsModel
 from xarray import DataArray
 
 from wsidata import TileSpec, WSIData, io, open_wsi
@@ -166,6 +167,37 @@ def test_slide_properties_source_slide_ignores_the_store(test_slide, tmp_path):
     wsi.close()
 
 
+def test_store_folder_keeps_the_stores_of_slides_apart(
+    test_slide, test_pyramid_slide, tmp_path
+):
+    """Regression: a store path that did not exist yet became the store of the
+    first slide, so every later slide opened with it loaded that store and
+    wrote into it. A new path without a .zarr suffix is a folder of stores.
+    """
+    folder = tmp_path / "data"
+    for slide in (test_slide, test_pyramid_slide):
+        wsi = open_wsi(slide, store=str(folder))
+        wsi.write()
+        wsi.close()
+    assert sorted(p.name for p in folder.iterdir()) == [
+        "GTEX-1117F-0526.zarr",
+        "sample.zarr",
+    ]
+
+
+def test_store_of_another_slide_raises(test_slide, test_pyramid_slide, tmp_path):
+    """A store keeps the shape of its slide, so the store of another slide
+    raises instead of being loaded and overwritten. Here it is data, the one
+    store that store="data" used to give every slide.
+    """
+    store = tmp_path / "data"
+    wsi = open_wsi(test_slide, store=None)
+    wsi.write(store)
+    wsi.close()
+    with pytest.raises(ValueError, match="belongs to a slide of shape"):
+        open_wsi(test_pyramid_slide, store=str(store))
+
+
 def test_write_does_not_warn_about_format(test_slide, tmp_path):
     """spatialdata 0.7.0 renamed format to sdata_formats, write uses the new name"""
     wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
@@ -235,32 +267,40 @@ def test_write_saved_thumbnail(test_slide, tmp_path):
     np.testing.assert_array_equal(written.values, thumbnail.values)
 
 
-def test_store_folder_keeps_the_stores_of_slides_apart(
-    test_slide, test_pyramid_slide, tmp_path
+def test_write_back_into_own_store(test_slide, tmp_path):
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    io.add_tissues(wsi, "tissues", [box(0, 0, 10, 10)])
+    wsi.write()
+
+    # The usual workflow: reopen the slide's store and save new results into it
+    wsi = open_wsi(test_slide, store=store)
+    io.add_tissues(wsi, "more_tissues", [box(0, 0, 20, 20)])
+    wsi.write()
+    io.add_tissues(wsi, "tissues", [box(0, 0, 30, 30)])
+    wsi.write_element("tissues", overwrite=True)
+
+    shapes = read_zarr(store).shapes
+    assert shapes["tissues"].area.tolist() == [900.0]
+    assert shapes["more_tissues"].area.tolist() == [400.0]
+
+
+def test_write_keeps_store_that_lazy_elements_read_from(
+    test_slide, tmp_path, monkeypatch
 ):
-    """Regression: a store path that did not exist yet became the store of the
-    first slide, so every later slide opened with it loaded that store and
-    wrote into it. A new path without a .zarr suffix is a folder of stores.
-    """
-    folder = tmp_path / "data"
-    for slide in (test_slide, test_pyramid_slide):
-        wsi = open_wsi(slide, store=str(folder))
-        wsi.write()
-        wsi.close()
-    assert sorted(p.name for p in folder.iterdir()) == [
-        "GTEX-1117F-0526.zarr",
-        "sample.zarr",
-    ]
+    # A relative store, as open_wsi("slide.svs") gives, while backing files are
+    # absolute
+    monkeypatch.chdir(tmp_path)
+    store = "slide.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    cells = pd.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})
+    wsi.points["cells"] = PointsModel.parse(cells)
+    wsi.write()
 
+    # Reopened, the points are read lazily from parquet files inside the store,
+    # which overwriting the store would delete before reading them
+    wsi = open_wsi(test_slide, store=store)
+    with pytest.raises(ValueError):
+        wsi.write(overwrite=True)
 
-def test_store_of_another_slide_raises(test_slide, test_pyramid_slide, tmp_path):
-    """A store keeps the shape of its slide, so the store of another slide
-    raises instead of being loaded and overwritten. Here it is data, the one
-    store that store="data" used to give every slide.
-    """
-    store = tmp_path / "data"
-    wsi = open_wsi(test_slide, store=None)
-    wsi.write(store)
-    wsi.close()
-    with pytest.raises(ValueError, match="belongs to a slide of shape"):
-        open_wsi(test_pyramid_slide, store=str(store))
+    assert read_zarr(store).points["cells"].compute()["x"].tolist() == [1.0, 2.0]
