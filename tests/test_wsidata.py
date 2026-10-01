@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 import zarr
 from shapely import Polygon, box
-from spatialdata import read_zarr
+from spatialdata import SpatialData, read_zarr
 from spatialdata._io.format import SpatialDataContainerFormatV01
-from spatialdata.models import PointsModel
+from spatialdata.models import Image2DModel, PointsModel
 from xarray import DataArray
 
 from wsidata import TileSpec, WSIData, io, open_wsi
@@ -242,6 +242,19 @@ def test_write_rejects_format_with_sdata_formats(test_slide, tmp_path, fmt):
     wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
     with pytest.raises(TypeError, match="sdata_formats"):
         wsi.write(sdata_formats=SpatialDataContainerFormatV01(), format=fmt)
+
+
+def test_write_without_store_goes_to_path(tmp_path):
+    """Opened from a SpatialData, a WSIData has its path but no store"""
+    store = tmp_path / "s.zarr"
+    image = Image2DModel.parse(np.zeros((3, 64, 64), np.uint8), dims=("c", "y", "x"))
+    sdata = SpatialData(images={"image": image})
+    sdata.write(store)
+    wsi = open_wsi(sdata, image_key="image")
+    io.add_tissues(wsi, "tissues", [box(0, 0, 10, 10)])
+    wsi.write()
+
+    assert read_zarr(store).shapes["tissues"].area.tolist() == [100.0]
 
 
 def test_write_saved_thumbnail(test_slide, tmp_path):
