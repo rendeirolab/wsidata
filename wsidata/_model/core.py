@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Literal
 
 import numpy as np
+import zarr
 from anndata import AnnData
 from ome_zarr.io import parse_url
 from PIL.Image import Image, fromarray
@@ -377,6 +378,40 @@ class WSIData(SpatialData):
         *,
         format=_UNSET,
     ):
+        """Write the WSIData to a zarr store.
+
+        Writing to an existing store rewrites it: the store is deleted first,
+        then the attrs and every element are written again. Attrs that cannot
+        be written raise a TypeError before the store is deleted. An
+        interrupted write leaves an incomplete store, which :func:`open_wsi`
+        cannot read: delete it and write again. Write a store from one process
+        at a time.
+
+        Images, labels and points read from a store load their data lazily from
+        its files, so a store they read from cannot be deleted, and writing to
+        it raises a ValueError. Save the elements you added or changed with
+        :meth:`write_element` instead, and changed attrs, such as tile specs,
+        with :meth:`write_attrs`.
+
+        Images that :func:`open_wsi` attached without ``save_images`` or
+        ``save_thumbnail`` are not written.
+
+        Parameters
+        ----------
+        file_path : str or Path, optional
+            The store to write to. By default, the store from :func:`open_wsi`,
+            or else the path the WSIData was read from.
+        overwrite : bool, default: True
+            Whether to rewrite an existing store.
+        consolidate_metadata : bool, default: True
+            Whether to consolidate the metadata of the store.
+        sdata_formats : optional
+            The formats to write in, see
+            :meth:`SpatialData.write <spatialdata.SpatialData.write>`.
+        format : optional
+            Deprecated alias of ``sdata_formats``, to be removed in 0.13.0.
+
+        """
         if format is not _UNSET:
             # Remove format in 0.13.0
             if sdata_formats is not None:
@@ -403,12 +438,39 @@ class WSIData(SpatialData):
                     "Please set the store path before saving."
                 )
             file_path = self._wsi_store or self.path
+        # spatialdata deletes the store before it writes the attrs, so first
+        # write them the same way to a store in memory
+        try:
+            zarr.open_group(zarr.storage.MemoryStore(), mode="w").attrs.put(self.attrs)
+        except TypeError as e:
+            raise TypeError(
+                f"Cannot write the attrs, so {file_path} was left unchanged: {e}"
+            ) from e
         super().write(
             file_path=file_path,
             overwrite=overwrite,
             consolidate_metadata=consolidate_metadata,
             sdata_formats=sdata_formats,
         )
+
+    def write_element(self, element_name, overwrite=False, **kwargs):
+        """Write an element, or a list of elements, to the store.
+
+        See :meth:`SpatialData.write_element <spatialdata.SpatialData.write_element>`.
+        With ``overwrite=True``, an element already in the store is deleted from
+        it, then written. An element that still loads its data lazily from
+        those files raises a ValueError instead.
+
+        """
+        if overwrite and isinstance(element_name, str) and self.path is not None:
+            for element_type, name, _ in self.gen_elements():
+                if name == element_name and (self.path / element_type / name).exists():
+                    # spatialdata writes into the folder of the element on disk,
+                    # where the old parquet files of points stay and images
+                    # fail. delete_element_from_disk refuses to delete the
+                    # files that an element still loads lazily
+                    self.delete_element_from_disk(name)
+        super().write_element(element_name, overwrite=overwrite, **kwargs)
 
     def to_spatialdata(self) -> SpatialData:
         """

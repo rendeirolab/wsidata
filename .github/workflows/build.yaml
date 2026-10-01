@@ -91,6 +91,40 @@ jobs:
       - name: Tests
         run: uv run task test
 
+  # uv.lock holds one version of each dependency for every Python, so Test
+  # runs spatialdata 0.7.3, the last release for Python 3.11. pip on a newer
+  # Python installs the newest spatialdata, anndata and pandas instead, and
+  # this job tests those. Not a required check.
+  Test_latest:
+    name: Test (latest dependencies)
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    env:
+      CJDK_CACHE_DIR: ${{ github.workspace }}/.ci-cache/cjdk
+      M2_REPO: ${{ github.workspace }}/.ci-cache/m2
+      HF_HOME: ${{ github.workspace }}/.ci-cache/hf
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: '3.13'
+      - name: Cache JDK, Maven artifacts and test slides
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ github.workspace }}/.ci-cache
+            ~/.jgo
+          key: ci-cache-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ci-cache-${{ runner.os }}-
+      - name: Install project with the newest dependencies
+        run: |
+          uv venv
+          uv pip install -e . --group dev --torch-backend cpu
+      - name: Tests
+        run: uv run --no-sync task test
+
   Upload_to_pypi:
     needs: [Lint, Test]
     if: github.event_name == 'push'

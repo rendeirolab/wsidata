@@ -138,7 +138,12 @@ class FetchAccessor(object):
         var = feature_adata.var
 
         # layers slot
-        layers = {key: layer[rows] for key, layer in feature_adata.layers.items()}
+        # anndata 0.13 also lists X, as layers[None]
+        layers = {
+            key: layer[rows]
+            for key, layer in feature_adata.layers.items()
+            if key is not None
+        }
 
         # obs slot
         tile_table = sdata.shapes[tile_key]
