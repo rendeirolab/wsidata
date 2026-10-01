@@ -4622,7 +4622,7 @@ wheels = [
 
 [[package]]
 name = "spatialdata"
-version = "0.7.2"
+version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anndata" },
@@ -4655,9 +4655,9 @@ dependencies = [
     { name = "xarray-spatial", version = "0.9.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/b4/3cd97a7f473def2cf0fdb94d980efd5982274e8aedae944af144327b979c/spatialdata-0.7.2.tar.gz", hash = "sha256:17cfa4be157dd00d5dfc009038b2f0ba5ceaaad4fb15cf58cb8b53b7e28fc75e", size = 347975, upload-time = "2026-02-09T15:45:07.182Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/50/248fae79a62f3d9dffbe70e9b66be6e3f8aaf77caa20a8c931a79256b689/spatialdata-0.7.3.tar.gz", hash = "sha256:6054d66d00e19af96368a897faa0b369f3a25dbf9e0371f091129f8522ee6986", size = 359317, upload-time = "2026-05-06T16:02:42.446Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/eb/15962d23094016d13f057e9de97021f8cd6b16bc39f21bab8e55e3f0a63e/spatialdata-0.7.2-py3-none-any.whl", hash = "sha256:c41f985dee9c272b790dca0ab54130128af426591df61c8d12556d6aa86c70b5", size = 192281, upload-time = "2026-02-09T15:45:06.061Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/bd/76cd29c982ed8f06db839411f1f44c521bf36b8714074652368353856b44/spatialdata-0.7.3-py3-none-any.whl", hash = "sha256:15e0df647f149a8be70cef6b866dcf033c71890440583bca8bb1c20c37566e6c", size = 199244, upload-time = "2026-05-06T16:02:40.994Z" },
 ]
 
 [[package]]
@@ -5570,7 +5570,7 @@ requires-dist = [
     { name = "pylibczirw", marker = "extra == 'pylibczi'" },
     { name = "rich" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.12.2" },
-    { name = "spatialdata", specifier = ">=0.7.0" },
+    { name = "spatialdata", specifier = ">=0.7.3" },
     { name = "tiffslide", marker = "extra == 'tiffslide'" },
     { name = "torch", specifier = ">=2.0.0" },
     { name = "torchstain", marker = "extra == 'stain'" },
