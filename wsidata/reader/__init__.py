@@ -1,4 +1,4 @@
-from ._reader_datatree_zarr_v3 import to_datatree
+from ._datatree import to_datatree
 from ._reader_registry import READERS
 from .base import ReaderBase, SlideProperties
 from .bioformats import BioFormatsReader
