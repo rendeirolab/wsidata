@@ -7,6 +7,7 @@ import zarr
 from shapely import Polygon
 from spatialdata import read_zarr
 from spatialdata._io.format import SpatialDataContainerFormatV01
+from xarray import DataArray
 
 from wsidata import TileSpec, WSIData, io, open_wsi
 from wsidata.reader import OpenSlideReader
@@ -209,6 +210,29 @@ def test_write_rejects_format_with_sdata_formats(test_slide, tmp_path, fmt):
     wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
     with pytest.raises(TypeError, match="sdata_formats"):
         wsi.write(sdata_formats=SpatialDataContainerFormatV01(), format=fmt)
+
+
+def test_write_saved_thumbnail(test_slide, tmp_path):
+    """Regression: with spatialdata <0.7.3 and ome-zarr >=0.14, writing any
+    image failed with "TypeError: Expected an iterable of integers", and a
+    single-scale image was written as a pyramid.
+    """
+    store = tmp_path / "s.zarr"
+    wsi = open_wsi(
+        test_slide,
+        store=store,
+        attach_thumbnail=True,
+        save_thumbnail=True,
+        thumbnail_size=200,
+    )
+    thumbnail = wsi.images["wsi_thumbnail"]
+    wsi.write()
+    wsi.close()
+
+    written = read_zarr(store).images["wsi_thumbnail"]
+    # Single scale, as attached
+    assert isinstance(written, DataArray)
+    np.testing.assert_array_equal(written.values, thumbnail.values)
 
 
 def test_store_folder_keeps_the_stores_of_slides_apart(
