@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Generator, Literal
@@ -13,12 +14,17 @@ from PIL.Image import Image, fromarray
 from spatialdata import SpatialData
 from spatialdata.models import SpatialElement
 
+from .._utils import find_stack_level
 from ..accessors import DatasetAccessor, FetchAccessor, IterAccessor
 from ..reader import ReaderBase, SlideProperties
 from .tile import TileSpec
 
 if TYPE_CHECKING:
     from wsidata.reader.base import AssociatedImages
+
+# Default of the deprecated format of WSIData.write, so that format=None warns
+# too. Remove with format in 0.13.0
+_UNSET = object()
 
 
 class WSIData(SpatialData):
@@ -367,8 +373,25 @@ class WSIData(SpatialData):
         file_path=None,
         overwrite: bool = True,
         consolidate_metadata: bool = True,
-        format=None,
+        sdata_formats=None,
+        *,
+        format=_UNSET,
     ):
+        if format is not _UNSET:
+            # Remove format in 0.13.0
+            if sdata_formats is not None:
+                raise TypeError(
+                    "WSIData.write() got both format and sdata_formats, "
+                    "pass sdata_formats only."
+                )
+            warnings.warn(
+                "WSIData.write(format=...) is deprecated and will be removed in "
+                "wsidata 0.13.0. Use sdata_formats, the name SpatialData.write "
+                "uses since spatialdata 0.7.0.",
+                FutureWarning,
+                stacklevel=find_stack_level(),
+            )
+            sdata_formats = format
         if file_path is not None:
             file_path = Path(file_path)
             if self.path is None:
@@ -384,7 +407,7 @@ class WSIData(SpatialData):
             file_path=file_path,
             overwrite=overwrite,
             consolidate_metadata=consolidate_metadata,
-            format=format,
+            sdata_formats=sdata_formats,
         )
 
     def to_spatialdata(self) -> SpatialData:
