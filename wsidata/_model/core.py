@@ -402,7 +402,7 @@ class WSIData(SpatialData):
                     "The store path for the WSIData is not set. "
                     "Please set the store path before saving."
                 )
-            file_path = self._wsi_store
+            file_path = self._wsi_store or self.path
         super().write(
             file_path=file_path,
             overwrite=overwrite,
