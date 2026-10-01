@@ -116,23 +116,25 @@ class ReaderRegistry(MutableMapping):
         return suffixes[-1].lower()
 
     @staticmethod
-    def _open_reader(reader_cls, img_path, scene):
+    def _open_reader(reader_cls, img_path, scene, **kwargs):
         if scene is not None and not reader_cls.supports_scenes:
             if scene != 0:
                 raise SceneSelectionError(
                     f"Reader '{reader_cls.name}' does not support scene selection."
                 )
-            return reader_cls(img_path)
-        kwargs = {"scene": scene} if reader_cls.supports_scenes else {}
-        return reader_cls(img_path, **kwargs)
+            return reader_cls(img_path, **kwargs)
+        scene_kwargs = {"scene": scene} if reader_cls.supports_scenes else {}
+        return reader_cls(img_path, **scene_kwargs, **kwargs)
 
     def try_open(
-        self, img_path: str, reader: str = None, scene: int | None = None
+        self, img_path: str, reader: str = None, scene: int | None = None, **kwargs
     ) -> ReaderBase:
+        # kwargs are reader options. Every reader tried gets them, and readers
+        # ignore the ones they do not take.
         if reader is not None:
             reader_cls = self[reader]
             reader_cls.is_available(raise_error=True)
-            return self._open_reader(reader_cls, img_path, scene)
+            return self._open_reader(reader_cls, img_path, scene, **kwargs)
 
         # Prefer extension matches, then fall back to the global priority.
         candidates = []
@@ -158,7 +160,7 @@ class ReaderRegistry(MutableMapping):
             if scene not in (None, 0) and not reader_cls.supports_scenes:
                 continue
             try:
-                return self._open_reader(reader_cls, img_path, scene)
+                return self._open_reader(reader_cls, img_path, scene, **kwargs)
             except SceneSelectionError as error:
                 scene_error = error
             except Exception:  # noqa: BLE001

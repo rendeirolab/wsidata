@@ -7,6 +7,7 @@ import pytest
 from anndata import AnnData
 
 from wsidata import io
+from wsidata.io._wsi import _resolve_backed_files
 
 
 class TestAggWSI:
@@ -320,3 +321,58 @@ class TestAggWSI:
         assert isinstance(result, AnnData)
         assert result.X.shape[0] == 2  # Both slides have valid features
         assert result.X.shape[1] == feature_dim
+
+
+class TestResolveBackedFiles:
+    """Tests for _resolve_backed_files, which finds the store of each slide for
+    agg_wsi and concat_feature_anndata."""
+
+    @pytest.mark.parametrize(
+        "slide, stores, expected",
+        [
+            ("a.svs", ["a.scene-1.zarr"], "a.scene-1.zarr"),
+            # Two suffixes: open_wsi names the store by the stem, "a.ome"
+            ("a.ome.tiff", ["a.ome.scene-0.zarr"], "a.ome.scene-0.zarr"),
+            # The store of a single-scene slide comes first
+            ("a.svs", ["a.zarr", "a.scene-1.zarr"], "a.zarr"),
+            # No store: the default path, which the callers report missing
+            ("a.svs", [], "a.zarr"),
+        ],
+    )
+    def test_wsi_col_finds_scene_store(self, tmp_path, slide, stores, expected):
+        """Regression: with wsi_col, the store of a slide was always
+        <stem>.zarr, but open_wsi writes the store of a scene of a multi-scene
+        slide to <stem>.scene-<scene>.zarr, so agg_wsi and
+        concat_feature_anndata did not find it.
+        """
+        (tmp_path / slide).touch()
+        for store in stores:
+            (tmp_path / store).mkdir()
+        slides_table = pd.DataFrame({"wsi_path": [str(tmp_path / slide)]})
+
+        backed_files = _resolve_backed_files(slides_table, "wsi_path", None)
+
+        assert backed_files.tolist() == [str(tmp_path / expected)]
+
+    def test_wsi_col_several_scene_stores(self, tmp_path):
+        """Regression: as above; and with the stores of several scenes of a
+        slide, which one is meant is unknown, so it raises, naming them, rather
+        than take one. store_col still gives the store of each slide as is.
+        """
+        (tmp_path / "a.svs").touch()
+        (tmp_path / "a.scene-0.zarr").mkdir()
+        (tmp_path / "a.scene-1.zarr").mkdir()
+        slides_table = pd.DataFrame(
+            {
+                "wsi_path": [str(tmp_path / "a.svs")],
+                "store_path": [str(tmp_path / "a.scene-1.zarr")],
+            }
+        )
+
+        with pytest.raises(ValueError, match="store_col") as excinfo:
+            _resolve_backed_files(slides_table, "wsi_path", None)
+        assert "a.scene-0.zarr" in str(excinfo.value)
+        assert "a.scene-1.zarr" in str(excinfo.value)
+
+        backed_files = _resolve_backed_files(slides_table, "wsi_path", "store_path")
+        assert backed_files.tolist() == [str(tmp_path / "a.scene-1.zarr")]

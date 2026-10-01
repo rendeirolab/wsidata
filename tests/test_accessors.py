@@ -1,10 +1,46 @@
 import pickle
+import sys
 import warnings
+from types import SimpleNamespace
 
+import geopandas as gpd
 import numpy as np
+import pandas as pd
 import pytest
 import torch
 from anndata import AnnData
+from scipy import sparse
+
+from wsidata import open_wsi
+from wsidata.io import add_features, add_shapes, subset_tiles, update_shapes_data
+
+
+@pytest.fixture
+def own_wsidata(test_slide, test_store):
+    """A WSIData of its own, whose elements a test may change in memory"""
+    return open_wsi(test_slide, store=test_store)
+
+
+@pytest.fixture
+def stub_torch_geometric(monkeypatch):
+    """Run graph_data without torch_geometric: Data returns its arguments"""
+    stub = SimpleNamespace(Data=lambda **kw: kw)
+    monkeypatch.setitem(sys.modules, "torch_geometric", stub)
+    monkeypatch.setitem(sys.modules, "torch_geometric.data", stub)
+
+
+def chain_graph(n, sparse_format):
+    """A tile graph linking tile i to tile i + 1, at a distance of i + 1"""
+    i = np.arange(n - 1)
+    return AnnData(
+        obs=pd.DataFrame(index=np.arange(n).astype(str)),
+        obsp={
+            "spatial_connectivities": sparse_format(
+                (np.ones(n - 1), (i, i + 1)), shape=(n, n)
+            ),
+            "spatial_distances": sparse_format((i + 1.0, (i, i + 1)), shape=(n, n)),
+        },
+    )
 
 
 class TestFetchAccessor:
@@ -28,6 +64,64 @@ class TestFetchAccessor:
         assert tables.uns is not None
         assert "tile_spec" in wsidata.attrs
         assert "slide_properties" in wsidata.attrs
+
+    @pytest.mark.parametrize("n_kept", [None, 20], ids=["reordered", "subset"])
+    def test_features_anndata_follows_tiles(self, own_wsidata, n_kept):
+        """Regression: features_anndata put the rows of the feature table next
+        to the tiles by position, not by tile_id, so once the tiles were
+        reordered each tile got the features of another, and once they were
+        subset AnnData raised on the different lengths.
+        """
+        features = own_wsidata.tables["resnet50_tiles"]
+        features.layers["doubled"] = features.X * 2
+        order = np.random.default_rng(0).permutation(features.n_obs)[:n_kept]
+        subset_tiles(own_wsidata, "tiles", order)
+        tile_ids = own_wsidata.shapes["tiles"]["tile_id"].to_numpy()
+
+        adata = own_wsidata.fetch.features_anndata("resnet50")
+
+        row_of = dict(zip(features.obs["tile_id"], range(features.n_obs)))
+        rows = [row_of[t] for t in tile_ids]
+        np.testing.assert_array_equal(adata.obs["tile_id"], tile_ids)
+        np.testing.assert_array_equal(adata.X, features.X[rows])
+        np.testing.assert_array_equal(adata.layers["doubled"], features.X[rows] * 2)
+
+    def test_features_anndata_raises_for_tiles_without_features(self, own_wsidata):
+        """Regression: a tile with no row in the feature table got the features
+        in the row at its position, those of another tile.
+        """
+        tile_ids = own_wsidata.shapes["tiles"]["tile_id"].to_numpy().copy()
+        tile_ids[0] = tile_ids.max() + 1
+        update_shapes_data(own_wsidata, "tiles", {"tile_id": tile_ids})
+
+        with pytest.raises(ValueError, match="No features"):
+            own_wsidata.fetch.features_anndata("resnet50")
+
+    def test_features_anndata_of_shapes_without_tile_spec(self, own_wsidata):
+        """Regression: features_anndata read the TileSpec of the shapes with no
+        check, so shapes that have none, such as cells, raised AttributeError.
+        """
+        cells = gpd.GeoDataFrame(geometry=own_wsidata.shapes["tiles"].geometry.values)
+        add_shapes(own_wsidata, "cells", cells)
+        features = np.random.default_rng(0).random((len(cells), 8), dtype=np.float32)
+        add_features(own_wsidata, "resnet50_cells", "cells", features)
+
+        adata = own_wsidata.fetch.features_anndata("resnet50", tile_key="cells")
+
+        assert "tile_spec" not in adata.uns
+        # The cells have no tile_id, so the features follow them by position
+        np.testing.assert_array_equal(adata.X, features)
+
+    def test_features_anndata_by_position_needs_one_row_per_tile(self, own_wsidata):
+        """Regression: tiles without tile_id and a feature table of another
+        length raised AnnData's error on the length of obs, which does not say
+        that the rows are matched by position.
+        """
+        tiles = own_wsidata.shapes["tiles"]
+        own_wsidata.shapes["tiles"] = tiles.drop(columns="tile_id").iloc[:20]
+
+        with pytest.raises(ValueError, match="by position"):
+            own_wsidata.fetch.features_anndata("resnet50")
 
     def test_get_n_tissue(self, wsidata):
         wsidata.fetch.n_tissue("tissues")
@@ -172,6 +266,50 @@ class TestDatasetAccessor:
 
         # Check that we have the expected number of edges
         assert data.edge_index.size(1) == n_tiles - 1
+
+    @pytest.mark.usefixtures("stub_torch_geometric")
+    @pytest.mark.parametrize(
+        "sparse_format", [sparse.csr_matrix, sparse.csr_array], ids=lambda f: f.__name__
+    )
+    def test_ds_tile_feature_graph_of_sparse_arrays(self, own_wsidata, sparse_format):
+        """Regression: graph_data read the distances of the edges with .A1,
+        which np.matrix has but ndarray does not, so a tile graph stored as
+        scipy sparse arrays, such as csr_array, raised AttributeError.
+        """
+        n = len(own_wsidata.shapes["tiles"])
+        own_wsidata.tables["tiles_graph"] = chain_graph(n, sparse_format)
+
+        data = own_wsidata.ds.tile_feature_graph("resnet50")
+
+        i = np.arange(n - 1)
+        np.testing.assert_array_equal(data["edge_index"], [i, i + 1])
+        np.testing.assert_array_equal(data["edge_attr"], (i + 1.0)[:, None])
+
+    @pytest.mark.usefixtures("stub_torch_geometric")
+    @pytest.mark.parametrize("n_kept", [None, 20], ids=["reordered", "subset"])
+    def test_ds_tile_feature_graph_follows_tiles(self, own_wsidata, n_kept):
+        """Regression: the tile graph is in the order of the tiles, but
+        graph_data took the node features in the order of the feature table,
+        so once the tiles were reordered or subset each node got the features
+        of another tile. Subset tiles also raised KeyError on the targets:
+        torch reads a Series at the index labels 0 to n - 1, and a subset of
+        the tiles lacks some of them.
+        """
+        features = own_wsidata.tables["resnet50_tiles"]
+        order = np.random.default_rng(0).permutation(features.n_obs)[:n_kept]
+        subset_tiles(own_wsidata, "tiles", order)
+        tile_ids = own_wsidata.shapes["tiles"]["tile_id"].to_numpy()
+        own_wsidata.tables["tiles_graph"] = chain_graph(
+            len(tile_ids), sparse.csr_matrix
+        )
+
+        # The tile_id of each node, as its target
+        data = own_wsidata.ds.tile_feature_graph("resnet50", target_key="tile_id")
+
+        row_of = dict(zip(features.obs["tile_id"], range(features.n_obs)))
+        rows = [row_of[t] for t in tile_ids]
+        np.testing.assert_array_equal(data["y"], tile_ids)
+        np.testing.assert_array_equal(data["x"], features.X[rows])
 
 
 @pytest.mark.parametrize(

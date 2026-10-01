@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -6,7 +7,7 @@ import pandas as pd
 import pytest
 from anndata import AnnData
 
-from wsidata import io
+from wsidata import io, open_wsi
 from wsidata.io._wsi import _concat_feature_anndata
 
 
@@ -366,6 +367,107 @@ class TestConcatFeatureAnnData:
         # Check result
         assert isinstance(result, AnnData)
 
+    @pytest.mark.parametrize("as_anncollection", [False, True])
+    @patch("wsidata.io._wsi._concat_feature_anndata")
+    def test_concat_feature_anndata_slide_name(
+        self, mock_concat_feature_anndata, tmp_path, as_anncollection
+    ):
+        """Regression: the slides were labelled by their row, so
+        obs["slide_name"] held 0, 1, ... and the obs names ended in -0, -1, ...
+        instead of the name of the slide, the name of its store without .zarr.
+        """
+        mock_concat_feature_anndata.side_effect = lambda *args: AnnData(
+            np.random.rand(2, 5)
+        )
+        slides_table = pd.DataFrame(
+            {
+                "store_path": [
+                    str(tmp_path / "slide1.zarr"),
+                    str(tmp_path / "slide2.scene-1.zarr"),
+                ]
+            }
+        )
+
+        result = io.concat_feature_anndata(
+            slides_table=slides_table,
+            feature_key="test_feature",
+            tile_key="tiles",
+            store_col="store_path",
+            as_anncollection=as_anncollection,
+        )
+
+        assert result.obs["slide_name"].tolist() == [
+            "slide1",
+            "slide1",
+            "slide2.scene-1",
+            "slide2.scene-1",
+        ]
+        assert list(result.obs_names) == [
+            "0-slide1",
+            "1-slide1",
+            "0-slide2.scene-1",
+            "1-slide2.scene-1",
+        ]
+
+    @patch("wsidata.io._wsi._concat_feature_anndata")
+    def test_concat_feature_anndata_duplicate_slide_names(
+        self, mock_concat_feature_anndata, tmp_path
+    ):
+        """Regression: as above; named by their stores, two slides whose stores
+        share a name, in different folders, would get one name, and one of the
+        slides would be lost. It raises, naming them, before any store is read.
+        """
+        mock_concat_feature_anndata.side_effect = lambda *args: AnnData(
+            np.random.rand(2, 5)
+        )
+        slides_table = pd.DataFrame(
+            {
+                "store_path": [
+                    str(tmp_path / "a" / "slide1.zarr"),
+                    str(tmp_path / "slide2.zarr"),
+                    str(tmp_path / "b" / "slide1.zarr"),
+                ]
+            }
+        )
+        for store in slides_table["store_path"]:
+            Path(store).mkdir(parents=True)
+
+        with pytest.raises(ValueError, match="slide1") as excinfo:
+            io.concat_feature_anndata(
+                slides_table=slides_table,
+                feature_key="test_feature",
+                tile_key="tiles",
+                store_col="store_path",
+            )
+        assert "slide2" not in str(excinfo.value)
+        mock_concat_feature_anndata.assert_not_called()
+
+    @patch("wsidata.io._wsi._concat_feature_anndata")
+    def test_concat_feature_anndata_skips_missing_stores_sharing_a_name(
+        self, mock_concat_feature_anndata, tmp_path
+    ):
+        """Regression: as above; the stores that do not exist cannot collide, as
+        none is read. With error="skip", empty store_col cells, which all name
+        the store "nan", are skipped as before, not raised as duplicates.
+        """
+        mock_concat_feature_anndata.side_effect = lambda f, *args: (
+            AnnData(np.random.rand(2, 5)) if Path(f).exists() else None
+        )
+        (tmp_path / "slide1.zarr").mkdir()
+        slides_table = pd.DataFrame(
+            {"store_path": [str(tmp_path / "slide1.zarr"), np.nan, np.nan]}
+        )
+
+        result = io.concat_feature_anndata(
+            slides_table=slides_table,
+            feature_key="test_feature",
+            tile_key="tiles",
+            store_col="store_path",
+            error="skip",
+        )
+
+        assert result.obs["slide_name"].unique().tolist() == ["slide1"]
+
 
 class TestConcatFeatureAnnDataHelper:
     """Tests for the _concat_feature_anndata helper function."""
@@ -449,3 +551,26 @@ class TestConcatFeatureAnnDataHelper:
         )
 
         assert result is None
+
+
+def test_concat_feature_anndata_open_wsi_scene_store(test_multiscene_czi, tmp_path):
+    """Regression: with wsi_col, concat_feature_anndata looked for the store of
+    a scene of a multi-scene slide at <stem>.zarr, not where open_wsi writes
+    it, and named the slide 0 in obs["slide_name"].
+    """
+    # Two suffixes: open_wsi names the store by the stem, "multi_scene.ome"
+    slide = tmp_path / "multi_scene.ome.czi"
+    shutil.copy(test_multiscene_czi, slide)
+    wsi = open_wsi(slide, reader="pylibczi", scene=1)
+    wsi.tables["test_feature_tiles"] = AnnData(np.ones((3, 4)))
+    wsi.write()
+    wsi.close()
+
+    result = io.concat_feature_anndata(
+        slides_table=pd.DataFrame({"wsi_path": [str(slide)]}),
+        feature_key="test_feature",
+        tile_key="tiles",
+        wsi_col="wsi_path",
+    )
+
+    assert result.obs["slide_name"].tolist() == ["multi_scene.ome.scene-1"] * 3

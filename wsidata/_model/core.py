@@ -22,6 +22,10 @@ from .tile import TileSpec
 if TYPE_CHECKING:
     from wsidata.reader.base import AssociatedImages
 
+# Default of the deprecated format of WSIData.write, so that format=None warns
+# too. Remove with format in 0.13.0
+_UNSET = object()
+
 
 class WSIData(SpatialData):
     """
@@ -90,10 +94,13 @@ class WSIData(SpatialData):
     reader : :class:`ReaderBase <wsidata.reader.ReaderBase>`
         A reader object that can interface with the whole slide image file.
     slide_properties_source : {'slide', 'sdata'}, default: 'sdata'
-        The source of the slide properties.
+        Where the mpp and bounds come from when the SpatialData object already
+        holds slide properties, as a reopened store does. The other slide
+        properties always come from the reader.
 
-        - "slide": load from the reader object.
-        - "sdata": load from the SpatialData object.
+        - "slide": from the reader.
+        - "sdata": from the SpatialData object, as :meth:`set_mpp` and
+          :meth:`set_bounds` set them, or from the reader if none is stored.
 
     Attributes
     ----------
@@ -148,20 +155,14 @@ class WSIData(SpatialData):
             attrs=attrs,
         )
 
-        if self.SLIDE_PROPERTIES_KEY not in self:
-            self.attrs[self.SLIDE_PROPERTIES_KEY] = reader.properties.to_dict()
-        else:
-            # Try to load the slide properties from the spatial data
-            if slide_properties_source == "slide":
-                reader_properties = self.attrs[self.SLIDE_PROPERTIES_KEY]
-                if reader_properties != reader.properties.to_dict():
-                    # Update the reader properties
-                    reader.properties.from_mapping(reader_properties)
-                    warnings.warn(
-                        "Slide properties in the spatial data is different from the reader properties.",
-                        UserWarning,
-                        stacklevel=find_stack_level(),
-                    )
+        if slide_properties_source == "sdata":
+            # Keep the mpp and bounds users set (set_mpp, set_bounds); the rest
+            # is the reader's, as another reader may have written the store
+            stored = self.attrs.get(self.SLIDE_PROPERTIES_KEY, {})
+            for key in ("mpp", "bounds"):
+                if stored.get(key) is not None:
+                    setattr(reader.properties, key, stored[key])
+        self.attrs[self.SLIDE_PROPERTIES_KEY] = reader.properties.to_dict()
 
     def __repr_texts(self):
         H, W = self.properties.shape
@@ -318,8 +319,10 @@ class WSIData(SpatialData):
             The bounds of the whole slide image in the format [x, y, width, height].
 
         """
+        # Plain int lists: attrs are written to the store as JSON
+        bounds = [int(v) for v in bounds]
         self.properties.bounds = bounds
-        self.tables[self.SLIDE_PROPERTIES_KEY].uns["bounds"] = bounds
+        self.attrs[self.SLIDE_PROPERTIES_KEY]["bounds"] = list(bounds)
 
     def read_region(
         self,
@@ -370,8 +373,25 @@ class WSIData(SpatialData):
         file_path=None,
         overwrite: bool = True,
         consolidate_metadata: bool = True,
-        format=None,
+        sdata_formats=None,
+        *,
+        format=_UNSET,
     ):
+        if format is not _UNSET:
+            # Remove format in 0.13.0
+            if sdata_formats is not None:
+                raise TypeError(
+                    "WSIData.write() got both format and sdata_formats, "
+                    "pass sdata_formats only."
+                )
+            warnings.warn(
+                "WSIData.write(format=...) is deprecated and will be removed in "
+                "wsidata 0.13.0. Use sdata_formats, the name SpatialData.write "
+                "uses since spatialdata 0.7.0.",
+                FutureWarning,
+                stacklevel=find_stack_level(),
+            )
+            sdata_formats = format
         if file_path is not None:
             file_path = Path(file_path)
             if self.path is None:
@@ -387,7 +407,7 @@ class WSIData(SpatialData):
             file_path=file_path,
             overwrite=overwrite,
             consolidate_metadata=consolidate_metadata,
-            format=format,
+            sdata_formats=sdata_formats,
         )
 
     def to_spatialdata(self) -> SpatialData:

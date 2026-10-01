@@ -1,4 +1,5 @@
 from .._model import WSIData
+from ..accessors.fetch import _tile_rows
 
 
 def graph_data(
@@ -53,8 +54,9 @@ def graph_data(
     graph_tables = wsi.tables[graph_key]
     features = wsi.tables[feature_key]
 
-    # Extract node features (image features)
-    x = torch.tensor(features.X, dtype=torch.float)
+    # Extract node features (image features), in tile order like the graph
+    rows = _tile_rows(wsi, feature_key, tile_key)
+    x = torch.tensor(features.X[rows], dtype=torch.float)
 
     # Extract graph structure from obsp
     if (
@@ -75,9 +77,11 @@ def graph_data(
 
             # Get corresponding distances as edge attributes
             if sp.issparse(dist_matrix):
-                # Extract distances for the same edges
+                # Extract distances for the same edges; sparse matrices
+                # return them as np.matrix, sparse arrays as a 1-D ndarray
                 edge_attr = torch.tensor(
-                    dist_matrix[edges[0], edges[1]].A1, dtype=torch.float
+                    np.asarray(dist_matrix[edges[0], edges[1]]).ravel(),
+                    dtype=torch.float,
                 ).view(-1, 1)
             else:
                 # If dist_matrix is dense
@@ -102,7 +106,8 @@ def graph_data(
     if target_key is not None:
         tiles = wsi.shapes[tile_key]
         if target_key in tiles:
-            y = torch.tensor(tiles[target_key])
+            # By position: torch reads a Series by index label
+            y = torch.tensor(tiles[target_key].to_numpy())
 
     # Create and return PyG Data object
     return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
