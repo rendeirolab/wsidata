@@ -145,3 +145,34 @@ def test_slide_properties_source_slide_ignores_the_store(test_slide, tmp_path):
     assert wsi.properties.bounds == [0, 0, 2220, 2967]
     assert wsi.attrs["slide_properties"]["mpp"] == 0.499
     wsi.close()
+
+
+def test_store_folder_keeps_the_stores_of_slides_apart(
+    test_slide, test_pyramid_slide, tmp_path
+):
+    """Regression: a store path that did not exist yet became the store of the
+    first slide, so every later slide opened with it loaded that store and
+    wrote into it. A new path without a .zarr suffix is a folder of stores.
+    """
+    folder = tmp_path / "data"
+    for slide in (test_slide, test_pyramid_slide):
+        wsi = open_wsi(slide, store=str(folder))
+        wsi.write()
+        wsi.close()
+    assert sorted(p.name for p in folder.iterdir()) == [
+        "GTEX-1117F-0526.zarr",
+        "sample.zarr",
+    ]
+
+
+def test_store_of_another_slide_raises(test_slide, test_pyramid_slide, tmp_path):
+    """A store keeps the shape of its slide, so the store of another slide
+    raises instead of being loaded and overwritten. Here it is data, the one
+    store that store="data" used to give every slide.
+    """
+    store = tmp_path / "data"
+    wsi = open_wsi(test_slide, store=None)
+    wsi.write(store)
+    wsi.close()
+    with pytest.raises(ValueError, match="belongs to a slide of shape"):
+        open_wsi(test_pyramid_slide, store=str(store))
