@@ -14,6 +14,7 @@ from wsidata.reader import (
     ReaderBase,
     SlideProperties,
     TiffSlideReader,
+    to_datatree,
 )
 from wsidata.reader._reader_registry import READERS, ReaderRegistry
 from wsidata.reader.base import convert_image
@@ -457,6 +458,61 @@ def test_spatialdata(test_slide):
     assert wsi.n_scenes == 1
     with pytest.raises(ValueError, match="does not exist"):
         open_wsi(sdata, image_key="img", scene=1)
+
+
+@pytest.mark.skipif(skip_reader("tiffslide"), reason="tiffslide not installed")
+def test_to_datatree_levels_match_one_read(test_pyramid_slide):
+    """TiffSlide maps offsets to the level with int(x / ds): a chunk origin
+    rounded at a non-integer downsample (4.0005) reads a row or column early."""
+    reader = TiffSlideReader(test_pyramid_slide)
+    tree = to_datatree(reader)
+    for level in range(1, reader.properties.n_level):
+        height, width = reader.properties.level_shape[level]
+        one_read = convert_image(
+            reader.reader.read_region((0, 0), level, (width, height))
+        )
+        np.testing.assert_array_equal(
+            tree[f"scale{level}"]["image"].values, one_read.transpose(2, 0, 1)
+        )
+
+
+def test_to_datatree_pickles(test_pyramid_slide):
+    """Spawned workers receive the lazy image through the standard pickle."""
+    image = to_datatree(OpenSlideReader(test_pyramid_slide))["scale2"]["image"]
+    restored = pickle.loads(pickle.dumps(image))
+    np.testing.assert_array_equal(
+        restored.data.blocks[0, 0, 0].compute(), image.data.blocks[0, 0, 0].compute()
+    )
+
+
+def test_attached_image_layout(test_pyramid_slide):
+    """sopa.io.wsi reads slides through open_wsi(attach_images=True)."""
+    from spatialdata.models import Image2DModel
+    from spatialdata.transformations import Identity, Scale, get_transformation
+
+    wsi = open_wsi(test_pyramid_slide, store=None, attach_images=True)
+    image = wsi.to_spatialdata()["wsi"]
+    Image2DModel().validate(image)
+    assert "raw" in image.attrs
+    assert list(image.children) == ["scale0", "scale1", "scale2"]
+    for level, (height, width) in enumerate(wsi.properties.level_shape):
+        level_image = image[f"scale{level}"]["image"]
+        assert level_image.dims == ("c", "y", "x")
+        assert level_image.shape == (3, height, width)
+        assert list(level_image.c.values) == ["r", "g", "b"]
+    assert get_transformation(image["scale0"]["image"]) == Identity()
+    ds = wsi.properties.level_downsample[1]
+    assert get_transformation(image["scale1"]["image"]) == Scale(
+        [ds, ds], axes=("y", "x")
+    )
+
+
+def test_attached_image_is_not_written(test_pyramid_slide, tmp_path):
+    store = tmp_path / "slide.zarr"
+    wsi = open_wsi(test_pyramid_slide, store=str(store), attach_images=True)
+    wsi.write()
+    assert store.exists()
+    assert not (store / "images" / "wsi").exists()
 
 
 # ---- Extension-based reader detection tests ----
