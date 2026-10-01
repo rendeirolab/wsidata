@@ -1,11 +1,33 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
+import zarr
 from shapely import Polygon
 from spatialdata import read_zarr
+from spatialdata._io.format import SpatialDataContainerFormatV01
 
 from wsidata import TileSpec, WSIData, io, open_wsi
 from wsidata.reader import OpenSlideReader
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [(10, 20, 300, 400), np.array([10, 20, 300, 400])],
+    ids=["tuple", "numpy"],
+)
+def test_set_bounds(bounds, test_slide, tmp_path):
+    store = tmp_path / "sample.zarr"
+    wsi = open_wsi(test_slide, store=store)
+    wsi.set_bounds(bounds)
+
+    # Lists of plain ints: attrs are written to the store as JSON
+    assert wsi.properties.bounds == [10, 20, 300, 400]
+    assert wsi.attrs["slide_properties"]["bounds"] == [10, 20, 300, 400]
+
+    wsi.write()
+    assert read_zarr(store).attrs["slide_properties"]["bounds"] == [10, 20, 300, 400]
 
 
 class TestWSIData:
@@ -74,16 +96,12 @@ class TestWSIData:
 
         io.add_features(wsidata, "test_feature", "test_tile", features)
 
-    # def test_save(self, wsidata, tmpdir):
-    #     wsidata.write(tmpdir / "test.zarr")
-
 
 def _write_store(slide, store):
     """Write a store of the slide whose slide properties are not the slide's."""
     wsi = open_wsi(slide, store=store)
     wsi.set_mpp(0.123)
-    # set_bounds raises KeyError: it writes to a table that does not exist
-    wsi.attrs["slide_properties"]["bounds"] = [1, 2, 30, 40]
+    wsi.set_bounds([1, 2, 30, 40])
     # As written by a reader that saw another pyramid
     wsi.attrs["slide_properties"].update(
         n_level=2, level_shape=[[2967, 2220], [741, 555]], level_downsample=[1.0, 4.0]
@@ -145,6 +163,52 @@ def test_slide_properties_source_slide_ignores_the_store(test_slide, tmp_path):
     assert wsi.properties.bounds == [0, 0, 2220, 2967]
     assert wsi.attrs["slide_properties"]["mpp"] == 0.499
     wsi.close()
+
+
+def test_write_does_not_warn_about_format(test_slide, tmp_path):
+    """spatialdata 0.7.0 renamed format to sdata_formats, write uses the new name"""
+    wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        wsi.write()
+    assert not [
+        w
+        for w in caught
+        if issubclass(w.category, (DeprecationWarning, FutureWarning))
+        and "format" in str(w.message)
+    ]
+
+
+@pytest.mark.parametrize("name", ["sdata_formats", "format"])
+def test_write_passes_sdata_formats(test_slide, tmp_path, name):
+    """The formats reach spatialdata, also by the deprecated name format"""
+    wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        wsi.write(**{name: SpatialDataContainerFormatV01()})
+    attrs = zarr.open_group(tmp_path / "s.zarr").attrs["spatialdata_attrs"]
+    assert attrs["version"] == "0.1"
+
+
+@pytest.mark.parametrize(
+    "fmt", [None, SpatialDataContainerFormatV01()], ids=["None", "V01"]
+)
+def test_write_format_is_deprecated(test_slide, tmp_path, fmt):
+    """format warns, even as None, at the line of the caller"""
+    wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
+    with pytest.warns(FutureWarning, match="sdata_formats") as record:
+        wsi.write(format=fmt)
+    assert record.pop(FutureWarning).filename == __file__
+
+
+@pytest.mark.parametrize(
+    "fmt", [None, SpatialDataContainerFormatV01()], ids=["None", "V01"]
+)
+def test_write_rejects_format_with_sdata_formats(test_slide, tmp_path, fmt):
+    """format and its new name sdata_formats cannot both be passed"""
+    wsi = open_wsi(test_slide, store=tmp_path / "s.zarr")
+    with pytest.raises(TypeError, match="sdata_formats"):
+        wsi.write(sdata_formats=SpatialDataContainerFormatV01(), format=fmt)
 
 
 def test_store_folder_keeps_the_stores_of_slides_apart(
