@@ -48,8 +48,12 @@ def open_wsi(
         The backed file path, by default will create
         a zarr file with the same name as the slide file.
         You can either supply a file path or a directory.
-        If a directory is supplied, the zarr file will be created in that directory.
+        A path ending in ``.zarr``, or an existing zarr store, is the store.
+        Any other path is a directory, created when the store is written, and the
+        zarr file is created in it: ``store="data"`` keeps the store of
+        ``slide.svs`` at ``data/slide.zarr``.
         This is useful when you want to store all zarr files in a specific location.
+        The store of a slide of another shape raises a ValueError.
         Pass ``None`` to skip persistence (no zarr store will be set).
     reader : str, optional
         Reader to use, by default ``None``. Passing ``None`` enables automatic reader
@@ -163,14 +167,18 @@ def open_wsi(
                     else:
                         zarr_name = _default_store_name(wsi, reader_instance)
                         store = store_path / zarr_name
-                # If store is a not a directory, we assume it is a valid zarr file
-                # WARNING: No guarantee
-                else:
+                # An existing file, or a new path with a .zarr suffix, is the store
+                elif store_path.exists() or store_path.suffix == ".zarr":
                     store = store_path
+                # Any other new path is a directory, so store="data" gives each
+                # slide its own store in it, not one store named data for all
+                else:
+                    store = store_path / _default_store_name(wsi, reader_instance)
         if store is not None:
             if store.exists():
                 sdata = read_zarr(store)
                 _validate_store_scene(sdata, reader_instance, store)
+                _validate_store_slide(sdata, reader_instance, store)
 
         exclude_elements = []
         sdata_images = {}
@@ -257,6 +265,23 @@ def _validate_store_scene(sdata, reader, store):
         raise ValueError(
             f"Store '{store}' belongs to scene {stored_scene}, but scene "
             f"{reader.scene} was requested."
+        )
+
+
+def _validate_store_slide(sdata, reader, store):
+    """Ensure an existing store belongs to the opened slide, by its shape."""
+    stored_shape = sdata.attrs.get(WSIData.SLIDE_PROPERTIES_KEY, {}).get("shape")
+    # Stores written before this check have the shape too; two slides of one
+    # shape pass, which a slide id in the store would catch
+    if stored_shape is None:
+        return
+    stored_shape = [int(i) for i in stored_shape]
+    shape = [int(i) for i in reader.properties.shape]
+    if stored_shape != shape:
+        raise ValueError(
+            f"Store '{store}' belongs to a slide of shape {stored_shape}, but "
+            f"{reader.file} has shape {shape}. Use the store of this slide, or a "
+            "directory that holds a store for each slide."
         )
 
 
