@@ -5,6 +5,7 @@ from .bioformats import BioFormatsReader
 from .cucim import CuCIMReader
 from .fastslide import FastSlideReader
 from .isyntax import ISyntaxReader
+from .kfbslide import KFBSlideReader
 from .openslide import OpenSlideReader
 from .pylibczi import PylibCZIReader
 from .spatialdata_image2d import SpatialDataImage2DReader
@@ -19,6 +20,7 @@ __all__ = [
     "CuCIMReader",
     "FastSlideReader",
     "ISyntaxReader",
+    "KFBSlideReader",
     "PylibCZIReader",
     "SpatialDataImage2DReader",
     "TiffSlideReader",
